@@ -1,0 +1,23 @@
+name: Mock CI Pipeline
+
+on:
+  push:
+    branches:
+      - main 
+      - feat-add-mock-ci
+  pull_request:
+    branches:
+      - main 
+
+jobs:
+  build:
+    name: Run Echo Job
+    runs-on: ubuntu-latest
+
+    steps:
+      # actually, don't need it here - downloads our repo in container for further build stages
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Print successful commit message
+        run: echo "Mock ci pipeline - successful commit"
