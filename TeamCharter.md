@@ -56,4 +56,4 @@
 - [ ] Max Kostyniuk (GitHub: @mkostinuk)
 - [ ] Maksim Havrasiienko (GitHub: @AdeptMaks)
 - [x] Artem Butyrin (GitHub: @artbutyrin)
-- [ ] Theodora Hrechko (GitHub: @urkarnad)
+- [x] Theodora Hrechko (GitHub: @urkarnad)
