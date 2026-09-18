@@ -54,6 +54,6 @@
 ## 9. Підписи
 
 - [ ] Max Kostyniuk (GitHub: @mkostinuk)
-- [ ] Maksim Havrasiienko (GitHub: @AdeptMaks)
+- [x] Maksim Havrasiienko (GitHub: @AdeptMaks)
 - [x] Artem Butyrin (GitHub: @artbutyrin)
 - [ ] Theodora Hrechko (GitHub: @urkarnad)
