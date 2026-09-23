@@ -23,6 +23,7 @@
 
 - [docs/requirements/user-stories.md](docs/requirements/user-stories.md) - користувацькі історії
 - [docs/requirements/non-functional-requirements.md](docs/requirements/non-functional-requirements.md) - нефункціональні вимоги (NFR)
+- [docs/requirements/rtm.md](docs/requirements/rtm.md) - матриця простежуваності (RTM)
 
 ## Основні можливості
 
