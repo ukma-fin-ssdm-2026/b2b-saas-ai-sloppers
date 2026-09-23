@@ -19,6 +19,11 @@
 
 Відповідальності, правила комунікації та використання ШІ описані в [TeamCharter.md](TeamCharter.md).
 
+## Артефакти вимог (Lab 2)
+
+- [docs/requirements/user-stories.md](docs/requirements/user-stories.md) - користувацькі історії
+- [docs/requirements/non-functional-requirements.md](docs/requirements/non-functional-requirements.md) - нефункціональні вимоги (NFR)
+
 ## Основні можливості
 
 - Каталог організацій з тегами, повнотекстовим пошуком і пагінацією
@@ -45,16 +50,13 @@
 .
 ├── .github/workflows/     # CI-конвеєр (GitHub Actions)
 ├── docs/                  # проєктна документація
-│   └── issue-workflow.md  # робочий процес задач
-├── src/                   # вихідний код backend (Spring Boot)
-├── pom.xml, mvnw          # збірка backend (Maven Wrapper)
-├── Project-Description.md # опис проєкту та міні-ТЗ
-├── TeamCharter.md         # командний статут
+│   ├── issue-workflow.md
+│   └── requirements/      # Lab 2: US, FR, NFR, RTM
+├── src/                   # backend (Spring Boot)
+├── Project-Description.md
+├── TeamCharter.md
 └── README.md
 ```
-
-> Структура буде розширюватися: окремі директорії для frontend та маніфестів розгортання
-> додаватимуться разом із відповідними частинами проєкту.
 
 ## Запуск
 
