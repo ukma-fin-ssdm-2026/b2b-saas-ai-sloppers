@@ -22,7 +22,7 @@
 ## Артефакти вимог (Lab 2)
 
 - [docs/requirements/user-stories.md](docs/requirements/user-stories.md) - користувацькі історії
-- [docs/requirements/non-functional-requirements.md](docs/requirements/non-functional-requirements.md) - нефункціональні вимоги (NFR)
+- [docs/requirements/requirements.md](docs/requirements/requirements.md) - функціональні (FR) і нефункціональні (NFR) вимоги
 - [docs/requirements/rtm.md](docs/requirements/rtm.md) - матриця простежуваності (RTM)
 
 ## Основні можливості
