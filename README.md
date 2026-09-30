@@ -25,6 +25,13 @@
 - [docs/requirements/requirements.md](docs/requirements/requirements.md) - функціональні (FR) і нефункціональні (NFR) вимоги
 - [docs/requirements/rtm.md](docs/requirements/rtm.md) - матриця простежуваності (RTM)
 
+## Архітектура (Lab 3)
+
+- [docs/architecture/](docs/architecture/) — огляд папки
+- [docs/architecture/high-level-design.md](docs/architecture/high-level-design.md) — високорівневий дизайн
+- [docs/architecture/uml/](docs/architecture/uml/) — UML (PlantUML)
+- [docs/architecture/decisions/](docs/architecture/decisions/) — ADR
+
 ## Основні можливості
 
 - Каталог організацій з тегами, повнотекстовим пошуком і пагінацією
@@ -50,9 +57,10 @@
 ```
 .
 ├── .github/workflows/     # CI-конвеєр (GitHub Actions)
-├── docs/                  # проєктна документація
+├── docs/
 │   ├── issue-workflow.md
-│   └── requirements/      # Lab 2: US, FR, NFR, RTM
+│   ├── requirements/      # Lab 2: US, FR, NFR, RTM
+│   └── architecture/      # Lab 3: HLD, UML, ADR
 ├── src/                   # backend (Spring Boot)
 ├── Project-Description.md
 ├── TeamCharter.md
