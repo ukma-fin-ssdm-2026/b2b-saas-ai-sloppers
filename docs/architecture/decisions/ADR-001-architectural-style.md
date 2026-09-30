@@ -7,7 +7,7 @@
 ## Context
 
 Обмеження контексту:
-- стек : Angular + Spring Boot, деплой у Minikube;
+- стек: React + Spring Boot + PostgreSQL, деплой у Minikube;
 - за [Project-Description](../../../Project-Description.md) цільове місце сервісу — **мікросервісна** екосистема SmartUkma (`account-server`, `ui-constructor`), але в семестрі AuthZ і UI робимо самі;
 - NFR (p95 ≤ 500 мс, цілісність даних, приватність контактів) вимагають простої, контрольованої схеми даних і чітких меж API.
 
