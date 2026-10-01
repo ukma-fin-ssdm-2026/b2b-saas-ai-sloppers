@@ -1,6 +1,6 @@
 # ADR-001: Архітектурний стиль
 
-- **Статус:** Under consideration
+- **Статус:** Accepted
 - **Дата:** 2026-09-30
 - **Учасники рішення:** Architecture (Artem Butyrin)
 

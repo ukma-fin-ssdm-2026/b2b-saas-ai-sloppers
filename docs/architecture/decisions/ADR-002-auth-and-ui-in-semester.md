@@ -1,6 +1,6 @@
 # ADR-002: AuthZ і UI у семестрі
 
-- **Статус:** Under consideration
+- **Статус:** future
 - **Дата:** 2026-09-30
 - **Учасники рішення:** Architecture (Artem Butyrin)
 
