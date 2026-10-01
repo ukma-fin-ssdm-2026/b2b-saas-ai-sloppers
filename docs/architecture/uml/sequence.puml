@@ -1,0 +1,35 @@
+@startuml Lab3_Sequence_Diagram
+title Скрейпер → модерація → публікація події
+
+autonumber
+skinparam shadowing false
+skinparam defaultFontSize 13
+
+participant "Instagram" as Insta
+participant "Scraper\nWorker" as Scraper
+participant "Events &\nModeration" as Events
+database "PostgreSQL" as DB
+actor "Голова\nорганізації" as Head
+
+Scraper -> Insta : отримати нові пости
+activate Scraper
+Insta --> Scraper : пости
+Scraper -> Events : передати подію
+activate Events
+Events -> DB : зберегти подію
+Events --> Scraper : готово
+deactivate Events
+deactivate Scraper
+
+alt автопублікація ввімкнена
+  Events -> DB : статус «Опубліковано»
+else автопублікація вимкнена
+  Events -> DB : статус «На модерації»
+  Head -> Events : схвалити подію
+  activate Events
+  Events -> DB : статус «Опубліковано»
+  Events --> Head : подію опубліковано
+  deactivate Events
+end
+
+@enduml
