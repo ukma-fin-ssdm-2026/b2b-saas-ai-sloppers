@@ -1,4 +1,4 @@
-package org.example.aislopstudentcommunity;
+package ua.edu.ukma.community;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
