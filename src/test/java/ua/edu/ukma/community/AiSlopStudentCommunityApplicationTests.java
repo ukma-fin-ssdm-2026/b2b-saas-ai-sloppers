@@ -1,4 +1,4 @@
-package org.example.aislopstudentcommunity;
+package ua.edu.ukma.community;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
