@@ -1,0 +1,50 @@
+name: community
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-community}
+      POSTGRES_USER: ${POSTGRES_USER:-community}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-community}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # one-shot: applies schema migrations and exits
+  migrate:
+    image: flyway/flyway:11
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-community}
+      FLYWAY_USER: ${POSTGRES_USER:-community}
+      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-community}
+      FLYWAY_CONNECT_RETRIES: 10
+    volumes:
+      - ./infra/migrations:/flyway/sql:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-community}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-community}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-community}
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  db-data:
