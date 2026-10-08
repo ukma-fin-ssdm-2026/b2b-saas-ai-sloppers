@@ -19,6 +19,7 @@
     <properties>
         <java.version>21</java.version>
         <springdoc.version>2.8.13</springdoc.version>
+        <springdoc-maven-plugin.version>1.5</springdoc-maven-plugin.version>
     </properties>
 
     <dependencies>
@@ -50,4 +51,54 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- ./mvnw -Popenapi verify: starts the app and writes docs/api/openapi-generated.yaml -->
+        <profile>
+            <id>openapi</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>openapi-start</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>openapi-stop</id>
+                                <phase>post-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.springdoc</groupId>
+                        <artifactId>springdoc-openapi-maven-plugin</artifactId>
+                        <version>${springdoc-maven-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>openapi-generate</id>
+                                <phase>integration-test</phase>
+                                <goals>
+                                    <goal>generate</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <apiDocsUrl>http://localhost:8080/v3/api-docs.yaml</apiDocsUrl>
+                            <outputDir>${project.basedir}/docs/api</outputDir>
+                            <outputFileName>openapi-generated.yaml</outputFileName>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

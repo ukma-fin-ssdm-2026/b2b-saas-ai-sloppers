@@ -61,7 +61,11 @@
 │   ├── issue-workflow.md
 │   ├── requirements/      # Lab 2: US, FR, NFR, RTM
 │   └── architecture/      # Lab 3: HLD, UML, ADR
+├── infra/
+│   └── migrations/        # SQL-міграції схеми БД (Flyway)
 ├── src/                   # backend (Spring Boot)
+│   └── main/docker/       # Dockerfile образу backend
+├── docker-compose.yml     # локальне оточення: db + migrate + backend
 ├── Project-Description.md
 ├── TeamCharter.md
 └── README.md
@@ -69,7 +73,37 @@
 
 ## Запуск
 
-_Інструкції з локального запуску та розгортання в Minikube буде додано разом із реалізацією._
+Потрібен Docker з Compose.
+
+```bash
+docker compose up --build
+```
+
+Піднімаються три сервіси:
+
+| Сервіс    | Що робить                                                             | Адреса                                |
+| --------- | --------------------------------------------------------------------- | ------------------------------------- |
+| `db`      | PostgreSQL 17                                                         | `localhost:5432`, `community/community` |
+| `migrate` | Flyway: накочує `infra/migrations/` і завершується                    | —                                     |
+| `backend` | Spring Boot API, стартує лише після успішних міграцій                 | http://localhost:8080/api/v1          |
+
+Swagger UI: http://localhost:8080/swagger-ui.html
+
+**Нова міграція:** додайте файл `infra/migrations/V<N>__<опис>.sql` і перезапустіть `up`. Уже застосовані файли не редагуйте: Flyway звіряє їхні контрольні суми.
+
+**Скинути базу:** `docker compose down -v`.
+
+Поки що backend тримає дані в пам'яті й до бази не підключається. Розгортання в Minikube буде додано окремо.
+
+## Специфікація API
+
+[docs/api/openapi-generated.yaml](docs/api/openapi-generated.yaml) генерується з анотацій у коді, руками її не редагують. Після змін у контролерах або DTO перегенеруйте файл і закомітьте:
+
+```bash
+./mvnw -Popenapi verify
+```
+
+Команда на час генерації піднімає застосунок на порту 8080, тож зупиніть `docker compose` перед запуском. Workflow **API Docs** на кожному PR перегенеровує специфікацію і падає, якщо закомічений файл застарів або невалідний.
 
 ## Документи
 

@@ -1,0 +1,480 @@
+openapi: 3.1.0
+info:
+  contact:
+    name: Команда Student Community
+  description: "API мікросервісу «Студентське ком'юніті та Івенти» (екосистема SmartUKMA):\
+    \ каталог студентських організацій. Специфікація згенерована з коду (Code-First).\
+    \ Відповіді — заглушки з пам'яті процесу."
+  title: Student Community & Events API
+  version: 1.0.0
+servers:
+- description: Generated server url
+  url: http://localhost:8080
+tags:
+- description: Каталог студентських організацій
+  name: Organizations
+paths:
+  /api/v1/organizations:
+    get:
+      description: "Публічна (доступна гостям). Пагінація зі зсувом, сортування за\
+        \ назвою."
+      operationId: listOrganizations
+      parameters:
+      - description: "Пошук за назвою або slug, без урахування регістру"
+        example: клуб
+        in: query
+        name: q
+        required: false
+        schema:
+          type: string
+          maxLength: 100
+          minLength: 0
+      - description: "Розмір сторінки, 1–100"
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: string
+          maximum: 100
+          minimum: 1
+      - description: Скільки елементів пропустити
+        in: query
+        name: offset
+        required: false
+        schema:
+          type: string
+          minimum: 0
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OffsetPageOrganization"
+          description: Сторінка організацій
+        "400":
+          $ref: "#/components/responses/BadRequest"
+      summary: Список організацій
+      tags:
+      - Organizations
+    post:
+      description: Лише суперадмін. Slug має бути унікальним.
+      operationId: createOrganization
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationCreateRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Organization"
+          description: Організацію створено
+          headers:
+            Location:
+              description: URL нової організації
+              schema:
+                type: string
+                format: uri
+              style: simple
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Створити організацію
+      tags:
+      - Organizations
+  /api/v1/organizations/{organizationId}:
+    delete:
+      description: Лише суперадмін. Разом з організацією видаляються її події.
+      operationId: deleteOrganization
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Організацію видалено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Видалити організацію
+      tags:
+      - Organizations
+    get:
+      description: Публічна (доступна гостям).
+      operationId: getOrganization
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Organization"
+          description: Організацію знайдено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      summary: Організація за ідентифікатором
+      tags:
+      - Organizations
+    patch:
+      description: Суперадмін або голова цієї організації. Змінюються лише передані
+        поля.
+      operationId: updateOrganization
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationUpdateRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Organization"
+          description: Оновлену організацію повернуто
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Частково оновити організацію
+      tags:
+      - Organizations
+components:
+  responses:
+    BadRequest:
+      content:
+        application/json:
+          example:
+            error:
+              code: VALIDATION_ERROR
+              details:
+              - field: slug
+                message: "Slug: 3–50 символів, лише a-z, 0-9 і дефіс"
+                providedValue: Debate Club!
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#validation-error
+              message: Запит містить невалідні поля
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: "Невалідні параметри або тіло запиту (VALIDATION_ERROR, INVALID_PARAMETER,\
+        \ MALFORMED_REQUEST)"
+    Conflict:
+      content:
+        application/json:
+          example:
+            error:
+              code: SLUG_ALREADY_EXISTS
+              details:
+              - field: slug
+                message: Slug зайнятий
+                providedValue: debate-club
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#slug-already-exists
+              message: Організація з таким slug уже існує
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Конфлікт зі станом ресурсу (SLUG_ALREADY_EXISTS)
+    Forbidden:
+      content:
+        application/json:
+          example:
+            error:
+              code: FORBIDDEN
+              details: []
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#forbidden
+              message: Дія доступна лише голові цієї організації
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Роль користувача не дозволяє цю дію (FORBIDDEN)
+    NotFound:
+      content:
+        application/json:
+          example:
+            error:
+              code: ORGANIZATION_NOT_FOUND
+              details: []
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#organization-not-found
+              message: Організацію не знайдено
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Ресурс не знайдено (ORGANIZATION_NOT_FOUND)
+    Unauthorized:
+      content:
+        application/json:
+          example:
+            error:
+              code: UNAUTHORIZED
+              details: []
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#unauthorized
+              message: Потрібна автентифікація
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Відсутній або недійсний JWT (UNAUTHORIZED)
+  schemas:
+    ApiError:
+      description: "Тіло помилки: код для програми, повідомлення для людини, детал\
+        і по полях"
+      properties:
+        code:
+          type: string
+          description: Машиночитаний код помилки
+          enum:
+          - VALIDATION_ERROR
+          - INVALID_PARAMETER
+          - MALFORMED_REQUEST
+          - UNAUTHORIZED
+          - FORBIDDEN
+          - ORGANIZATION_NOT_FOUND
+          - ROUTE_NOT_FOUND
+          - METHOD_NOT_ALLOWED
+          - SLUG_ALREADY_EXISTS
+          - INTERNAL_ERROR
+          example: VALIDATION_ERROR
+        details:
+          type: array
+          description: "Порушення по конкретних полях/параметрах; порожній, якщо н\
+            е застосовно"
+          items:
+            $ref: "#/components/schemas/FieldViolation"
+        documentation:
+          type: string
+          description: Посилання на опис цього коду помилки
+          example: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#validation-error
+        message:
+          type: string
+          description: Зрозуміле людині повідомлення
+          example: Запит містить невалідні поля
+        requestId:
+          type: string
+          description: Кореляційний ідентифікатор запиту (дублюється в заголовку X-Request-Id
+            і в логах)
+          example: req_7f3a9c21d04b4e18
+      required:
+      - code
+      - message
+      - requestId
+    ErrorResponse:
+      description: Єдина обгортка для всіх помилок API
+      properties:
+        error:
+          $ref: "#/components/schemas/ApiError"
+      required:
+      - error
+    FieldViolation:
+      description: Порушення правила валідації для одного поля або параметра
+      properties:
+        field:
+          type: string
+          description: Назва поля тіла запиту або query/path-параметра
+          example: slug
+        message:
+          type: string
+          description: Що саме не так
+          example: "Slug: 3–50 символів, лише a-z, 0-9 і дефіс"
+        providedValue:
+          type: object
+          description: Передане значення (може бути відсутнє)
+          example: Debate Club!
+    OffsetPageOrganization:
+      type: object
+      description: "Сторінка результатів, пагінація зі зсувом (offset)"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Organization"
+        pagination:
+          $ref: "#/components/schemas/OffsetPagination"
+    OffsetPagination:
+      type: object
+      description: Метадані пагінації зі зсувом
+      properties:
+        hasMore:
+          type: boolean
+          description: Чи є ще елементи після цієї сторінки
+          example: true
+        limit:
+          type: integer
+          format: int32
+          example: 20
+        offset:
+          type: integer
+          format: int32
+          example: 0
+        total:
+          type: integer
+          format: int64
+          description: "Загальна кількість елементів, що відповідають фільтрам"
+          example: 42
+    Organization:
+      type: object
+      description: Student organization
+      properties:
+        contactEmail:
+          type: string
+          description: Post
+          example: fido@ukma.edu.ua
+        createdAt:
+          type: string
+          format: date-time
+          description: Час створення (ISO 8601)
+          example: 2026-09-01T10:00:00+03:00
+        description:
+          type: string
+          description: Activity description
+          example: Жоско прогаєм
+        id:
+          type: string
+          format: uuid
+          description: ID
+          example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        instagramHandle:
+          type: string
+          description: Instagram-account without @
+          example: fido_naukma
+        name:
+          type: string
+          description: Name
+          example: FIdo
+        slug:
+          type: string
+          description: Unique readable ID for URL
+          example: fido
+        updatedAt:
+          type: string
+          format: date-time
+          description: Час останньої зміни (ISO 8601)
+          example: 2026-09-15T12:30:00+03:00
+      required:
+      - createdAt
+      - id
+      - name
+      - slug
+      - updatedAt
+    OrganizationCreateRequest:
+      type: object
+      description: Дані для створення організації (лише суперадмін)
+      properties:
+        contactEmail:
+          type: string
+          format: email
+          description: Контактна пошта
+          example: fido@ukma.edu.ua
+        description:
+          type: string
+          description: Опис діяльності
+          example: жоско кодім
+          maxLength: 2000
+          minLength: 0
+        instagramHandle:
+          type: string
+          description: Instagram-акаунт без @
+          example: fido_naukma
+          pattern: "^[A-Za-z0-9._]{1,30}$"
+        name:
+          type: string
+          description: Назва
+          example: FIdo
+          maxLength: 100
+          minLength: 3
+        slug:
+          type: string
+          description: "Унікальний slug: a-z, 0-9, дефіс між словами"
+          example: fido
+          maxLength: 50
+          minLength: 3
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+      required:
+      - name
+      - slug
+    OrganizationUpdateRequest:
+      type: object
+      description: "Часткове оновлення організації: передавайте лише поля, які змі\
+        нюються; відсутнє або null поле не змінюється"
+      properties:
+        contactEmail:
+          type: string
+          format: email
+          description: Контактна пошта
+          example: debate@ukma.edu.ua
+        description:
+          type: string
+          description: Опис діяльності
+          maxLength: 2000
+          minLength: 0
+        instagramHandle:
+          type: string
+          description: Instagram-акаунт без @
+          example: ukma.debate
+          pattern: "^[A-Za-z0-9._]{1,30}$"
+        name:
+          type: string
+          description: Назва
+          example: Debate Club NaUKMA
+          maxLength: 100
+          minLength: 3
+        slug:
+          type: string
+          description: Унікальний slug
+          example: debate-club
+          maxLength: 50
+          minLength: 3
+          pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+  securitySchemes:
+    bearerAuth:
+      bearerFormat: JWT
+      description: JWT власного AuthZ-сервісу (заплановано; у заглушках не перевіряється)
+      scheme: bearer
+      type: http
