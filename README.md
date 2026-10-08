@@ -105,8 +105,12 @@ Swagger UI: http://localhost:8080/swagger-ui.html
 
 Команда на час генерації піднімає застосунок на порту 8080, тож зупиніть `docker compose` перед запуском. Workflow **API Docs** на кожному PR перегенеровує специфікацію і падає, якщо закомічений файл застарів або невалідний.
 
+Статична сторінка в репо: [docs/api/index.html](docs/api/index.html). Локально: `cd docs/api && npx --yes serve -p 5500`.
+
 ## Документи
 
 - [Project-Description.md](Project-Description.md): опис проєкту, ролі, функції, міні-ТЗ
 - [TeamCharter.md](TeamCharter.md): командний статут
 - [docs/issue-workflow.md](docs/issue-workflow.md): робочий процес задач і мітки
+- [docs/api/api-design.md](docs/api/api-design.md): проєктування API
+- [docs/api/quality-attributes.md](docs/api/quality-attributes.md): атрибути якості API
