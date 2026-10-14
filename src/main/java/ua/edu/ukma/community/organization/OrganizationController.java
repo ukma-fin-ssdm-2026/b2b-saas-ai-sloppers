@@ -54,12 +54,14 @@ public class OrganizationController {
             @RequestParam(name = "q", required = false)
             @Size(max = 100, message = "Пошуковий запит: не довше 100 символів") String q,
 
-            @Parameter(description = "Розмір сторінки, 1–100", schema = @Schema(defaultValue = "20", minimum = "1", maximum = "100"))
+            @Parameter(description = "Розмір сторінки, 1–100",
+                    schema = @Schema(defaultValue = "20", minimum = "1", maximum = "100"))
             @RequestParam(name = "limit", defaultValue = "20")
             @Min(value = 1, message = "limit має бути ≥ 1")
             @Max(value = 100, message = "limit має бути ≤ 100") int limit,
 
-            @Parameter(description = "Скільки елементів пропустити", schema = @Schema(defaultValue = "0", minimum = "0"))
+            @Parameter(description = "Скільки елементів пропустити",
+                    schema = @Schema(defaultValue = "0", minimum = "0"))
             @RequestParam(name = "offset", defaultValue = "0")
             @Min(value = 0, message = "offset має бути ≥ 0") int offset) {
         return organizations.list(q, limit, offset);
