@@ -93,7 +93,6 @@
                     <threshold>Low</threshold>
                     <failOnError>false</failOnError>
                     <includeTests>true</includeTests>
-                    <excludeFilterFile>config/quality/spotbugs-exclude.xml</excludeFilterFile>
                     <plugins>
                         <plugin>
                             <groupId>com.h3xstream.findsecbugs</groupId>
