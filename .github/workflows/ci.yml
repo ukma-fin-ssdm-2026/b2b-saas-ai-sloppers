@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - add-ci-and-local-tools
   pull_request:
     branches:
       - main
@@ -33,9 +32,9 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # compile + unit tests + package the Spring Boot jar
+      # compile + unit tests + package the Spring Boot jar; linters run in lint.yml
       - name: Build and test with Maven
-        run: ./mvnw -B -ntp verify
+        run: ./mvnw -B -ntp verify -Dcheckstyle.skip -Dspotbugs.skip
 
       - name: Upload test reports
         if: failure()
@@ -50,5 +49,40 @@ jobs:
         with:
           name: backend-jar
           path: target/*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: web-src
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web-src/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # tsc -b (type check) + vite build
+      - name: Build
+        run: npm run build
+
+      - name: Upload frontend build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: web-src/dist/
           if-no-files-found: error
           retention-days: 7

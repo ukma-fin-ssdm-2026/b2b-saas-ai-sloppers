@@ -1,7 +1,5 @@
 # b2b-saas-ai-sloppers
 
-[![Mock CI Pipeline](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/mock-ci.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/mock-ci.yml)
-
 **Платформа для студентських організацій**: єдиний каталог організацій і подій,
 автоматичний збір анонсів із соцмереж організацій з подальшою модерацією координатором,
 експорт подій у календар та дошка пропозицій для пошуку команди чи компанії.
