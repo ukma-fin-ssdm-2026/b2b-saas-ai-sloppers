@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 import ua.edu.ukma.community.common.error.ErrorResponse;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 
@@ -97,7 +98,7 @@ public class OpenApiConfig {
         error.put("details", details);
         error.put("requestId", "req_7f3a9c21d04b4e18");
         error.put("documentation", "https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#"
-                + code.toLowerCase().replace('_', '-'));
+                + code.toLowerCase(Locale.ROOT).replace('_', '-'));
         return Map.of("error", error);
     }
 }

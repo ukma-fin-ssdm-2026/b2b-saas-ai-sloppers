@@ -2,6 +2,8 @@ package ua.edu.ukma.community.common.error;
 
 import org.springframework.http.HttpStatus;
 
+import java.util.Locale;
+
 
 public enum ErrorCode {
     VALIDATION_ERROR(HttpStatus.BAD_REQUEST),
@@ -28,6 +30,6 @@ public enum ErrorCode {
     }
 
     public String anchor() {
-        return name().toLowerCase().replace('_', '-');
+        return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 }
