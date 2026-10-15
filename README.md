@@ -1,7 +1,5 @@
 # b2b-saas-ai-sloppers
 
-[![Mock CI Pipeline](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/mock-ci.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/mock-ci.yml)
-
 **Платформа для студентських організацій**: єдиний каталог організацій і подій,
 автоматичний збір анонсів із соцмереж організацій з подальшою модерацією координатором,
 експорт подій у календар та дошка пропозицій для пошуку команди чи компанії.
@@ -66,7 +64,7 @@
 ├── src/                   # backend (Spring Boot)
 │   └── main/docker/       # Dockerfile образу backend
 ├── web-src/               # frontend (React + Vite)
-├── docker-compose.yml     # локальне оточення: db + migrate + backend
+├── docker-compose.yml     # локальне оточення: db + migrate + backend + frontend
 ├── Project-Description.md
 ├── TeamCharter.md
 └── README.md
@@ -76,9 +74,11 @@
 
 React-клієнт у [`web-src/`](web-src/). Інструкції: [`web-src/README.md`](web-src/README.md).
 
+Зібраний фронтенд піднімається разом з усім оточенням через `docker compose up --build` (див. [Запуск](#запуск)). Для розробки з hot reload:
+
 ```bash
-# 1) backend
-docker compose up --build
+# 1) backend (разом із db і migrate), без контейнера frontend
+docker compose up --build backend
 
 # 2) frontend (інший термінал)
 cd web-src
@@ -96,13 +96,14 @@ UI: http://localhost:5173 — запити `/api/*` проксуються на 
 docker compose up --build
 ```
 
-Піднімаються три сервіси:
+Піднімаються чотири сервіси:
 
 | Сервіс    | Що робить                                                             | Адреса                                |
 | --------- | --------------------------------------------------------------------- | ------------------------------------- |
 | `db`      | PostgreSQL 17                                                         | `localhost:5432`, `community/community` |
 | `migrate` | Flyway: накочує `infra/migrations/` і завершується                    | —                                     |
 | `backend` | Spring Boot API, стартує лише після успішних міграцій                 | http://localhost:8080/api/v1          |
+| `frontend`| React-збірка за nginx; `/api/*` проксує на `backend`                  | http://localhost:3000                 |
 
 Swagger UI: http://localhost:8080/swagger-ui.html
 

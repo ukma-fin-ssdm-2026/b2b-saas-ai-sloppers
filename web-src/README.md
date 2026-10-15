@@ -20,6 +20,8 @@ Vite проксує `/api` -> `http://localhost:8080`, тож у коді вик
 
 **Без бекенда сторінка покаже помилку завантаження списку**
 
+Зібрану версію (nginx, без hot reload) можна підняти з кореня репозиторію: `docker compose up --build`, адреса http://localhost:3000. Образ описано в [`Dockerfile`](Dockerfile), конфіг nginx — у [`docker/nginx.conf`](docker/nginx.conf).
+
 ## Скрипти
 
 | Команда           | Опис                                   |
