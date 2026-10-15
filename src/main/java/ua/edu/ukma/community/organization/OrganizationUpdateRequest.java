@@ -5,7 +5,9 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-@Schema(description = "Часткове оновлення організації: передавайте лише поля, які змінюються; відсутнє або null поле не змінюється")
+
+@Schema(description = "Часткове оновлення організації: передавайте лише поля, які змінюються; "
+        + "відсутнє або null поле не змінюється")
 public record OrganizationUpdateRequest(
         @Schema(description = "Назва", example = "Debate Club NaUKMA")
         @Size(min = 3, max = 100, message = "Назва: від 3 до 100 символів")
@@ -26,6 +28,9 @@ public record OrganizationUpdateRequest(
 
         @Schema(description = "Контактна пошта", example = "debate@ukma.edu.ua")
         @Email(message = "Некоректна адреса пошти")
-        String contactEmail
+        String contactEmail,
+
+        @Schema(description = "Увімкнути або вимкнути автопублікацію спаршених подій (FR-029)", example = "true")
+        Boolean autoPublish
 ) {
 }

@@ -48,7 +48,7 @@
 | ----------- | ----------------------------- |
 | Backend     | Java 21, Spring Boot, Maven   |
 | База даних  | PostgreSQL                    |
-| Frontend    | React                         |
+| Frontend    | React, TypeScript, Vite (`web-src/`) |
 | CI          | GitHub Actions                |
 | Розгортання | Docker, Minikube (Kubernetes) |
 
@@ -65,11 +65,28 @@
 │   └── migrations/        # SQL-міграції схеми БД (Flyway)
 ├── src/                   # backend (Spring Boot)
 │   └── main/docker/       # Dockerfile образу backend
+├── web-src/               # frontend (React + Vite)
 ├── docker-compose.yml     # локальне оточення: db + migrate + backend
 ├── Project-Description.md
 ├── TeamCharter.md
 └── README.md
 ```
+
+## Frontend
+
+React-клієнт у [`web-src/`](web-src/). Інструкції: [`web-src/README.md`](web-src/README.md).
+
+```bash
+# 1) backend
+docker compose up --build
+
+# 2) frontend (інший термінал)
+cd web-src
+npm install
+npm run dev
+```
+
+UI: http://localhost:5173 — запити `/api/*` проксуються на backend `:8080`.
 
 ## Запуск
 
@@ -114,3 +131,4 @@ Swagger UI: http://localhost:8080/swagger-ui.html
 - [docs/issue-workflow.md](docs/issue-workflow.md): робочий процес задач і мітки
 - [docs/api/api-design.md](docs/api/api-design.md): проєктування API
 - [docs/api/quality-attributes.md](docs/api/quality-attributes.md): атрибути якості API
+- [docs/code-quality/progress.md](docs/code-quality/progress.md): прогрес реалізації (Lab 5)

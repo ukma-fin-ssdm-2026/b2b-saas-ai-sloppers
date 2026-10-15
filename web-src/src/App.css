@@ -1,0 +1,13 @@
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-main {
+  min-height: 100vh;
+  opacity: 0;
+  transition: opacity 0.85s ease;
+}
+
+.app-main--visible {
+  opacity: 1;
+}
