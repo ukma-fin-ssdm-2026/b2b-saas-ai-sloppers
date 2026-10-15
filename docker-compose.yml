@@ -46,5 +46,14 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # static bundle behind nginx; /api is proxied to backend
+  frontend:
+    build:
+      context: ./web-src
+    ports:
+      - "3000:8080"
+    depends_on:
+      - backend
+
 volumes:
   db-data:

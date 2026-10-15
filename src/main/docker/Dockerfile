@@ -8,8 +8,8 @@ COPY .mvn/ .mvn/
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -ntp dependency:go-offline
 
 COPY src/ src/
-# tests run in CI, the image only packages the jar
-RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -ntp package -DskipTests
+# tests and linters run in CI, the image only packages the jar
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -ntp package -DskipTests -Dcheckstyle.skip -Dspotbugs.skip
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
