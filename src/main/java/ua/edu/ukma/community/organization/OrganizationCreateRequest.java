@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 
 @Schema(description = "Дані для створення організації (лише суперадмін)")
 public record OrganizationCreateRequest(
-        @Schema(description = "Назва", example = "FIdo")
+        @Schema(description = "Назва", example = "FIDo")
         @NotBlank(message = "Назва обов'язкова")
         @Size(min = 3, max = 100, message = "Назва: від 3 до 100 символів")
         String name,
@@ -19,7 +19,7 @@ public record OrganizationCreateRequest(
         @Pattern(regexp = OrganizationRules.SLUG_REGEX, message = OrganizationRules.SLUG_MESSAGE)
         String slug,
 
-        @Schema(description = "Опис діяльності", example = "жоско кодім")
+        @Schema(description = "Опис діяльності", example = "Студентська IT-спільнота: хакатони та лекції")
         @Size(max = 2000, message = "Опис: не довше 2000 символів")
         String description,
 
