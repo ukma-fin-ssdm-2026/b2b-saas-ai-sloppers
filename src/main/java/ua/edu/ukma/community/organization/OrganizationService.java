@@ -1,18 +1,19 @@
 package ua.edu.ukma.community.organization;
 
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.stereotype.Service;
-import ua.edu.ukma.community.common.error.ApiException;
-import ua.edu.ukma.community.common.error.ErrorCode;
-import ua.edu.ukma.community.common.error.FieldViolation;
-import ua.edu.ukma.community.common.pagination.OffsetPage;
-
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
+
+import ua.edu.ukma.community.common.error.ApiException;
+import ua.edu.ukma.community.common.error.ErrorCode;
+import ua.edu.ukma.community.common.error.FieldViolation;
+import ua.edu.ukma.community.common.pagination.OffsetPage;
 
 
 @Service
