@@ -1,18 +1,19 @@
 package ua.edu.ukma.community.organization;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class InstagramHandleTest {
 
-    @Test
-    void stripsLeadingAt() {
-        assertEquals("fido_naukma", InstagramHandle.normalize("@fido_naukma"));
-    }
-
-    @Test
-    void trimsAndLowercases() {
-        assertEquals("fido_naukma", InstagramHandle.normalize("  @FIdo_NaUKMA "));
+    @ParameterizedTest(name = "[{0}] -> {1}")
+    @CsvSource({
+            "fido_naukma, fido_naukma",
+            "@fido_naukma, fido_naukma",
+            "'  @FIdo_NaUKMA ', fido_naukma"
+    })
+    void normalizesHandle(String raw, String expected) {
+        assertEquals(expected, InstagramHandle.normalize(raw));
     }
 }
