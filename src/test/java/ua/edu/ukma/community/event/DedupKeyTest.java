@@ -25,4 +25,12 @@ class DedupKeyTest {
 
         assertThat(lower).isEqualTo(upper);
     }
+
+    @Test
+    void emojiAndPunctuationDoNotAffectKey() {
+        String plain = DedupKey.of("Дебатний турнір", START);
+        String decorated = DedupKey.of("🔥 Дебатний турнір!!! 🔥", START);
+
+        assertThat(plain).isEqualTo(decorated);
+    }
 }
