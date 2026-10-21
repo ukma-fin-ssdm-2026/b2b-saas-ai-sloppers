@@ -1,6 +1,7 @@
 package ua.edu.ukma.community.event;
 
 import java.time.OffsetDateTime;
+import java.util.Locale;
 
 public final class DedupKey {
 
@@ -8,6 +9,6 @@ public final class DedupKey {
     }
 
     public static String of(String title, OffsetDateTime startsAt) {
-        return title + "|" + startsAt;
+        return title.toLowerCase(Locale.ROOT) + "|" + startsAt;
     }
 }
