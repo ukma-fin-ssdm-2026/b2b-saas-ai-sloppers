@@ -110,6 +110,17 @@ class OrganizationServiceTest {
     }
 
     @Nested
+    @DisplayName("getBySlug")
+    class GetBySlug {
+
+        @Test
+        @DisplayName("знаходить організацію за slug")
+        void returnsOrganizationBySlug() {
+            assertThat(service.getBySlug("debate-club")).isEqualTo(debate);
+        }
+    }
+
+    @Nested
     @DisplayName("create")
     class Create {
 
