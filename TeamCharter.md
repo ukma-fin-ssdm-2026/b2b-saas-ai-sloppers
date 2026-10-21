@@ -71,7 +71,8 @@
 | --- | --- | --- |
 | Checkstyle | стиль Java-коду | `lint.yml` (Lint Backend), локально `./mvnw checkstyle:check` |
 | SpotBugs + find-sec-bugs | дефекти й вразливості Java-коду | `lint.yml` (Lint Backend), локально `./mvnw verify` |
-| JUnit | тести бекенду | `ci.yml` (Build and Test Backend), локально `./mvnw verify` |
+| JUnit | тести бекенду | `ci.yml` (Build and Test Backend), локально `./mvnw test` |
+| JaCoCo | покриття тестами бекенду, поріг 5% рядків (тимчасовий) | `ci.yml` (Build and Test Backend, Summary + артефакт `test-reports`), локально `./mvnw test` |
 | TypeScript (`tsc`) | типи фронтенду | `ci.yml` (Build Frontend), локально `npm run build` |
 | ESLint + eslint-plugin-security | помилки й небезпечні патерни у фронтенді | `lint.yml` (Lint Frontend), локально `npm run lint` |
 | Prettier | форматування фронтенду | `lint.yml` (Lint Frontend), локально `npm run format:check` |
