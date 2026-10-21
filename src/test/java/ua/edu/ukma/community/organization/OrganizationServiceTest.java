@@ -116,8 +116,20 @@ class OrganizationServiceTest {
         @Test
         @DisplayName("знаходить організацію за slug")
         void returnsOrganizationBySlug() {
-             when(repository.findBySlug("debate-club")).thenReturn(Optional.of(debate));
+            when(repository.findBySlug("debate-club")).thenReturn(Optional.of(debate));
             assertThat(service.getBySlug("debate-club")).isEqualTo(debate);
+        }
+
+        @Test
+        @DisplayName("знаходить організацію за slug")
+        void throwsNotFound() {
+            String missing = "debate-club";
+            when(repository.findBySlug(missing)).thenReturn(Optional.of(debate));
+
+            assertThatThrownBy(() -> service.getBySlug(missing))
+                    .isInstanceOfSatisfying(ApiException.class,
+                            ex -> assertThat(ex.code()).isEqualTo(ErrorCode.ORGANIZATION_NOT_FOUND))
+                    .hasMessageContaining(missing);
         }
     }
 
