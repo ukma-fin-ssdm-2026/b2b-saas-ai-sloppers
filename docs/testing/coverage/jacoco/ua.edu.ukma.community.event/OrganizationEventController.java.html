@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrganizationEventController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.event</a> &gt; <span class="el_source">OrganizationEventController.java</span></div><h1>OrganizationEventController.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.event;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import ua.edu.ukma.community.common.ApiPaths;
+import ua.edu.ukma.community.common.pagination.OffsetPage;
+import ua.edu.ukma.community.config.OpenApiConfig;
+
+import java.net.URI;
+import java.util.UUID;
+
+
+@RestController
+@RequestMapping(ApiPaths.V1 + &quot;/organizations/{organizationId}/events&quot;)
+@Tag(name = &quot;Events&quot;)
+public class OrganizationEventController {
+
+    private static final String ORG_ID_EXAMPLE = &quot;3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60&quot;;
+
+    private final EventService events;
+
+<span class="nc" id="L33">    public OrganizationEventController(EventService events) {</span>
+<span class="nc" id="L34">        this.events = events;</span>
+<span class="nc" id="L35">    }</span>
+
+    @GetMapping
+    @SecurityRequirement(name = OpenApiConfig.BEARER)
+    @Operation(operationId = &quot;listOrganizationEvents&quot;, summary = &quot;Події організації для голови&quot;,
+            description = &quot;Голова організації. Усі статуси; status=PENDING — черга модерації (FR-033), &quot;
+                    + &quot;verified=false — автоопубліковані, ще не переглянуті (FR-032).&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Сторінка подій організації&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = &quot;401&quot;, ref = OpenApiConfig.UNAUTHORIZED)
+    @ApiResponse(responseCode = &quot;403&quot;, ref = OpenApiConfig.FORBIDDEN)
+    @ApiResponse(responseCode = &quot;404&quot;, ref = OpenApiConfig.NOT_FOUND)
+    public OffsetPage&lt;EventResponse&gt; listOrganizationEvents(
+            @Parameter(description = &quot;Ідентифікатор організації (UUID)&quot;, example = ORG_ID_EXAMPLE)
+            @PathVariable(&quot;organizationId&quot;) UUID organizationId,
+
+            @Parameter(description = &quot;Фільтр за статусом&quot;, example = &quot;PENDING&quot;)
+            @RequestParam(name = &quot;status&quot;, required = false) EventStatus status,
+
+            @Parameter(description = &quot;Фільтр за ознакою перевірки головою&quot;, example = &quot;false&quot;)
+            @RequestParam(name = &quot;verified&quot;, required = false) Boolean verified,
+
+            @Parameter(description = &quot;Розмір сторінки, 1–100&quot;,
+                    schema = @Schema(defaultValue = &quot;20&quot;, minimum = &quot;1&quot;, maximum = &quot;100&quot;))
+            @RequestParam(name = &quot;limit&quot;, defaultValue = &quot;20&quot;)
+            @Min(value = 1, message = &quot;limit має бути ≥ 1&quot;)
+            @Max(value = 100, message = &quot;limit має бути ≤ 100&quot;) int limit,
+
+            @Parameter(description = &quot;Скільки елементів пропустити&quot;,
+                    schema = @Schema(defaultValue = &quot;0&quot;, minimum = &quot;0&quot;))
+            @RequestParam(name = &quot;offset&quot;, defaultValue = &quot;0&quot;)
+            @Min(value = 0, message = &quot;offset має бути ≥ 0&quot;) int offset) {
+<span class="nc" id="L67">        return events.listForOrganization(organizationId, status, verified, limit, offset).map(EventResponse::from);</span>
+    }
+
+    @PostMapping
+    @SecurityRequirement(name = OpenApiConfig.BEARER)
+    @Operation(operationId = &quot;createEvent&quot;, summary = &quot;Створити подію вручну&quot;,
+            description = &quot;Голова організації (FR-037). Подія публікується одразу.&quot;)
+    @ApiResponse(responseCode = &quot;201&quot;, description = &quot;Подію створено&quot;,
+            headers = @Header(name = &quot;Location&quot;, description = &quot;URL нової події&quot;,
+                    schema = @Schema(type = &quot;string&quot;, format = &quot;uri&quot;)))
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = &quot;401&quot;, ref = OpenApiConfig.UNAUTHORIZED)
+    @ApiResponse(responseCode = &quot;403&quot;, ref = OpenApiConfig.FORBIDDEN)
+    @ApiResponse(responseCode = &quot;404&quot;, ref = OpenApiConfig.NOT_FOUND)
+    public ResponseEntity&lt;EventResponse&gt; createEvent(
+            @Parameter(description = &quot;Ідентифікатор організації (UUID)&quot;, example = ORG_ID_EXAMPLE)
+            @PathVariable(&quot;organizationId&quot;) UUID organizationId,
+            @Valid @RequestBody EventCreateRequest request) {
+<span class="nc" id="L85">        Event created = events.create(organizationId, request);</span>
+<span class="nc" id="L86">        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()</span>
+<span class="nc" id="L87">                .path(ApiPaths.V1 + &quot;/events/{id}&quot;).buildAndExpand(created.id()).toUri();</span>
+<span class="nc" id="L88">        return ResponseEntity.created(location).body(EventResponse.from(created));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

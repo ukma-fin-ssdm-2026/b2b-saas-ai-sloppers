@@ -24,6 +24,7 @@
         <checkstyle.version>10.20.1</checkstyle.version>
         <spotbugs-plugin.version>4.8.6.6</spotbugs-plugin.version>
         <findsecbugs.version>1.13.0</findsecbugs.version>
+        <jacoco.version>0.8.13</jacoco.version>
     </properties>
 
     <dependencies>
@@ -52,6 +53,35 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- Покриття тестами: ./mvnw test → target/site/jacoco/index.html -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <configuration>
+                    <excludes>
+                        <!-- точка входу та конфігурація OpenAPI не містять логіки -->
+                        <exclude>ua/edu/ukma/community/AiSlopStudentCommunityApplication.class</exclude>
+                        <exclude>ua/edu/ukma/community/config/OpenApiConfig*.class</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>jacoco-prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>jacoco-report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <plugin>

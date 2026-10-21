@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GlobalExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.common.error</a> &gt; <span class="el_source">GlobalExceptionHandler.java</span></div><h1>GlobalExceptionHandler.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.common.error;
+
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.exc.MismatchedInputException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
+import org.springframework.core.MethodParameter;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.method.ParameterErrors;
+import org.springframework.validation.method.ParameterValidationResult;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+
+@RestControllerAdvice
+<span class="nc" id="L31">public class GlobalExceptionHandler {</span>
+
+<span class="nc" id="L33">    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);</span>
+
+    private static final String DOCS_BASE_URL = &quot;https://ukma-fin-ssdm-2026.github.io/b2b-saas-ai-sloppers/api/errors&quot;;
+
+    @ExceptionHandler(ApiException.class)
+    ResponseEntity&lt;ErrorResponse&gt; handleApi(ApiException ex) {
+<span class="nc" id="L39">        return build(ex.code(), ex.getMessage(), ex.details());</span>
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    ResponseEntity&lt;ErrorResponse&gt; handleBodyValidation(MethodArgumentNotValidException ex) {
+<span class="nc" id="L44">        List&lt;FieldViolation&gt; details = ex.getBindingResult().getFieldErrors().stream()</span>
+<span class="nc" id="L45">                .map(fe -&gt; new FieldViolation(fe.getField(), fe.getDefaultMessage(), fe.getRejectedValue()))</span>
+<span class="nc" id="L46">                .collect(Collectors.toCollection(ArrayList::new));</span>
+<span class="nc" id="L47">        ex.getBindingResult().getGlobalErrors()</span>
+<span class="nc" id="L48">                .forEach(ge -&gt; details.add(new FieldViolation(ge.getObjectName(), ge.getDefaultMessage(), null)));</span>
+<span class="nc" id="L49">        return build(ErrorCode.VALIDATION_ERROR, &quot;Запит містить невалідні поля&quot;, details);</span>
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    ResponseEntity&lt;ErrorResponse&gt; handleParamValidation(HandlerMethodValidationException ex) {
+<span class="nc" id="L54">        List&lt;FieldViolation&gt; details = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">        for (ParameterValidationResult result : ex.getParameterValidationResults()) {</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">            if (result instanceof ParameterErrors errors) {</span>
+<span class="nc" id="L57">                errors.getFieldErrors().forEach(fe -&gt;</span>
+<span class="nc" id="L58">                        details.add(new FieldViolation(fe.getField(), fe.getDefaultMessage(), fe.getRejectedValue())));</span>
+            } else {
+<span class="nc" id="L60">                String name = parameterName(result.getMethodParameter());</span>
+<span class="nc" id="L61">                result.getResolvableErrors().forEach(err -&gt;</span>
+<span class="nc" id="L62">                        details.add(new FieldViolation(name, err.getDefaultMessage(), result.getArgument())));</span>
+            }
+<span class="nc" id="L64">        }</span>
+<span class="nc" id="L65">        return build(ErrorCode.VALIDATION_ERROR, &quot;Запит містить невалідні параметри&quot;, details);</span>
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity&lt;ErrorResponse&gt; handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+<span class="nc bnc" id="L70" title="All 2 branches missed.">        String expected = ex.getRequiredType() == null ? &quot;інший тип&quot; : ex.getRequiredType().getSimpleName();</span>
+<span class="nc" id="L71">        return build(ErrorCode.INVALID_PARAMETER, &quot;Невалідний параметр запиту&quot;,</span>
+<span class="nc" id="L72">                List.of(new FieldViolation(ex.getName(), &quot;Очікується значення типу &quot; + expected, ex.getValue())));</span>
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    ResponseEntity&lt;ErrorResponse&gt; handleMissingParam(MissingServletRequestParameterException ex) {
+<span class="nc" id="L77">        return build(ErrorCode.INVALID_PARAMETER, &quot;Бракує обов'язкового параметра&quot;,</span>
+<span class="nc" id="L78">                List.of(new FieldViolation(ex.getParameterName(), &quot;Параметр обов'язковий&quot;, null)));</span>
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity&lt;ErrorResponse&gt; handleUnreadable(HttpMessageNotReadableException ex) {
+<span class="nc bnc" id="L83" title="All 4 branches missed.">        if (ex.getCause() instanceof MismatchedInputException mie &amp;&amp; !mie.getPath().isEmpty()) {</span>
+<span class="nc" id="L84">            String field = mie.getPath().stream()</span>
+<span class="nc" id="L85">                    .map(JsonMappingException.Reference::getFieldName)</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">                    .filter(n -&gt; n != null)</span>
+<span class="nc" id="L87">                    .collect(Collectors.joining(&quot;.&quot;));</span>
+<span class="nc" id="L88">            return build(ErrorCode.MALFORMED_REQUEST, &quot;Тіло запиту не відповідає схемі&quot;,</span>
+<span class="nc" id="L89">                    List.of(new FieldViolation(field, &quot;Неправильний тип або формат значення&quot;, null)));</span>
+        }
+<span class="nc" id="L91">        return build(ErrorCode.MALFORMED_REQUEST, &quot;Тіло запиту відсутнє або не є коректним JSON&quot;, List.of());</span>
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    ResponseEntity&lt;ErrorResponse&gt; handleNoRoute(NoResourceFoundException ex) {
+<span class="nc" id="L96">        return build(ErrorCode.ROUTE_NOT_FOUND, &quot;Кінцевої точки &quot; + ex.getResourcePath() + &quot; не існує&quot;, List.of());</span>
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    ResponseEntity&lt;ErrorResponse&gt; handleMethod(HttpRequestMethodNotSupportedException ex) {
+<span class="nc" id="L101">        return build(ErrorCode.METHOD_NOT_ALLOWED, &quot;Метод &quot; + ex.getMethod() + &quot; не підтримується для цього ресурсу&quot;, List.of());</span>
+    }
+
+    @ExceptionHandler(Exception.class)
+    ResponseEntity&lt;ErrorResponse&gt; handleUnexpected(Exception ex) {
+<span class="nc" id="L106">        log.error(&quot;Unhandled exception&quot;, ex);</span>
+<span class="nc" id="L107">        return build(ErrorCode.INTERNAL_ERROR, &quot;Внутрішня помилка сервера. Повідомте request_id підтримці&quot;, List.of());</span>
+    }
+
+    private ResponseEntity&lt;ErrorResponse&gt; build(ErrorCode code, String message, List&lt;FieldViolation&gt; details) {
+        // Якщо в команді є фільтр кореляційного ідентифікатора, він кладе requestId у MDC
+<span class="nc" id="L112">        String requestId = MDC.get(&quot;requestId&quot;);</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        if (requestId == null) {</span>
+<span class="nc" id="L114">            requestId = &quot;req_&quot; + UUID.randomUUID().toString().replace(&quot;-&quot;, &quot;&quot;).substring(0, 16);</span>
+        }
+<span class="nc" id="L116">        ApiError body = new ApiError(code, message, details, requestId, DOCS_BASE_URL + &quot;#&quot; + code.anchor());</span>
+<span class="nc" id="L117">        return ResponseEntity.status(code.status()).body(new ErrorResponse(body));</span>
+    }
+
+    private static String parameterName(MethodParameter p) {
+<span class="nc" id="L121">        RequestParam rp = p.getParameterAnnotation(RequestParam.class);</span>
+<span class="nc bnc" id="L122" title="All 4 branches missed.">        if (rp != null &amp;&amp; !rp.name().isBlank()) return rp.name();</span>
+<span class="nc" id="L123">        PathVariable pv = p.getParameterAnnotation(PathVariable.class);</span>
+<span class="nc bnc" id="L124" title="All 4 branches missed.">        if (pv != null &amp;&amp; !pv.name().isBlank()) return pv.name();</span>
+<span class="nc" id="L125">        return p.getParameterName();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
