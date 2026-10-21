@@ -124,7 +124,7 @@ class OrganizationServiceTest {
         @DisplayName("знаходить організацію за slug")
         void throwsNotFound() {
             String missing = "debate-club";
-            when(repository.findBySlug(missing)).thenReturn(Optional.of(debate));
+            when(repository.findBySlug(missing)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.getBySlug(missing))
                     .isInstanceOfSatisfying(ApiException.class,
