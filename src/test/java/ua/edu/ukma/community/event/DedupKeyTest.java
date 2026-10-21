@@ -33,4 +33,12 @@ class DedupKeyTest {
 
         assertThat(plain).isEqualTo(decorated);
     }
+
+    @Test
+    void startsWithinSameQuarterHourGiveSameKey() {
+        String exact = DedupKey.of("Дебатний турнір", START);
+        String sevenMinutesLater = DedupKey.of("Дебатний турнір", START.plusMinutes(7));
+
+        assertThat(exact).isEqualTo(sevenMinutesLater);
+    }
 }
