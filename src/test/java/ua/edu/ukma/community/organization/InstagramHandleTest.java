@@ -2,6 +2,8 @@ package ua.edu.ukma.community.organization;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -17,5 +19,11 @@ class InstagramHandleTest {
     })
     void normalizesHandle(String raw, String expected) {
         assertEquals(expected, InstagramHandle.normalize(raw));
+    }
+
+    @ParameterizedTest(name = "[{0}] rejected")
+    @ValueSource(strings = {"", "fido naukma", "fido-naukma"})
+    void rejectsInvalidHandle(String raw) {
+        assertThrows(IllegalArgumentException.class, () -> InstagramHandle.normalize(raw));
     }
 }
