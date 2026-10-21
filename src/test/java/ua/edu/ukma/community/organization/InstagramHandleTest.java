@@ -8,6 +8,11 @@ class InstagramHandleTest {
 
     @Test
     void stripsLeadingAt() {
-        assertEquals("fido.naukma", InstagramHandle.normalize("@fido.naukma"));
+        assertEquals("fido_naukma", InstagramHandle.normalize("@fido_naukma"));
+    }
+
+    @Test
+    void trimsAndLowercases() {
+        assertEquals("fido_naukma", InstagramHandle.normalize("  @FIdo_NaUKMA "));
     }
 }
