@@ -116,8 +116,9 @@ class OrganizationServiceTest {
         @Test
         @DisplayName("знаходить організацію за slug")
         void returnsOrganizationBySlug() {
-            when(repository.findBySlug("debate-club")).thenReturn(Optional.of(debate));
-            assertThat(service.getBySlug("debate-club")).isEqualTo(debate);
+            String missing = "debate-club";
+            when(repository.findBySlug(missing)).thenReturn(Optional.of(debate));
+            assertThat(service.getBySlug(missing)).isEqualTo(debate);
         }
 
         @Test
