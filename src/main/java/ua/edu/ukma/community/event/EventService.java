@@ -44,7 +44,7 @@ public class EventService {
         OffsetDateTime lowerBound = from != null && from.isAfter(now) ? from : now;
         List<Event> upcoming = events.findAll().stream()
                 .filter(Event::isPublished)
-                .filter(e -> e.startsAt().isAfter(lowerBound))
+                .filter(e -> !e.startsAt().isBefore(lowerBound))
                 .filter(e -> to == null || e.startsAt().isBefore(to))
                 .filter(e -> organizationId == null || organizationId.equals(e.organizationId()))
                 .sorted(BY_START)
