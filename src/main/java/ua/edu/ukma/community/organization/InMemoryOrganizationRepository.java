@@ -44,6 +44,13 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
     }
 
     @Override
+    public Optional<Organization> findBySlug(String slug) {
+        return store.values().stream()
+                .filter(o -> o.slug().equals(slug))
+                .findFirst();
+    }
+
+    @Override
     public List<Organization> findAll() {
         return List.copyOf(store.values());
     }

@@ -41,7 +41,12 @@ public class OrganizationService {
     }
 
     public Organization get(UUID id) {
-        return organizations.findById(id).orElseThrow(() -> notFound(id));
+        return organizations.findById(id).orElseThrow(() -> notFound(id.toString()));
+    }
+
+    public Organization getBySlug(String slug) {
+        String normalized = normalizeSlug(slug);
+        return organizations.findBySlug(normalized).orElseThrow(() -> notFound(normalized));
     }
 
     public boolean exists(UUID id) {
@@ -72,7 +77,7 @@ public class OrganizationService {
 
     public synchronized void delete(UUID id) {
         if (!organizations.deleteById(id)) {
-            throw notFound(id);
+            throw notFound(id.toString());
         }
         events.publishEvent(new OrganizationDeleted(id));
     }
@@ -90,7 +95,11 @@ public class OrganizationService {
         }
     }
 
-    private static ApiException notFound(UUID id) {
-        return new ApiException(ErrorCode.ORGANIZATION_NOT_FOUND, "Організацію " + id + " не знайдено");
+    private static String normalizeSlug(String slug) {
+        return slug.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static ApiException notFound(String key) {
+        return new ApiException(ErrorCode.ORGANIZATION_NOT_FOUND, "Організацію " + key + " не знайдено");
     }
 }
