@@ -15,6 +15,10 @@ final class InstagramHandle {
     static String normalize(String raw) {
         String lowered = raw.strip().toLowerCase(Locale.ROOT);
         String handle = PROFILE_URL_PREFIX.matcher(lowered).replaceFirst("").split(URL_TAIL, 2)[0];
-        return handle.startsWith("@") ? handle.substring(1) : handle;
+        String result = handle.startsWith("@") ? handle.substring(1) : handle;
+        if (!result.matches("[a-z0-9._]{1,30}")) {
+            throw new IllegalArgumentException("Некоректний Instagram-акаунт");
+        }
+        return result;
     }
 }
