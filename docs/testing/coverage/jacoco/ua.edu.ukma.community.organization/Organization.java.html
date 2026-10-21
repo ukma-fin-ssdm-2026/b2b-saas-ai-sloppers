@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Organization.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.organization</a> &gt; <span class="el_source">Organization.java</span></div><h1>Organization.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.organization;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+/**
+ * Студентська організація — ресурс каталогу (компонент C-04).
+ */
+@Schema(description = &quot;Студентська організація&quot;)
+<span class="fc" id="L12">public record Organization(</span>
+        @Schema(description = &quot;Ідентифікатор&quot;, example = &quot;3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60&quot;,
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        UUID id,
+
+        @Schema(description = &quot;Назва&quot;, example = &quot;Дебатний клуб НаУКМА&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+        String name,
+
+        @Schema(description = &quot;Унікальний людиночитаний ідентифікатор для URL&quot;, example = &quot;debate-club&quot;,
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        String slug,
+
+        @Schema(description = &quot;Опис діяльності&quot;,
+                example = &quot;Щотижневі тренування з британського парламентського формату&quot;)
+        String description,
+
+        @Schema(description = &quot;Instagram-акаунт без @, з якого скрейпер збирає події&quot;, example = &quot;ukma.debate&quot;)
+        String instagramHandle,
+
+        @Schema(description = &quot;Контактна пошта організації&quot;, example = &quot;debate@ukma.edu.ua&quot;)
+        String contactEmail,
+
+        @Schema(description = &quot;Публікувати спаршені події без модерації (FR-029); за замовчуванням вимкнено&quot;,
+                example = &quot;false&quot;, requiredMode = Schema.RequiredMode.REQUIRED)
+        boolean autoPublish,
+
+        @Schema(description = &quot;Час створення (ISO 8601)&quot;, example = &quot;2026-09-01T10:00:00+03:00&quot;,
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        OffsetDateTime createdAt,
+
+        @Schema(description = &quot;Час останньої зміни (ISO 8601)&quot;, example = &quot;2026-09-15T12:30:00+03:00&quot;,
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        OffsetDateTime updatedAt
+) {
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,60 @@
+# Модульні тести та покриття
+
+Інструменти: **JUnit 5**, **Mockito**, **AssertJ** (усі з `spring-boot-starter-test`) і **JaCoCo** для покриття.
+Тести лежать у стандартній для Maven теці [`src/test/java/`](../../src/test/java/ua/edu/ukma/community/),
+структура пакетів дзеркалить `src/main/java`.
+
+## Запуск
+
+```bash
+./mvnw test                           # усі тести + звіт JaCoCo
+open target/site/jacoco/index.html    # переглянути звіт локально
+```
+
+
+### Оновити закомічений звіт
+
+`target/` у `.gitignore`, тому знімок звіту зберігаємо в [`docs/testing/coverage/`](coverage/index.html):
+
+```bash
+./mvnw test -Dcheckstyle.skip -Dspotbugs.skip
+rm -rf docs/testing/coverage && cp -r target/site/jacoco docs/testing/coverage
+git add docs/testing/coverage
+```
+
+## Що покрито
+
+| Модуль | Тестовий клас | Що перевіряється |
+| ------ | ------------- | ---------------- |
+| `organization` | [`OrganizationServiceTest`](../../src/test/java/ua/edu/ukma/community/organization/OrganizationServiceTest.java) | пошук і сортування, створення, часткове оновлення, унікальність slug, видалення з подією-каскадом |
+| `organization` | [`InMemoryOrganizationRepositoryTest`](../../src/test/java/ua/edu/ukma/community/organization/InMemoryOrganizationRepositoryTest.java) | `existsBySlug` з виключенням, повторне видалення, пагінація поверх демо-даних |
+| `event` | [`EventServiceTest`](../../src/test/java/ua/edu/ukma/community/event/EventServiceTest.java) | дайджест (FR-038/039), ручне створення (FR-037), прийом від скрейпера й дедуплікація, модерація, каскадне видалення |
+| `event` | [`EventTest`](../../src/test/java/ua/edu/ukma/community/event/EventTest.java) | машина станів модерації (FR-032, FR-035, FR-036), часткове редагування |
+
+## Техніки
+
+**Фікстури.** [`TestFixtures`](../../src/test/java/ua/edu/ukma/community/support/TestFixtures.java) дає
+зафіксований `Clock` (21.10.2026 13:00, Київ) і фабрики `organization(...)`, `event(...)`. Завдяки
+фіксованому часу перевірки `createdAt`/`updatedAt` і меж дайджесту детерміновані. Спільний стан класу
+готується в `@BeforeEach`.
+
+**Моки (Mockito).** `OrganizationServiceTest` і `EventServiceTest` ізолюють сервіс від сховища,
+`ApplicationEventPublisher` і `OrganizationService` через `@Mock`. Перевіряємо не лише результат, а й
+взаємодії: `verify(..., never()).save(...)` після помилки, `verifyNoInteractions(...)` коли запит має
+відсіктися раніше, `ArgumentCaptor` для опублікованої події.
+
+**Заглушки (fakes/stubs).** `InMemoryOrganizationRepositoryTest` підставляє в сервіс справжнє сховище в
+пам'яті замість БД, а `ApplicationEventPublisher` — лямбду, що складає події в список.
+
+**Граничні випадки.** Подія рівно «зараз» входить у дайджест, рівно о `to` — ні; `from == to`;
+`from` у минулому; назва рівно 3/200 і 201 символ; порожня назва чи ідентифікатор поста; посилання
+не `http(s)` або з пробілом; `offset` за межами списку; повторне видалення; локаль `tr_TR`.
+Повторювані випадки оформлені як `@ParameterizedTest` (`@CsvSource`, `@EnumSource`, `@ValueSource`).
+
+## Поза обсягом
+
+Модульні тести зосереджені на модулях `organization` і `event`, де живе основна доменна логіка.
+`calendar` (експорт `.ics` і Google Calendar) окремих тестів поки не має, а `common/pagination`
+покривається опосередковано через `list`/`digest` сервісів.
+
+Текст та більшість коду тестів оформлено за допомогою Claude

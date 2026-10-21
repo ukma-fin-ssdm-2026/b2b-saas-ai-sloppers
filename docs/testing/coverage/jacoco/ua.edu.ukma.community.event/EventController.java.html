@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EventController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.event</a> &gt; <span class="el_source">EventController.java</span></div><h1>EventController.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.event;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.*;
+import ua.edu.ukma.community.common.ApiPaths;
+import ua.edu.ukma.community.common.pagination.OffsetPage;
+import ua.edu.ukma.community.config.OpenApiConfig;
+
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+
+@RestController
+@RequestMapping(ApiPaths.V1 + &quot;/events&quot;)
+@Tag(name = &quot;Events&quot;)
+public class EventController {
+
+    static final String EVENT_ID_EXAMPLE = &quot;e1000000-0000-4000-8000-000000000001&quot;;
+
+    private final EventService events;
+
+<span class="nc" id="L31">    public EventController(EventService events) {</span>
+<span class="nc" id="L32">        this.events = events;</span>
+<span class="nc" id="L33">    }</span>
+
+    @GetMapping
+    @Operation(operationId = &quot;listEvents&quot;, summary = &quot;Дайджест подій&quot;,
+            description = &quot;Публічна (доступна гостям). Лише опубліковані майбутні події, відсортовані за часом &quot;
+                    + &quot;початку (FR-038). Фільтри за організацією й діапазоном дат (FR-039). &quot;
+                    + &quot;Знак «+» у зсуві часового поясу в query потрібно кодувати як %2B або використовувати «Z».&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Сторінка подій&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    public OffsetPage&lt;EventResponse&gt; listEvents(
+            @Parameter(description = &quot;Лише події цієї організації&quot;, example = &quot;3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60&quot;)
+            @RequestParam(name = &quot;organizationId&quot;, required = false) UUID organizationId,
+
+            @Parameter(description = &quot;Початок не раніше (ISO 8601)&quot;, example = &quot;2026-10-20T00:00:00Z&quot;)
+            @RequestParam(name = &quot;from&quot;, required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime from,
+
+            @Parameter(description = &quot;Початок раніше за (ISO 8601)&quot;, example = &quot;2026-11-01T00:00:00Z&quot;)
+            @RequestParam(name = &quot;to&quot;, required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime to,
+
+            @Parameter(description = &quot;Розмір сторінки, 1–100&quot;,
+                    schema = @Schema(defaultValue = &quot;20&quot;, minimum = &quot;1&quot;, maximum = &quot;100&quot;))
+            @RequestParam(name = &quot;limit&quot;, defaultValue = &quot;20&quot;)
+            @Min(value = 1, message = &quot;limit має бути ≥ 1&quot;)
+            @Max(value = 100, message = &quot;limit має бути ≤ 100&quot;) int limit,
+
+            @Parameter(description = &quot;Скільки елементів пропустити&quot;,
+                    schema = @Schema(defaultValue = &quot;0&quot;, minimum = &quot;0&quot;))
+            @RequestParam(name = &quot;offset&quot;, defaultValue = &quot;0&quot;)
+            @Min(value = 0, message = &quot;offset має бути ≥ 0&quot;) int offset) {
+<span class="nc" id="L64">        return events.digest(organizationId, from, to, limit, offset).map(EventResponse::from);</span>
+    }
+
+    @GetMapping(&quot;/{eventId}&quot;)
+    @Operation(operationId = &quot;getEvent&quot;, summary = &quot;Деталі події&quot;,
+            description = &quot;Публічна (FR-040). Неопубліковані події повертають 404.&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Подію знайдено&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = &quot;404&quot;, ref = OpenApiConfig.NOT_FOUND)
+    public EventResponse getEvent(
+            @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
+            @PathVariable(&quot;eventId&quot;) UUID eventId) {
+<span class="nc" id="L76">        return EventResponse.from(events.getPublished(eventId));</span>
+    }
+
+    @PatchMapping(&quot;/{eventId}&quot;)
+    @SecurityRequirement(name = OpenApiConfig.BEARER)
+    @Operation(operationId = &quot;updateEvent&quot;, summary = &quot;Частково оновити подію&quot;,
+            description = &quot;Голова організації-власника. Можна редагувати до і після публікації (FR-034), &quot;
+                    + &quot;крім відхилених подій.&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Оновлену подію повернуто&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = &quot;401&quot;, ref = OpenApiConfig.UNAUTHORIZED)
+    @ApiResponse(responseCode = &quot;403&quot;, ref = OpenApiConfig.FORBIDDEN)
+    @ApiResponse(responseCode = &quot;404&quot;, ref = OpenApiConfig.NOT_FOUND)
+    @ApiResponse(responseCode = &quot;409&quot;, ref = OpenApiConfig.CONFLICT)
+    public EventResponse updateEvent(
+            @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
+            @PathVariable(&quot;eventId&quot;) UUID eventId,
+            @Valid @RequestBody EventUpdateRequest request) {
+<span class="nc" id="L94">        return EventResponse.from(events.update(eventId, request));</span>
+    }
+
+    @PostMapping(&quot;/{eventId}/approve&quot;)
+    @SecurityRequirement(name = OpenApiConfig.BEARER)
+    @Operation(operationId = &quot;approveEvent&quot;, summary = &quot;Схвалити подію&quot;,
+            description = &quot;Голова організації. PENDING або UNPUBLISHED → PUBLISHED (FR-035); для неперевіреної &quot;
+                    + &quot;автоопублікованої події позначає її переглянутою (FR-032).&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Подію опубліковано&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = &quot;401&quot;, ref = OpenApiConfig.UNAUTHORIZED)
+    @ApiResponse(responseCode = &quot;403&quot;, ref = OpenApiConfig.FORBIDDEN)
+    @ApiResponse(responseCode = &quot;404&quot;, ref = OpenApiConfig.NOT_FOUND)
+    @ApiResponse(responseCode = &quot;409&quot;, ref = OpenApiConfig.CONFLICT)
+    public EventResponse approveEvent(
+            @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
+            @PathVariable(&quot;eventId&quot;) UUID eventId) {
+<span class="nc" id="L111">        return EventResponse.from(events.approve(eventId));</span>
+    }
+
+    @PostMapping(&quot;/{eventId}/reject&quot;)
+    @SecurityRequirement(name = OpenApiConfig.BEARER)
+    @Operation(operationId = &quot;rejectEvent&quot;, summary = &quot;Відхилити подію&quot;,
+            description = &quot;Голова організації. Лише з черги модерації: PENDING → REJECTED (FR-035).&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Подію відхилено&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = &quot;401&quot;, ref = OpenApiConfig.UNAUTHORIZED)
+    @ApiResponse(responseCode = &quot;403&quot;, ref = OpenApiConfig.FORBIDDEN)
+    @ApiResponse(responseCode = &quot;404&quot;, ref = OpenApiConfig.NOT_FOUND)
+    @ApiResponse(responseCode = &quot;409&quot;, ref = OpenApiConfig.CONFLICT)
+    public EventResponse rejectEvent(
+            @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
+            @PathVariable(&quot;eventId&quot;) UUID eventId) {
+<span class="nc" id="L127">        return EventResponse.from(events.reject(eventId));</span>
+    }
+
+    @PostMapping(&quot;/{eventId}/unpublish&quot;)
+    @SecurityRequirement(name = OpenApiConfig.BEARER)
+    @Operation(operationId = &quot;unpublishEvent&quot;, summary = &quot;Зняти подію з публікації&quot;,
+            description = &quot;Голова організації. PUBLISHED → UNPUBLISHED (FR-036).&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Подію знято з публікації&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = &quot;401&quot;, ref = OpenApiConfig.UNAUTHORIZED)
+    @ApiResponse(responseCode = &quot;403&quot;, ref = OpenApiConfig.FORBIDDEN)
+    @ApiResponse(responseCode = &quot;404&quot;, ref = OpenApiConfig.NOT_FOUND)
+    @ApiResponse(responseCode = &quot;409&quot;, ref = OpenApiConfig.CONFLICT)
+    public EventResponse unpublishEvent(
+            @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
+            @PathVariable(&quot;eventId&quot;) UUID eventId) {
+<span class="nc" id="L143">        return EventResponse.from(events.unpublish(eventId));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

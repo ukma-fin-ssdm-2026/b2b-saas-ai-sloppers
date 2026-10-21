@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OffsetPage.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.common.pagination</a> &gt; <span class="el_source">OffsetPage.java</span></div><h1>OffsetPage.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.common.pagination;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.util.List;
+import java.util.function.Function;
+
+@Schema(description = &quot;Сторінка результатів, пагінація зі зсувом (offset)&quot;)
+public record OffsetPage&lt;T&gt;(
+        List&lt;T&gt; data,
+        OffsetPagination pagination
+) {
+
+<span class="fc" id="L14">    public OffsetPage {</span>
+<span class="fc" id="L15">        data = List.copyOf(data);</span>
+<span class="fc" id="L16">    }</span>
+
+    @Schema(description = &quot;Метадані пагінації зі зсувом&quot;)
+<span class="fc" id="L19">    public record OffsetPagination(</span>
+            @Schema(example = &quot;20&quot;) int limit,
+            @Schema(example = &quot;0&quot;) int offset,
+            @Schema(description = &quot;Загальна кількість елементів, що відповідають фільтрам&quot;, example = &quot;42&quot;) long total,
+            @Schema(description = &quot;Чи є ще елементи після цієї сторінки&quot;, example = &quot;true&quot;) boolean hasMore
+    ) {
+    }
+
+    public static &lt;T&gt; OffsetPage&lt;T&gt; of(List&lt;T&gt; all, int limit, int offset) {
+<span class="fc" id="L28">        int from = Math.min(offset, all.size());</span>
+<span class="fc" id="L29">        int to = (int) Math.min((long) from + limit, all.size());</span>
+<span class="fc" id="L30">        return new OffsetPage&lt;&gt;(all.subList(from, to),</span>
+<span class="pc bpc" id="L31" title="1 of 2 branches missed.">                new OffsetPagination(limit, offset, all.size(), to &lt; all.size()));</span>
+    }
+
+    public &lt;R&gt; OffsetPage&lt;R&gt; map(Function&lt;? super T, ? extends R&gt; mapper) {
+<span class="nc" id="L35">        return new OffsetPage&lt;&gt;(data.stream().&lt;R&gt;map(mapper).toList(), pagination);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
