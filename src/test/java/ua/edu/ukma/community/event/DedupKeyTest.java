@@ -17,4 +17,12 @@ class DedupKeyTest {
 
         assertThat(first).isEqualTo(second);
     }
+
+    @Test
+    void titleCaseDoesNotAffectKey() {
+        String lower = DedupKey.of("дебатний турнір", START);
+        String upper = DedupKey.of("ДЕБАТНИЙ ТУРНІР", START);
+
+        assertThat(lower).isEqualTo(upper);
+    }
 }
