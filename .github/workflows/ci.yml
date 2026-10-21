@@ -32,17 +32,58 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # compile + unit tests + package the Spring Boot jar; linters run in lint.yml
-      - name: Build and test with Maven
-        run: ./mvnw -B -ntp verify -Dcheckstyle.skip -Dspotbugs.skip
+      # linters run in lint.yml
+      - name: Compile
+        run: ./mvnw -B -ntp test-compile
+
+      # unit tests + JaCoCo report and coverage threshold (see pom.xml)
+      - name: Run backend tests
+        run: ./mvnw -B -ntp test
+
+      - name: Package
+        run: ./mvnw -B -ntp package -DskipTests -Dcheckstyle.skip -Dspotbugs.skip
+
+      - name: Test summary
+        if: always()
+        run: |
+          shopt -s nullglob
+          reports=(target/surefire-reports/TEST-*.xml)
+          {
+            echo "## Backend tests"
+            if [ ${#reports[@]} -eq 0 ]; then
+              echo "No test reports found."
+              exit 0
+            fi
+            # count elements: for @Nested classes the testsuite attributes are 0
+            count() { cat "${reports[@]}" | grep -o "<$1[ />]" | wc -l | tr -d ' '; }
+            echo "| Tests | Failures | Errors | Skipped |"
+            echo "|---|---|---|---|"
+            echo "| $(count testcase) | $(count failure) | $(count error) | $(count skipped) |"
+            if [ -f target/site/jacoco/jacoco.csv ]; then
+              # columns 8/9: LINE_MISSED, LINE_COVERED
+              LC_ALL=C awk -F, 'NR > 1 { m += $8; c += $9 } END { printf "\nLine coverage: **%.1f%%** (threshold 5%%)\n", 100 * c / (m + c) }' target/site/jacoco/jacoco.csv
+              # per class, least covered first; columns 6/7: BRANCH_MISSED, BRANCH_COVERED
+              echo
+              echo "| Class | Lines | Branches |"
+              echo "|---|---|---|"
+              LC_ALL=C awk -F, 'NR > 1 && $8 + $9 > 0 {
+                  cls = $2 "." $3; sub(/^ua\.edu\.ukma\.community\./, "", cls)
+                  b = $6 + $7 > 0 ? sprintf("%.0f%%", 100 * $7 / ($6 + $7)) : "—"
+                  printf "%.1f\t| %s | %.0f%% (%d/%d) | %s |\n", 100 * $9 / ($8 + $9), cls, 100 * $9 / ($8 + $9), $9, $8 + $9, b
+                }' target/site/jacoco/jacoco.csv | LC_ALL=C sort -n | cut -f2-
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload test reports
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: surefire-reports
-          path: target/surefire-reports/
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            target/site/jacoco/
           if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload application jar
         uses: actions/upload-artifact@v4

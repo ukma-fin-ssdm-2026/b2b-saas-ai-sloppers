@@ -9,6 +9,8 @@ public interface OrganizationRepository {
 
     Optional<Organization> findById(UUID id);
 
+    Optional<Organization> findBySlug(String slug);
+
     List<Organization> findAll();
 
     boolean existsBySlug(String slug, UUID excludedId);

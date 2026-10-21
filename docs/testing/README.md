@@ -11,6 +11,19 @@
 open target/site/jacoco/index.html    # переглянути звіт локально
 ```
 
+`./mvnw test` падає, якщо покриття рядків нижче порогу `jacoco-check` у [`pom.xml`](../../pom.xml). Зараз це
+**5%** — тимчасовий поріг на тестовий період, піднімаємо разом із кількістю тестів.
+
+### У CI
+
+Job **Build and Test Backend** у [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) на кожен push і PR
+у `main` виконує окремі кроки `Compile` → `Run backend tests` → `Package`, тож у логах одразу видно, що
+впало: компіляція чи тести. Далі:
+
+- **Summary запуску** — кількість тестів (усього, failures, errors, skipped), загальне покриття рядків і
+  таблиця покриття по класах (рядки й гілки, найменш покриті зверху);
+- **артефакт `test-reports`** (завжди, 7 днів) — звіти Surefire і HTML-звіт JaCoCo з підсвіткою рядків.
+
 
 ### Оновити закомічений звіт
 
@@ -26,7 +39,7 @@ git add docs/testing/coverage
 
 | Модуль | Тестовий клас | Що перевіряється |
 | ------ | ------------- | ---------------- |
-| `organization` | [`OrganizationServiceTest`](../../src/test/java/ua/edu/ukma/community/organization/OrganizationServiceTest.java) | пошук і сортування, створення, часткове оновлення, унікальність slug, видалення з подією-каскадом |
+| `organization` | [`OrganizationServiceTest`](../../src/test/java/ua/edu/ukma/community/organization/OrganizationServiceTest.java) | пошук і сортування, отримання за slug, створення, часткове оновлення, унікальність slug, видалення з подією-каскадом |
 | `organization` | [`InMemoryOrganizationRepositoryTest`](../../src/test/java/ua/edu/ukma/community/organization/InMemoryOrganizationRepositoryTest.java) | `existsBySlug` з виключенням, повторне видалення, пагінація поверх демо-даних |
 | `event` | [`EventServiceTest`](../../src/test/java/ua/edu/ukma/community/event/EventServiceTest.java) | дайджест (FR-038/039), ручне створення (FR-037), прийом від скрейпера й дедуплікація, модерація, каскадне видалення |
 | `event` | [`EventTest`](../../src/test/java/ua/edu/ukma/community/event/EventTest.java) | машина станів модерації (FR-032, FR-035, FR-036), часткове редагування |
