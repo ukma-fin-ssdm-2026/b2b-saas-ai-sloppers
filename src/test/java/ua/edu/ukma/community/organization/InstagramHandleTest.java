@@ -11,7 +11,9 @@ class InstagramHandleTest {
     @CsvSource({
             "fido_naukma, fido_naukma",
             "@fido_naukma, fido_naukma",
-            "'  @FIdo_NaUKMA ', fido_naukma"
+            "'  @FIdo_NaUKMA ', fido_naukma",
+            "https://www.instagram.com/fido_naukma/, fido_naukma",
+            "instagram.com/fido_naukma?igsh=abc, fido_naukma"
     })
     void normalizesHandle(String raw, String expected) {
         assertEquals(expected, InstagramHandle.normalize(raw));
