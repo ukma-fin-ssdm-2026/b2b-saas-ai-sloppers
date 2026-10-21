@@ -13,6 +13,6 @@ public final class DedupKey {
     }
 
     private static String normalizeTitle(String title) {
-        return title.toLowerCase(Locale.ROOT);
+        return title.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
     }
 }
