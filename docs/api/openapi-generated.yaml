@@ -14,6 +14,296 @@ tags:
 - description: Каталог студентських організацій
   name: Organizations
 paths:
+  /api/v1/events:
+    get:
+      description: "Публічна (доступна гостям). Лише опубліковані майбутні події,\
+        \ відсортовані за часом початку (FR-038). Фільтри за організацією й діапаз\
+        оном дат (FR-039). Знак «+» у зсуві часового поясу в query потрібно кодува\
+        ти як %2B або використовувати «Z»."
+      operationId: listEvents
+      parameters:
+      - description: Лише події цієї організації
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: query
+        name: organizationId
+        required: false
+        schema:
+          type: string
+          format: uuid
+      - description: Початок не раніше (ISO 8601)
+        example: 2026-10-20T00:00:00Z
+        in: query
+        name: from
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - description: Початок раніше за (ISO 8601)
+        example: 2026-11-01T00:00:00Z
+        in: query
+        name: to
+        required: false
+        schema:
+          type: string
+          format: date-time
+      - description: "Розмір сторінки, 1–100"
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: string
+          maximum: 100
+          minimum: 1
+      - description: Скільки елементів пропустити
+        in: query
+        name: offset
+        required: false
+        schema:
+          type: string
+          minimum: 0
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OffsetPageEventResponse"
+          description: Сторінка подій
+        "400":
+          $ref: "#/components/responses/BadRequest"
+      summary: Дайджест подій
+      tags:
+      - Events
+  /api/v1/events/{eventId}:
+    get:
+      description: Публічна (FR-040). Неопубліковані події повертають 404.
+      operationId: getEvent
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+          description: Подію знайдено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      summary: Деталі події
+      tags:
+      - Events
+    patch:
+      description: "Голова організації-власника. Можна редагувати до і після публі\
+        кації (FR-034), крім відхилених подій."
+      operationId: updateEvent
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventUpdateRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+          description: Оновлену подію повернуто
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Частково оновити подію
+      tags:
+      - Events
+  /api/v1/events/{eventId}/approve:
+    post:
+      description: Голова організації. PENDING або UNPUBLISHED → PUBLISHED (FR-035);
+        для неперевіреної автоопублікованої події позначає її переглянутою (FR-032).
+      operationId: approveEvent
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+          description: Подію опубліковано
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Схвалити подію
+      tags:
+      - Events
+  /api/v1/events/{eventId}/calendar.ics:
+    get:
+      description: "Публічна (FR-042). Час у файлі в UTC, календар користувача пок\
+        аже його в місцевому поясі."
+      operationId: downloadEventIcs
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            text/calendar:
+              schema:
+                type: string
+          description: Файл календаря
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      summary: Файл .ics для події
+      tags:
+      - Calendar
+  /api/v1/events/{eventId}/calendar/google:
+    get:
+      description: "Публічна (FR-041). Повертає посилання на шаблон події з назвою\
+        , часом, місцем і описом."
+      operationId: getGoogleCalendarLink
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GoogleCalendarLink"
+          description: Посилання сформовано
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      summary: Посилання на Google Calendar
+      tags:
+      - Calendar
+  /api/v1/events/{eventId}/reject:
+    post:
+      description: "Голова організації. Лише з черги модерації: PENDING → REJECTED\
+        \ (FR-035)."
+      operationId: rejectEvent
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+          description: Подію відхилено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Відхилити подію
+      tags:
+      - Events
+  /api/v1/events/{eventId}/unpublish:
+    post:
+      description: Голова організації. PUBLISHED → UNPUBLISHED (FR-036).
+      operationId: unpublishEvent
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+          description: Подію знято з публікації
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Зняти подію з публікації
+      tags:
+      - Events
   /api/v1/organizations:
     get:
       description: "Публічна (доступна гостям). Пагінація зі зсувом, сортування за\
@@ -188,6 +478,119 @@ paths:
       summary: Частково оновити організацію
       tags:
       - Organizations
+  /api/v1/organizations/{organizationId}/events:
+    get:
+      description: "Голова організації. Усі статуси; status=PENDING — черга модера\
+        ції (FR-033), verified=false — автоопубліковані, ще не переглянуті (FR-032)."
+      operationId: listOrganizationEvents
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: Фільтр за статусом
+        example: PENDING
+        in: query
+        name: status
+        required: false
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - PUBLISHED
+          - REJECTED
+          - UNPUBLISHED
+      - description: Фільтр за ознакою перевірки головою
+        example: false
+        in: query
+        name: verified
+        required: false
+        schema:
+          type: boolean
+      - description: "Розмір сторінки, 1–100"
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: string
+          maximum: 100
+          minimum: 1
+      - description: Скільки елементів пропустити
+        in: query
+        name: offset
+        required: false
+        schema:
+          type: string
+          minimum: 0
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OffsetPageEventResponse"
+          description: Сторінка подій організації
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Події організації для голови
+      tags:
+      - Events
+    post:
+      description: Голова організації (FR-037). Подія публікується одразу.
+      operationId: createEvent
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventCreateRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+          description: Подію створено
+          headers:
+            Location:
+              description: URL нової події
+              schema:
+                type: string
+                format: uri
+              style: simple
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Створити подію вручну
+      tags:
+      - Events
 components:
   responses:
     BadRequest:
@@ -277,9 +680,11 @@ components:
           - UNAUTHORIZED
           - FORBIDDEN
           - ORGANIZATION_NOT_FOUND
+          - EVENT_NOT_FOUND
           - ROUTE_NOT_FOUND
           - METHOD_NOT_ALLOWED
           - SLUG_ALREADY_EXISTS
+          - INVALID_STATE_TRANSITION
           - INTERNAL_ERROR
           example: VALIDATION_ERROR
         details:
@@ -312,6 +717,151 @@ components:
           $ref: "#/components/schemas/ApiError"
       required:
       - error
+    EventCreateRequest:
+      type: object
+      description: "Подія, яку голова створює вручну; публікується одразу"
+      properties:
+        description:
+          type: string
+          description: Опис
+          example: Жоско рубитимемося в бравл ШД
+          maxLength: 5000
+          minLength: 0
+        location:
+          type: string
+          description: Місце проведення
+          example: "НаУКМА, фідо серверна"
+          maxLength: 200
+          minLength: 0
+        originalUrl:
+          type: string
+          description: Посилання на анонс
+          example: https://www.instagram.com/p/C1a2b3d4/
+          maxLength: 2048
+          minLength: 0
+          pattern: ^https?://\S+$
+        startsAt:
+          type: string
+          format: date-time
+          description: Дата й час початку (ISO 8601 зі зсувом)
+          example: 2026-10-21T18:00:00+03:00
+        title:
+          type: string
+          description: Назва
+          example: Турнір з бравл старсу
+          maxLength: 200
+          minLength: 3
+      required:
+      - startsAt
+      - title
+    EventResponse:
+      type: object
+      description: Подія студентської організації
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          description: Час створення (ISO 8601)
+          example: 2026-10-14T10:00:00+03:00
+        description:
+          type: string
+          description: Опис
+          example: Граємо в кікер на гроші
+        id:
+          type: string
+          format: uuid
+          description: Ідентифікатор
+          example: e1000000-0000-4000-8000-000000000001
+        location:
+          type: string
+          description: Місце проведення
+          example: "НаУКМА, лаба"
+        organizationId:
+          type: string
+          format: uuid
+          description: Організація-власник
+          example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        originalUrl:
+          type: string
+          description: Посилання на оригінальний пост або анонс
+          example: https://www.instagram.com/p/C1a2b3d4/
+        scraped:
+          type: boolean
+          description: Чи створена подія скрейпером
+          example: false
+        startsAt:
+          type: string
+          format: date-time
+          description: Дата й час початку (ISO 8601)
+          example: 2026-10-21T18:00:00+03:00
+        status:
+          type: string
+          description: Статус модерації
+          enum:
+          - PENDING
+          - PUBLISHED
+          - REJECTED
+          - UNPUBLISHED
+          example: PUBLISHED
+        title:
+          type: string
+          description: Назва
+          example: Граємо в кікер
+        updatedAt:
+          type: string
+          format: date-time
+          description: Час останньої зміни (ISO 8601)
+          example: 2026-10-14T10:00:00+03:00
+        verified:
+          type: boolean
+          description: "false — автоопублікована подія, яку голова ще не перегляну\
+            в (FR-032)"
+          example: true
+      required:
+      - createdAt
+      - id
+      - organizationId
+      - scraped
+      - startsAt
+      - status
+      - title
+      - updatedAt
+      - verified
+    EventUpdateRequest:
+      type: object
+      description: "Часткове оновлення події: передавайте лише поля, які змінюютьс\
+        я"
+      properties:
+        description:
+          type: string
+          description: Опис
+          maxLength: 5000
+          minLength: 0
+        location:
+          type: string
+          description: Місце проведення
+          example: "НаУКМА, підвол"
+          maxLength: 200
+          minLength: 0
+        originalUrl:
+          type: string
+          description: Посилання на анонс
+          example: https://www.instagram.com/p/C1a2b3d4/
+          maxLength: 2048
+          minLength: 0
+          pattern: ^https?://\S+$
+        startsAt:
+          type: string
+          format: date-time
+          description: Дата й час початку (ISO 8601 зі зсувом)
+          example: 2026-10-21T19:00:00+03:00
+        title:
+          type: string
+          description: Назва
+          example: аукціон побачень
+          maxLength: 200
+          minLength: 3
+          pattern: (?s).*\S.*
     FieldViolation:
       description: Порушення правила валідації для одного поля або параметра
       properties:
@@ -327,6 +877,27 @@ components:
           type: object
           description: Передане значення (може бути відсутнє)
           example: Debate Club!
+    GoogleCalendarLink:
+      type: object
+      description: Посилання для відкриття події в Google Calendar (FR-041)
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Посилання на шаблон події
+          example: https://calendar.google.com/calendar/render?action=TEMPLATE&text=...
+      required:
+      - url
+    OffsetPageEventResponse:
+      type: object
+      description: "Сторінка результатів, пагінація зі зсувом (offset)"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventResponse"
+        pagination:
+          $ref: "#/components/schemas/OffsetPagination"
     OffsetPageOrganization:
       type: object
       description: "Сторінка результатів, пагінація зі зсувом (offset)"
@@ -360,12 +931,17 @@ components:
           example: 42
     Organization:
       type: object
-      description: Student organization
+      description: Студентська організація
       properties:
+        autoPublish:
+          type: boolean
+          description: Публікувати спаршені події без модерації (FR-029); за замовчуванням
+            вимкнено
+          example: false
         contactEmail:
           type: string
-          description: Post
-          example: fido@ukma.edu.ua
+          description: Контактна пошта організації
+          example: debate@ukma.edu.ua
         createdAt:
           type: string
           format: date-time
@@ -373,31 +949,32 @@ components:
           example: 2026-09-01T10:00:00+03:00
         description:
           type: string
-          description: Activity description
-          example: Жоско прогаєм
+          description: Опис діяльності
+          example: Щотижневі тренування з британського парламентського формату
         id:
           type: string
           format: uuid
-          description: ID
+          description: Ідентифікатор
           example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
         instagramHandle:
           type: string
-          description: Instagram-account without @
-          example: fido_naukma
+          description: "Instagram-акаунт без @, з якого скрейпер збирає події"
+          example: ukma.debate
         name:
           type: string
-          description: Name
-          example: FIdo
+          description: Назва
+          example: Дебатний клуб НаУКМА
         slug:
           type: string
-          description: Unique readable ID for URL
-          example: fido
+          description: Унікальний людиночитаний ідентифікатор для URL
+          example: debate-club
         updatedAt:
           type: string
           format: date-time
           description: Час останньої зміни (ISO 8601)
           example: 2026-09-15T12:30:00+03:00
       required:
+      - autoPublish
       - createdAt
       - id
       - name
@@ -415,7 +992,7 @@ components:
         description:
           type: string
           description: Опис діяльності
-          example: жоско кодім
+          example: "Студентська IT-спільнота: хакатони та лекції"
           maxLength: 2000
           minLength: 0
         instagramHandle:
@@ -426,7 +1003,7 @@ components:
         name:
           type: string
           description: Назва
-          example: FIdo
+          example: FIDo
           maxLength: 100
           minLength: 3
         slug:
@@ -444,6 +1021,10 @@ components:
       description: "Часткове оновлення організації: передавайте лише поля, які змі\
         нюються; відсутнє або null поле не змінюється"
       properties:
+        autoPublish:
+          type: boolean
+          description: Увімкнути або вимкнути автопублікацію спаршених подій (FR-029)
+          example: true
         contactEmail:
           type: string
           format: email
