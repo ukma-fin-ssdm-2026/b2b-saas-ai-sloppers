@@ -6,6 +6,6 @@ final class InstagramHandle {
     }
 
     static String normalize(String raw) {
-        return null;
+        return raw.startsWith("@") ? raw.substring(1) : raw;
     }
 }
