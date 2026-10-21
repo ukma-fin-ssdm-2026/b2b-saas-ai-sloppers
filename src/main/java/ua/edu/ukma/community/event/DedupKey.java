@@ -12,7 +12,8 @@ public final class DedupKey {
     }
 
     public static String of(String title, OffsetDateTime startsAt) {
-        return normalizeTitle(title) + "|" + startsAt;
+        return normalizeTitle(title) + "|"
+                + startsAt.withMinute(startsAt.getMinute() / 15 * 15).withSecond(0).withNano(0);
     }
 
     private static String normalizeTitle(String title) {
