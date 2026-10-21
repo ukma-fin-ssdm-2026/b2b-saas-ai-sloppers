@@ -9,6 +9,10 @@ public final class DedupKey {
     }
 
     public static String of(String title, OffsetDateTime startsAt) {
-        return title.toLowerCase(Locale.ROOT) + "|" + startsAt;
+        return normalizeTitle(title) + "|" + startsAt;
+    }
+
+    private static String normalizeTitle(String title) {
+        return title.toLowerCase(Locale.ROOT);
     }
 }
