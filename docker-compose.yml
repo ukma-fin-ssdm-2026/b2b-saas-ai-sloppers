@@ -22,9 +22,9 @@ services:
     image: flyway/flyway:11
     command: migrate
     environment:
-      FLYWAY_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-community}
-      FLYWAY_USER: ${POSTGRES_USER:-community}
-      FLYWAY_PASSWORD: ${POSTGRES_PASSWORD:-community}
+      FLYWAY_URL: ${DB_URL:-jdbc:postgresql://db:5432/community}
+      FLYWAY_USER: ${DB_USER:-community}
+      FLYWAY_PASSWORD: ${DB_PASSWORD:-community}
       FLYWAY_CONNECT_RETRIES: 10
     volumes:
       - ./infra/migrations:/flyway/sql:ro
@@ -37,9 +37,9 @@ services:
       context: .
       dockerfile: src/main/docker/Dockerfile
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-community}
-      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-community}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-community}
+      SPRING_DATASOURCE_URL: ${DB_URL:-jdbc:postgresql://db:5432/community}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-community}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-community}
     ports:
       - "8080:8080"
     depends_on:
