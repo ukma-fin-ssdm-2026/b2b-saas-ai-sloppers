@@ -98,7 +98,7 @@ class EventTest {
     void constructorRejectsNullTitle() {
         assertThatNullPointerException()
                 .isThrownBy(() -> new Event(UUID.randomUUID(), ORG_ID, null, null, STARTS, null, null,
-                        null, null, EventStatus.PENDING, false, NOW, NOW))
+                        null, null, null, EventStatus.PENDING, false, NOW, NOW))
                 .withMessage("title");
     }
 }

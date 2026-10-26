@@ -40,6 +40,8 @@ services:
       SPRING_DATASOURCE_URL: ${DB_URL:-jdbc:postgresql://db:5432/community}
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-community}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-community}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_SECRET_KEY: ${SUPABASE_SECRET_KEY:-}
     ports:
       - "8080:8080"
     depends_on:

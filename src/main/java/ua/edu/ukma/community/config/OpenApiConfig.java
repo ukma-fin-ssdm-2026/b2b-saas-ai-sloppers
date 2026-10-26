@@ -32,6 +32,9 @@ public class OpenApiConfig {
     public static final String FORBIDDEN = "#/components/responses/Forbidden";
     public static final String NOT_FOUND = "#/components/responses/NotFound";
     public static final String CONFLICT = "#/components/responses/Conflict";
+    public static final String PAYLOAD_TOO_LARGE = "#/components/responses/PayloadTooLarge";
+    public static final String UNSUPPORTED_MEDIA_TYPE = "#/components/responses/UnsupportedMediaType";
+    public static final String STORAGE_UNAVAILABLE = "#/components/responses/StorageUnavailable";
 
     @Bean
     OpenAPI communityOpenApi() {
@@ -80,6 +83,17 @@ public class OpenApiConfig {
                     "Конфлікт зі станом ресурсу (SLUG_ALREADY_EXISTS)",
                     example("SLUG_ALREADY_EXISTS", "Організація з таким slug уже існує",
                             List.of(Map.of("field", "slug", "message", "Slug зайнятий", "providedValue", "debate-club")))));
+            components.addResponses("PayloadTooLarge", errorResponse(
+                    "Файл більший за 5 МБ (PAYLOAD_TOO_LARGE)",
+                    example("PAYLOAD_TOO_LARGE", "Файл завеликий: не більше 5 МБ", List.of())));
+            components.addResponses("UnsupportedMediaType", errorResponse(
+                    "Файл не є картинкою JPEG, PNG чи WebP або запит не multipart/form-data (UNSUPPORTED_MEDIA_TYPE)",
+                    example("UNSUPPORTED_MEDIA_TYPE", "Підтримуються лише картинки JPEG, PNG і WebP",
+                            List.of(Map.of("field", "file", "message", "Невідомий формат файлу",
+                                    "providedValue", "logo.svg")))));
+            components.addResponses("StorageUnavailable", errorResponse(
+                    "Файлове сховище недоступне або не налаштоване (STORAGE_UNAVAILABLE)",
+                    example("STORAGE_UNAVAILABLE", "Не вдалося зберегти файл у сховищі", List.of())));
         };
     }
 

@@ -30,13 +30,13 @@ public final class TestFixtures {
     public static Organization organization(UUID id, String name, String slug, boolean autoPublish) {
         OffsetDateTime created = NOW.minusDays(30);
         return new Organization(id, name, slug, "Опис " + name, slug.replace('-', '.'),
-                slug + "@ukma.edu.ua", autoPublish, created, created);
+                slug + "@ukma.edu.ua", null, autoPublish, created, created);
     }
 
     public static Event event(UUID organizationId, EventStatus status, boolean verified, OffsetDateTime startsAt) {
         OffsetDateTime created = NOW.minusDays(1);
         return new Event(UUID.randomUUID(), organizationId, "Подія о " + startsAt.toLocalTime(), "Опис",
-                startsAt, "НаУКМА", "https://www.instagram.com/p/demo/", null, null,
+                startsAt, "НаУКМА", "https://www.instagram.com/p/demo/", null, null, null,
                 status, verified, created, created);
     }
 
