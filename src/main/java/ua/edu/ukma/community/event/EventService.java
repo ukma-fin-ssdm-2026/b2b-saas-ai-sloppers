@@ -76,12 +76,16 @@ public class EventService {
         OffsetDateTime now = OffsetDateTime.now(clock);
         return events.save(new Event(UUID.randomUUID(), organizationId, request.title().trim(),
                 request.description(), request.startsAt(), request.location(), request.originalUrl(),
-                null, null, EventStatus.PUBLISHED, true, now, now));
+                null, null, null, EventStatus.PUBLISHED, true, now, now));
     }
 
     public synchronized Event update(UUID id, EventUpdateRequest request) {
         return change(id, event -> event.withDetails(request.title(), request.description(),
                 request.startsAt(), request.location(), request.originalUrl(), OffsetDateTime.now(clock)));
+    }
+
+    public synchronized Event changeImage(UUID id, String imageUrl) {
+        return change(id, event -> event.withImage(imageUrl, OffsetDateTime.now(clock)));
     }
 
     public synchronized Event approve(UUID id) {
@@ -105,7 +109,7 @@ public class EventService {
         EventStatus status = organization.autoPublish() ? EventStatus.PUBLISHED : EventStatus.PENDING;
         OffsetDateTime now = OffsetDateTime.now(clock);
         return Optional.of(events.save(new Event(UUID.randomUUID(), organization.id(), scraped.title(),
-                null, scraped.startsAt(), null, scraped.originalUrl(), scraped.sourceId(),
+                null, scraped.startsAt(), null, scraped.originalUrl(), null, scraped.sourceId(),
                 scraped.externalPostId(), status, false, now, now)));
     }
 

@@ -16,6 +16,7 @@ public record Event(
         OffsetDateTime startsAt,
         String location,
         String originalUrl,
+        String imageUrl,
         UUID sourceId,
         String externalPostId,
         EventStatus status,
@@ -77,12 +78,23 @@ public record Event(
                 newStartsAt != null ? newStartsAt : startsAt,
                 newLocation != null ? newLocation : location,
                 newOriginalUrl != null ? newOriginalUrl : originalUrl,
-                sourceId, externalPostId, status, verified, createdAt, now);
+                imageUrl, sourceId, externalPostId, status, verified, createdAt, now);
     }
 
     private Event withStatus(EventStatus newStatus, boolean newVerified, OffsetDateTime now) {
         return new Event(id, organizationId, title, description, startsAt, location, originalUrl,
-                sourceId, externalPostId, newStatus, newVerified, createdAt, now);
+                imageUrl, sourceId, externalPostId, newStatus, newVerified, createdAt, now);
+    }
+
+    /**
+     * Нова картинка (або {@code null}, щоб прибрати). Відхилену подію не змінюємо, як і в {@link #withDetails}.
+     */
+    public Event withImage(String newImageUrl, OffsetDateTime now) {
+        if (status == EventStatus.REJECTED) {
+            throw transitionNotAllowed("змінити картинку");
+        }
+        return new Event(id, organizationId, title, description, startsAt, location, originalUrl,
+                newImageUrl, sourceId, externalPostId, status, verified, createdAt, now);
     }
 
     private ApiException transitionNotAllowed(String action) {

@@ -5,9 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Студентська організація — ресурс каталогу (компонент C-04).
- */
+
 @Schema(description = "Студентська організація")
 public record Organization(
         @Schema(description = "Ідентифікатор", example = "3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60",
@@ -30,6 +28,11 @@ public record Organization(
 
         @Schema(description = "Контактна пошта організації", example = "debate@ukma.edu.ua")
         String contactEmail,
+
+        @Schema(description = "Посилання на логотип у сховищі; null, якщо логотип не завантажено",
+                example = "https://project.supabase.co/storage/v1/object/public/images/"
+                        + "organizations/3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60/logo-1a2b3c.png")
+        String logoUrl,
 
         @Schema(description = "Публікувати спаршені події без модерації (FR-029); за замовчуванням вимкнено",
                 example = "false", requiredMode = Schema.RequiredMode.REQUIRED)

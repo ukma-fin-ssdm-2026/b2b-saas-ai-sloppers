@@ -7,6 +7,7 @@ export interface Organization {
   description?: string
   contactEmail?: string
   instagramHandle?: string
+  logoUrl?: string
 }
 
 export interface OffsetPagination {

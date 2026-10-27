@@ -5,9 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Подія у відповідях API. Службові поля скрейпера ({@code sourceId}, {@code externalPostId}) назовні не віддаються.
- */
+
 @Schema(description = "Подія студентської організації")
 public record EventResponse(
         @Schema(description = "Ідентифікатор", example = "e1000000-0000-4000-8000-000000000001",
@@ -35,6 +33,11 @@ public record EventResponse(
         @Schema(description = "Посилання на оригінальний пост або анонс", example = "https://www.instagram.com/p/C1a2b3d4/")
         String originalUrl,
 
+        @Schema(description = "Посилання на картинку (постер) у сховищі; null, якщо не завантажено",
+                example = "https://project.supabase.co/storage/v1/object/public/images/organizations/"
+                        + "3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60/events/e1000000-0000-4000-8000-000000000001/image-4d5e6f.jpg")
+        String imageUrl,
+
         @Schema(description = "Статус модерації", example = "PUBLISHED", requiredMode = Schema.RequiredMode.REQUIRED)
         EventStatus status,
 
@@ -57,7 +60,7 @@ public record EventResponse(
 
     public static EventResponse from(Event event) {
         return new EventResponse(event.id(), event.organizationId(), event.title(), event.description(),
-                event.startsAt(), event.location(), event.originalUrl(), event.status(), event.verified(),
+                event.startsAt(), event.location(), event.originalUrl(), event.imageUrl(), event.status(), event.verified(),
                 event.isScraped(), event.createdAt(), event.updatedAt());
     }
 }

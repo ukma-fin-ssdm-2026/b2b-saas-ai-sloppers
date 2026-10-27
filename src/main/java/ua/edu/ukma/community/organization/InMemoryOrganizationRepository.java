@@ -1,5 +1,6 @@
 package ua.edu.ukma.community.organization;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.time.Clock;
@@ -10,11 +11,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Сховище організацій у пам'яті процесу з демонстраційними даними.
- * Тимчасова реалізація до під'єднання PostgreSQL (таблиця {@code organization}, міграції V1–V2).
- */
+
 @Repository
+@Profile("inmemory")
 public class InMemoryOrganizationRepository implements OrganizationRepository {
 
     public static final UUID DEBATE_CLUB_ID = UUID.fromString("3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60");
@@ -29,13 +28,13 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
         OffsetDateTime seededAt = OffsetDateTime.now(clock).minusDays(SEED_AGE_DAYS);
         seed(new Organization(DEBATE_CLUB_ID, "Дебатний клуб НаУКМА", "debate-club",
                 "Щотижневі тренування з британського парламентського формату", "ukma.debate",
-                "debate@ukma.edu.ua", false, seededAt, seededAt));
+                "debate@ukma.edu.ua", null, false, seededAt, seededAt));
         seed(new Organization(CODING_CLUB_ID, "Клуб програмування", "coding-club",
                 "Хакатони, лекції та підготовка до олімпіад", "ukma.coding",
-                "coding@ukma.edu.ua", true, seededAt, seededAt));
+                "coding@ukma.edu.ua", null, true, seededAt, seededAt));
         seed(new Organization(VOLUNTEERS_ID, "Волонтерський рух Могилянки", "volunteers",
                 "Збори, допомога ветеранам і переселенцям", "mohyla.volunteers",
-                null, false, seededAt, seededAt));
+                null, null, false, seededAt, seededAt));
     }
 
     @Override

@@ -120,7 +120,28 @@ Swagger UI: http://localhost:8080/swagger-ui.html
 
 **Скинути базу:** `docker compose down -v`.
 
-Поки що backend тримає дані в пам'яті й до бази не підключається. Розгортання в Minikube буде додано окремо.
+Розгортання в Minikube буде додано окремо.
+
+### Віддалена база й картинки (Supabase)
+
+Скопіюйте `.env.example` у `.env` і заповніть паролі. `.env` у `.gitignore`, у репозиторій не потрапляє.
+
+| Змінна | Звідки взяти |
+| ------ | ------------ |
+| `DB_URL`, `DB_USER`, `DB_PASSWORD` | Supabase → **Connect** → Direct → JDBC, **Session pooler** |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_SECRET_KEY` | Project Settings → **API Keys** → Secret keys (`sb_secret_...`) |
+
+Без `DB_URL` compose працює з локальним Postgres, як раніше. Без `SUPABASE_*` усе працює, лише завантаження картинок відповідає `503`.
+
+Логотипи організацій і картинки подій лежать у публічному бакеті Supabase Storage `images`, у базі зберігаються лише їхні URL:
+
+```bash
+curl -X PUT -F "file=@logo.png" http://localhost:8080/api/v1/organizations/<id>/logo
+curl -X PUT -F "file=@poster.jpg" http://localhost:8080/api/v1/events/<id>/image
+```
+
+**Без бази взагалі** (in-memory з демо-даними): `./mvnw spring-boot:run -Dspring-boot.run.profiles=inmemory`.
 
 ## Специфікація API
 
