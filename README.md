@@ -30,6 +30,14 @@
 - [docs/architecture/uml/](docs/architecture/uml/) — UML (PlantUML)
 - [docs/architecture/decisions/](docs/architecture/decisions/) — ADR
 
+## Тестування (Lab 6)
+
+- [docs/testing/testing-strategy.md](docs/testing/testing-strategy.md) — стратегія рівнів, покриття, CI
+- [docs/testing/README.md](docs/testing/README.md) — як запускати тести та оновлювати звіт JaCoCo
+- [docs/testing/coverage/jacoco/](docs/testing/coverage/jacoco/index.html) — знімок покриття
+
+Локально: `./mvnw test` (поріг рядків — у `pom.xml`, зараз 5%).
+
 ## Основні можливості
 
 - Каталог організацій з тегами, повнотекстовим пошуком і пагінацією
@@ -58,7 +66,8 @@
 ├── docs/
 │   ├── issue-workflow.md
 │   ├── requirements/      # Lab 2: US, FR, NFR, RTM
-│   └── architecture/      # Lab 3: HLD, UML, ADR
+│   ├── architecture/      # Lab 3: HLD, UML, ADR
+│   └── testing/           # Lab 6: стратегія, покриття, журнал налагодження
 ├── infra/
 │   └── migrations/        # SQL-міграції схеми БД (Flyway)
 ├── src/                   # backend (Spring Boot)
@@ -133,3 +142,4 @@ Swagger UI: http://localhost:8080/swagger-ui.html
 - [docs/api/api-design.md](docs/api/api-design.md): проєктування API
 - [docs/api/quality-attributes.md](docs/api/quality-attributes.md): атрибути якості API
 - [docs/code-quality/progress.md](docs/code-quality/progress.md): прогрес реалізації (Lab 5)
+- [docs/testing/testing-strategy.md](docs/testing/testing-strategy.md): стратегія тестування (Lab 6)

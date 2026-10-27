@@ -33,6 +33,12 @@
 
 Ролі можуть ротуватися за згодою команди. Кожен також пише код.
 
+### 2.4 Ролі Lab 6 — тестування та налагодження
+- Керівник тестування (Testing Lead): **Daria Hrechko** — модульні тести `organization`/`event`, фікстури, звіт покриття.
+- Керівник інтеграції (Integration Lead): **Maksim Havrasiienko** — тести й JaCoCo в `ci.yml`, ворота покриття.
+- Стратег тестування (Testing Strategist): **Artem Butyrin** — [`docs/testing/testing-strategy.md`](docs/testing/testing-strategy.md), цілі якості й план рівнів.
+- Керівник налагодження (Debugging Lead): **Max Kostyniuk** — [`docs/testing/debugging-log.md`](docs/testing/debugging-log.md).
+
 ## 3. План комунікації
 - Основний канал: Telegram-чат команди та Discord-канал (оперативні питання, дедлайни, посилання на PR/Issues).
 - Розклад зустрічей: щотижня на лабораторній парі + короткі онлайн-синхрони за потреби (15–30 хв).
@@ -56,6 +62,11 @@
 - Діаграми UML — PlantUML (`.puml`) у `/docs/architecture/uml/`; зміни рев’юються як код.
 - Усі артефакти архітектури — у **`/docs/architecture/`** (HLD, RTM архітектури, data-model, threat-model, uml, decisions).
 - README містить розділ із посиланням на `/docs/architecture/`.
+
+### 4.3 Практики тестування (Lab 6)
+- Модульні тести бекенду — у `src/test/java/`; знімок покриття — у `/docs/testing/coverage/`.
+- Стратегія рівнів і воріт — [`docs/testing/testing-strategy.md`](docs/testing/testing-strategy.md); як ганяти тести — [`docs/testing/README.md`](docs/testing/README.md).
+- На кожен PR job **Build and Test Backend** виконує `./mvnw test` і падає нижче порогу JaCoCo (зараз 5% рядків).
 
 ## 5. Політика якості та огляду коду
 
@@ -123,6 +134,7 @@
 - Кожен учасник записує Loom ≤5 хв зі **своїм** внеском і кладе посилання в `Labs/Lab0X/video_<Прізвище>.txt`.
 - **Lab 2:** історії / NFR / RTM / структура docs — за роллю з §2.2.
 - **Lab 3:** архітектура / UML / матриця / data+STRIDE / ADR+статут — за роллю з §2.3.
+- **Lab 6:** два посилання в `Labs/Lab06/video_<Прізвище>.txt` (рядок 1 — TDD, рядок 2 — внесок за роллю з §2.4).
 - Перевірка: Issue Tracker Lead або Documentation Lead звіряє наявність файлів перед дедлайном; у відео статуту показують `git log` змін TeamCharter.
 
 ## 11. Підписи
@@ -139,3 +151,5 @@
 Оновлення статуту (структура ролей Lab 2/3 і формулювання практик); зміст звірено з вимогами Lab02-TeamCharter і Lab 3; переглянуто Documentation Lead.
 
 Розділ §5 «Політика якості та огляду коду» (Lab 5) сформовано за участі ШІ на основі налаштувань репозиторію (`pom.xml`, конфіги лінтерів, workflows, ruleset захисту `main`).
+
+§2.4 і §4.3 (Lab 6): ролі за комітами тестів/CI; текст стратегії — окремий файл `docs/testing/testing-strategy.md`.

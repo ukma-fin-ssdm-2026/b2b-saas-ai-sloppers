@@ -1,5 +1,7 @@
 # Модульні тести та покриття
 
+Стратегія рівнів, воріт і подальших тестів: [testing-strategy.md](testing-strategy.md).
+
 Інструменти: **JUnit 5**, **Mockito**, **AssertJ** (усі з `spring-boot-starter-test`) і **JaCoCo** для покриття.
 Тести лежать у стандартній для Maven теці [`src/test/java/`](../../src/test/java/ua/edu/ukma/community/),
 структура пакетів дзеркалить `src/main/java`.
