@@ -80,6 +80,9 @@
 | `ROUTE_NOT_FOUND` | 404 | такої кінцевої точки немає |
 | `METHOD_NOT_ALLOWED` | 405 | метод не підтримується ресурсом |
 | `SLUG_ALREADY_EXISTS` | 409 | slug організації зайнятий |
+| `PAYLOAD_TOO_LARGE` | 413 | файл картинки більший за 5 МБ |
+| `UNSUPPORTED_MEDIA_TYPE` | 415 | файл не JPEG/PNG/WebP або запит не `multipart/form-data` |
+| `STORAGE_UNAVAILABLE` | 503 | Supabase Storage недоступне або не налаштоване |
 | `INTERNAL_ERROR` | 500 | непередбачена помилка сервера |
 
 ### Версіонування

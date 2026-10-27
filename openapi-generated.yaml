@@ -233,6 +233,92 @@ paths:
       summary: Посилання на Google Calendar
       tags:
       - Calendar
+  /api/v1/events/{eventId}/image:
+    delete:
+      description: "Голова організації-власника. Якщо картинки немає, нічого не зм\
+        інюється."
+      operationId: deleteEventImage
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Картинки більше немає
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Прибрати картинку події
+      tags:
+      - Events
+    put:
+      description: "Голова організації-власника. JPEG, PNG або WebP до 5 МБ, поле\
+        \ форми `file`. Відхилену подію змінити не можна (409). Попередня картинка\
+        \ видаляється зі сховища."
+      operationId: uploadEventImage
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Файл картинки
+              required:
+              - file
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+          description: Подію з новим imageUrl повернуто
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "503":
+          $ref: "#/components/responses/StorageUnavailable"
+      security:
+      - bearerAuth: []
+      summary: Завантажити або замінити картинку події
+      tags:
+      - Events
   /api/v1/events/{eventId}/reject:
     post:
       description: "Голова організації. Лише з черги модерації: PENDING → REJECTED\
@@ -591,6 +677,88 @@ paths:
       summary: Створити подію вручну
       tags:
       - Events
+  /api/v1/organizations/{organizationId}/logo:
+    delete:
+      description: "Суперадмін або голова цієї організації. Якщо логотипу немає, н\
+        ічого не змінюється."
+      operationId: deleteOrganizationLogo
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Логотипу більше немає
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Прибрати логотип
+      tags:
+      - Organizations
+    put:
+      description: "Суперадмін або голова цієї організації. JPEG, PNG або WebP до\
+        \ 5 МБ, поле форми `file`. Формат визначається за вмістом файлу. Попередні\
+        й логотип видаляється зі сховища."
+      operationId: uploadOrganizationLogo
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Файл картинки
+              required:
+              - file
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Organization"
+          description: Організацію з новим logoUrl повернуто
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "503":
+          $ref: "#/components/responses/StorageUnavailable"
+      security:
+      - bearerAuth: []
+      summary: Завантажити або замінити логотип
+      tags:
+      - Organizations
 components:
   responses:
     BadRequest:
@@ -652,6 +820,32 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
       description: Ресурс не знайдено (ORGANIZATION_NOT_FOUND)
+    PayloadTooLarge:
+      content:
+        application/json:
+          example:
+            error:
+              code: PAYLOAD_TOO_LARGE
+              details: []
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#payload-too-large
+              message: "Файл завеликий: не більше 5 МБ"
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Файл більший за 5 МБ (PAYLOAD_TOO_LARGE)
+    StorageUnavailable:
+      content:
+        application/json:
+          example:
+            error:
+              code: STORAGE_UNAVAILABLE
+              details: []
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#storage-unavailable
+              message: Не вдалося зберегти файл у сховищі
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Файлове сховище недоступне або не налаштоване (STORAGE_UNAVAILABLE)
     Unauthorized:
       content:
         application/json:
@@ -665,6 +859,23 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
       description: Відсутній або недійсний JWT (UNAUTHORIZED)
+    UnsupportedMediaType:
+      content:
+        application/json:
+          example:
+            error:
+              code: UNSUPPORTED_MEDIA_TYPE
+              details:
+              - field: file
+                message: Невідомий формат файлу
+                providedValue: logo.svg
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#unsupported-media-type
+              message: "Підтримуються лише картинки JPEG, PNG і WebP"
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: "Файл не є картинкою JPEG, PNG чи WebP або запит не multipart/form-data\
+        \ (UNSUPPORTED_MEDIA_TYPE)"
   schemas:
     ApiError:
       description: "Тіло помилки: код для програми, повідомлення для людини, детал\
@@ -685,6 +896,9 @@ components:
           - METHOD_NOT_ALLOWED
           - SLUG_ALREADY_EXISTS
           - INVALID_STATE_TRANSITION
+          - PAYLOAD_TOO_LARGE
+          - UNSUPPORTED_MEDIA_TYPE
+          - STORAGE_UNAVAILABLE
           - INTERNAL_ERROR
           example: VALIDATION_ERROR
         details:
@@ -772,6 +986,11 @@ components:
           format: uuid
           description: Ідентифікатор
           example: e1000000-0000-4000-8000-000000000001
+        imageUrl:
+          type: string
+          description: "Посилання на картинку (постер) у сховищі; null, якщо не за\
+            вантажено"
+          example: https://project.supabase.co/storage/v1/object/public/images/organizations/3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60/events/e1000000-0000-4000-8000-000000000001/image-4d5e6f.jpg
         location:
           type: string
           description: Місце проведення
@@ -960,6 +1179,11 @@ components:
           type: string
           description: "Instagram-акаунт без @, з якого скрейпер збирає події"
           example: ukma.debate
+        logoUrl:
+          type: string
+          description: "Посилання на логотип у сховищі; null, якщо логотип не зава\
+            нтажено"
+          example: https://project.supabase.co/storage/v1/object/public/images/organizations/3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60/logo-1a2b3c.png
         name:
           type: string
           description: Назва
