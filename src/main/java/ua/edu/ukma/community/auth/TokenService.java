@@ -10,10 +10,7 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Instant;
 
-/**
- * Видає JWT: {@code sub} — id користувача, строк дії з {@code auth.token-ttl} (NFR-010).
- * Ролі в токен не кладемо: їх перевіряємо по базі на кожен запит, тож зняття ролі діє одразу (FR-010).
- */
+
 @Service
 public class TokenService {
 

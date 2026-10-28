@@ -9,10 +9,7 @@ import ua.edu.ukma.community.common.error.ErrorCode;
 
 import java.util.UUID;
 
-/**
- * Користувач поточного запиту за JWT. Завантажується з бази щоразу, тож заблокований
- * користувач втрачає доступ одразу, а не коли закінчиться токен.
- */
+
 @Component
 public class CurrentUser {
 

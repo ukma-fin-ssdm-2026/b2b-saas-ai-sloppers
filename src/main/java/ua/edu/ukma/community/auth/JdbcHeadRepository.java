@@ -12,13 +12,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Голови в PostgreSQL (таблиці {@code organization_head} і {@code role_change}, міграція V4).
- *
- * <p>Зміни складу голів ідуть у транзакції, що спершу блокує рядок організації ({@code SELECT ... FOR UPDATE}).
- * Тому паралельні запити до однієї організації виконуються по черзі, і перевірка «чи не останній голова»
- * завжди бачить актуальну кількість (FR-011, NFR-006, TC-016), навіть якщо працює кілька копій бекенду.
- */
+
 @Repository
 @Profile("!inmemory")
 public class JdbcHeadRepository implements HeadRepository {

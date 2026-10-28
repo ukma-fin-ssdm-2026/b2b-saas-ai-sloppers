@@ -4,11 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-/**
- * Користувач. Пошта зберігається в нижньому регістрі.
- *
- * @param verification поточний код підтвердження; {@code null}, якщо коду немає (зокрема після активації)
- */
+
 public record User(
         UUID id,
         String email,

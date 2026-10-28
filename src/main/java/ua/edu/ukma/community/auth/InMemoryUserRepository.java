@@ -8,9 +8,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Користувачі в пам'яті процесу (профіль {@code inmemory} і тести).
- */
+
 @Repository
 @Profile("inmemory")
 public class InMemoryUserRepository implements UserRepository {

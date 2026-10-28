@@ -11,9 +11,7 @@ import java.time.ZoneId;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Користувачі в PostgreSQL (таблиця {@code app_user}, міграція V4).
- */
+
 @Repository
 @Profile("!inmemory")
 public class JdbcUserRepository implements UserRepository {

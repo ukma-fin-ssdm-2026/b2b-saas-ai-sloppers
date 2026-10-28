@@ -11,10 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/**
- * Голови в пам'яті процесу (профіль {@code inmemory} і тести). Усі методи синхронізовані,
- * тож перевірка «чи не останній голова» і зняття відбуваються атомарно.
- */
+
 @Repository
 @Profile("inmemory")
 public class InMemoryHeadRepository implements HeadRepository {

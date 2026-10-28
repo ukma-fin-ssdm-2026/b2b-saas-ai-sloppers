@@ -21,10 +21,7 @@ import java.util.List;
 
 import static ua.edu.ukma.community.common.ApiPaths.V1;
 
-/**
- * Хто куди може без токена. Решта вимагає дійсний JWT ({@code Authorization: Bearer ...}),
- * а конкретні ролі (Global Admin, голова організації) перевіряє {@link OrgRolePolicy} у контролерах.
- */
+
 @Configuration
 public class SecurityConfig {
 

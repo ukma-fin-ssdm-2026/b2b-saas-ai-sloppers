@@ -10,9 +10,7 @@ import ua.edu.ukma.community.common.error.ErrorCode;
 
 import java.time.Duration;
 
-/**
- * Код підтвердження листом через SMTP ({@code spring.mail.*}).
- */
+
 public class MailCodeSender implements CodeSender {
 
     private static final Logger LOG = LoggerFactory.getLogger(MailCodeSender.class);

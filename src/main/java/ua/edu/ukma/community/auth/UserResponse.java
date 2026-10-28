@@ -5,9 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Користувач у відповідях API. Хеш пароля й код підтвердження назовні не віддаються.
- */
+
 @Schema(description = "Користувач")
 public record UserResponse(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)

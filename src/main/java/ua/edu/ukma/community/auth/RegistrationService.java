@@ -12,9 +12,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Реєстрація з поштою {@code @ukma.edu.ua} і підтвердження кодом (FR-001–FR-003, US-001).
- */
+
 @Service
 public class RegistrationService {
 
@@ -36,10 +34,7 @@ public class RegistrationService {
         this.clock = clock;
     }
 
-    /**
-     * Створює неактивний акаунт і надсилає код. Якщо лист не пішов, акаунт лишається:
-     * код можна запросити повторно через {@link #resendCode}.
-     */
+
     public synchronized User register(String rawEmail, String password) {
         String email = Emails.normalize(rawEmail);
         if (!Emails.hasDomain(email, properties.allowedDomain())) {
@@ -61,7 +56,6 @@ public class RegistrationService {
 
     public synchronized void verify(String rawEmail, String code) {
         String email = Emails.normalize(rawEmail);
-        // невідома пошта виглядає як неправильний код: не підказуємо, які пошти зареєстровані
         User user = users.findByEmail(email).orElseThrow(RegistrationService::invalidCode);
         if (user.isActive()) {
             throw new ApiException(ErrorCode.ACCOUNT_ALREADY_VERIFIED, "Пошту вже підтверджено, можна входити");
@@ -84,10 +78,6 @@ public class RegistrationService {
         users.save(user.activated(now));
     }
 
-    /**
-     * Новий код для непідтвердженого акаунта. Для невідомої або вже підтвердженої пошти нічого не робить,
-     * щоб відповідь не розкривала, які пошти зареєстровані.
-     */
     public synchronized void resendCode(String rawEmail) {
         String email = Emails.normalize(rawEmail);
         User user = users.findByEmail(email).orElse(null);

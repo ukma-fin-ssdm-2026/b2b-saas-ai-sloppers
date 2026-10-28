@@ -5,16 +5,13 @@ import org.springframework.stereotype.Service;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.common.error.ErrorCode;
 
-/**
- * Вхід за поштою й паролем (FR-004).
- */
+
 @Service
 public class LoginService {
 
     private final UserRepository users;
     private final PasswordEncoder passwords;
     private final TokenService tokens;
-    /** Хеш, з яким порівнюємо пароль, коли пошти немає: так відповідь займає стільки ж часу. */
     private final String dummyHash;
 
     public LoginService(UserRepository users, PasswordEncoder passwords, TokenService tokens) {

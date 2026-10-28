@@ -23,9 +23,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 
-/**
- * Біни Auth: хешування паролів, підпис і перевірка JWT, відправка коду підтвердження.
- */
+
 @Configuration
 @EnableConfigurationProperties(AuthProperties.class)
 public class AuthConfig {
@@ -35,6 +33,7 @@ public class AuthConfig {
     private static final Logger LOG = LoggerFactory.getLogger(AuthConfig.class);
     private static final int MIN_SECRET_BYTES = 32;
     private static final String HMAC = "HmacSHA256";
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -46,7 +45,7 @@ public class AuthConfig {
         if (properties.jwtSecret().isBlank()) {
             LOG.warn("AUTH_JWT_SECRET is not set: using a random key, tokens will be invalid after restart");
             byte[] random = new byte[MIN_SECRET_BYTES];
-            new SecureRandom().nextBytes(random);
+            RANDOM.nextBytes(random);
             return new SecretKeySpec(random, HMAC);
         }
         byte[] secret = properties.jwtSecret().getBytes(StandardCharsets.UTF_8);
@@ -68,16 +67,13 @@ public class AuthConfig {
         return decoder;
     }
 
-    /**
-     * Лист через SMTP, якщо Spring Boot створив {@link JavaMailSender} (задано {@code spring.mail.host});
-     * інакше код пишеться в лог.
-     */
+
     @Bean
     CodeSender codeSender(ObjectProvider<JavaMailSender> mailSender, AuthProperties properties,
                           @Value("${spring.mail.host:}") String mailHost,
                           @Value("${spring.mail.username:}") String mailUsername) {
         JavaMailSender mail = mailSender.getIfAvailable();
-        // порожній SPRING_MAIL_HOST= у .env теж вважаємо «SMTP не налаштовано»
+
         if (mail == null || mailHost.isBlank()) {
             LOG.warn("SMTP is not configured (spring.mail.host): verification codes will be written to the log");
             return new LogCodeSender();

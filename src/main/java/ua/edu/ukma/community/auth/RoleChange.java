@@ -5,9 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Запис журналу змін ролей (FR-013).
- */
+
 @Schema(description = "Зміна ролі голови: хто, кому, що, коли (FR-013)")
 public record RoleChange(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
@@ -35,7 +33,6 @@ public record RoleChange(
         OffsetDateTime createdAt
 ) {
 
-    /** Що сталося з роллю голови. */
     public enum RoleAction {
         APPOINTED,
         REMOVED

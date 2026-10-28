@@ -2,9 +2,7 @@ package ua.edu.ukma.community.auth;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/**
- * Токен доступу після входу.
- */
+
 @Schema(description = "JWT для заголовка Authorization: Bearer <accessToken>")
 public record TokenResponse(
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)

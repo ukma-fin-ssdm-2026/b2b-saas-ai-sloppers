@@ -7,18 +7,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Налаштування Auth (префікс {@code auth.} у {@code application.properties}).
- *
- * @param jwtSecret      секрет для підпису JWT, щонайменше 32 байти; порожній — згенерується при старті
- * @param tokenTtl       строк дії токена (NFR-010: не більше 60 хв)
- * @param adminEmails    пошти, які при реєстрації отримують роль Global Admin
- * @param mailFrom       адреса відправника листів; порожня — береться {@code spring.mail.username}
- * @param allowedDomain  дозволений домен пошти (FR-001)
- * @param codeTtl        строк дії коду підтвердження (US-001: 15 хв)
- * @param codeAttempts   кількість спроб введення коду (US-001: 5)
- * @param resendCooldown мінімальна пауза між надсиланням кодів
- */
+
 @ConfigurationProperties("auth")
 public record AuthProperties(
         @DefaultValue("") String jwtSecret,

@@ -17,9 +17,7 @@ import ua.edu.ukma.community.config.OpenApiConfig;
 
 import java.util.List;
 
-/**
- * Реєстрація, підтвердження пошти, вхід, поточний користувач.
- */
+
 @RestController
 @RequestMapping(ApiPaths.V1 + "/auth")
 @Tag(name = "Auth")

@@ -5,9 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
-/**
- * Голова організації.
- */
+
 @Schema(description = "Голова організації")
 public record OrganizationHead(
         @Schema(description = "Ідентифікатор користувача", requiredMode = Schema.RequiredMode.REQUIRED)

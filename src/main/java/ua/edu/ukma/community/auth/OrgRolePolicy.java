@@ -6,10 +6,7 @@ import ua.edu.ukma.community.common.error.ErrorCode;
 
 import java.util.UUID;
 
-/**
- * Перевірки ролей (FR-005, FR-006). Global Admin <b>не</b> має прав голови автоматично:
- * щоб модерувати події організації, він має призначити себе її головою.
- */
+
 @Component
 public class OrgRolePolicy {
 
@@ -29,14 +26,12 @@ public class OrgRolePolicy {
         }
     }
 
-    /** Лише голова цієї організації: події, модерація, картинки подій. */
     public void requireHead(User user, UUID organizationId) {
         if (!isHead(user, organizationId)) {
             throw new ApiException(ErrorCode.FORBIDDEN, "Дія доступна лише голові цієї організації");
         }
     }
 
-    /** Голова цієї організації або Global Admin: профіль організації, логотип, голови, журнал ролей. */
     public void requireHeadOrAdmin(User user, UUID organizationId) {
         if (!user.globalAdmin() && !isHead(user, organizationId)) {
             throw new ApiException(ErrorCode.FORBIDDEN, "Дія доступна голові цієї організації або Global Admin");

@@ -6,15 +6,12 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-/**
- * Тіла запитів {@code /auth/*}.
- */
+
 public final class AuthRequests {
 
     private AuthRequests() {
     }
 
-    /** Реєстрація (FR-001). Пароль до 72 символів: bcrypt далі не дивиться. */
     @Schema(name = "RegisterRequest", description = "Реєстрація з університетською поштою")
     public record Register(
             @Schema(example = "student@ukma.edu.ua")
@@ -71,7 +68,6 @@ public final class AuthRequests {
         }
     }
 
-    /** Призначення голови (FR-008, FR-009); з {@code replacesUserId} — заміна (FR-012). */
     @Schema(name = "AppointHeadRequest", description = "Призначити голову організації")
     public record AppointHead(
             @Schema(description = "Пошта зареєстрованого користувача з підтвердженою поштою",

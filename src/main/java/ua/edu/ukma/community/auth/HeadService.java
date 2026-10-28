@@ -9,10 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Призначення й зняття голів організацій (FR-008–FR-013). Існування самої організації перевіряє
- * контролер до виклику: модуль Auth не залежить від модуля організацій.
- */
+
 @Service
 public class HeadService {
 
@@ -33,10 +30,7 @@ public class HeadService {
         return heads.findHeads(organizationId);
     }
 
-    /**
-     * Призначає голову (FR-008, FR-009). З {@code replacesUserId} — одночасно знімає іншого голову (FR-012);
-     * це може лише Global Admin.
-     */
+
     public OrganizationHead appoint(User actor, UUID organizationId, String email, UUID replacesUserId) {
         policy.requireHeadOrAdmin(actor, organizationId);
         User target = requireActiveUser(email);
@@ -62,12 +56,10 @@ public class HeadService {
                 .orElseThrow(() -> headNotFound(target.id()));
     }
 
-    /** Знімає голову (FR-010); останнього зняти не можна (FR-011). */
     public void remove(User actor, UUID organizationId, UUID userId) {
         policy.requireHeadOrAdmin(actor, organizationId);
         switch (heads.remove(organizationId, userId, actor.id(), OffsetDateTime.now(clock))) {
             case REMOVED -> {
-                // готово
             }
             case NOT_HEAD -> throw headNotFound(userId);
             case LAST_HEAD -> throw new ApiException(ErrorCode.LAST_HEAD,
@@ -81,12 +73,10 @@ public class HeadService {
         return heads.findLog(organizationId);
     }
 
-    /** Перший голова щойно створеної організації; права адміна перевіряє той, хто створює організацію. */
     public void appointFirstHead(User actor, UUID organizationId, User head) {
         heads.appoint(organizationId, head.id(), actor.id(), OffsetDateTime.now(clock));
     }
 
-    /** Головою можна зробити лише зареєстрованого користувача з підтвердженою поштою. */
     public User requireActiveUser(String rawEmail) {
         String email = Emails.normalize(rawEmail);
         return users.findByEmail(email)
