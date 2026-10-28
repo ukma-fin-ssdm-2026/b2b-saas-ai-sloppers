@@ -1,0 +1,394 @@
+diff --git a/src/main/java/ua/edu/ukma/community/organization/OrganizationLogoService.java b/src/main/java/ua/edu/ukma/community/organization/OrganizationLogoService.java
+index 96d20d0..12e251d 100644
+--- a/src/main/java/ua/edu/ukma/community/organization/OrganizationLogoService.java
++++ b/src/main/java/ua/edu/ukma/community/organization/OrganizationLogoService.java
+@@ -1,5 +1,6 @@
+ package ua.edu.ukma.community.organization;
+ 
++import org.springframework.context.event.EventListener;
+ import org.springframework.stereotype.Service;
+ import org.springframework.web.multipart.MultipartFile;
+ import ua.edu.ukma.community.common.error.ApiException;
+@@ -45,6 +46,14 @@ public class OrganizationLogoService {
+         images.deleteQuietly(current.logoUrl());
+     }
+ 
++    /**
++     * Після видалення організації прибирає зі сховища все під її папкою: логотип і картинки всіх її подій.
++     */
++    @EventListener
++    public void onOrganizationDeleted(OrganizationDeleted deleted) {
++        images.deleteFolderQuietly(folder(deleted.organizationId()));
++    }
++
+     static String folder(UUID organizationId) {
+         return "organizations/" + organizationId;
+     }
+diff --git a/src/main/java/ua/edu/ukma/community/storage/ImageService.java b/src/main/java/ua/edu/ukma/community/storage/ImageService.java
+index d2de1e5..9dfb70d 100644
+--- a/src/main/java/ua/edu/ukma/community/storage/ImageService.java
++++ b/src/main/java/ua/edu/ukma/community/storage/ImageService.java
+@@ -48,6 +48,10 @@ public class ImageService {
+         storage.deleteQuietly(publicUrl);
+     }
+ 
++    public void deleteFolderQuietly(String folder) {
++        storage.deleteFolderQuietly(folder);
++    }
++
+     private static byte[] readValidated(MultipartFile file) {
+         if (file == null || file.isEmpty()) {
+             throw ApiException.validation("file", "Файл порожній", null);
+diff --git a/src/main/java/ua/edu/ukma/community/storage/ImageStorage.java b/src/main/java/ua/edu/ukma/community/storage/ImageStorage.java
+index 921646a..9bcc1c7 100644
+--- a/src/main/java/ua/edu/ukma/community/storage/ImageStorage.java
++++ b/src/main/java/ua/edu/ukma/community/storage/ImageStorage.java
+@@ -15,4 +15,10 @@ public interface ImageStorage {
+      * Чужі URL і помилки сховища ігноруються: прибирання старих файлів не повинно ламати запит.
+      */
+     void deleteQuietly(String publicUrl);
++
++    /**
++     * Видаляє всі файли в папці {@code folder} разом із підпапками (наприклад, {@code organizations/<id>}).
++     * Помилки сховища ігноруються й лише пишуться в лог.
++     */
++    void deleteFolderQuietly(String folder);
+ }
+diff --git a/src/main/java/ua/edu/ukma/community/storage/StorageConfig.java b/src/main/java/ua/edu/ukma/community/storage/StorageConfig.java
+index 614951d..d8be2e8 100644
+--- a/src/main/java/ua/edu/ukma/community/storage/StorageConfig.java
++++ b/src/main/java/ua/edu/ukma/community/storage/StorageConfig.java
+@@ -5,6 +5,10 @@ import org.slf4j.LoggerFactory;
+ import org.springframework.beans.factory.annotation.Value;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
++import org.springframework.http.client.SimpleClientHttpRequestFactory;
++import org.springframework.web.client.RestClient;
++
++import java.time.Duration;
+ 
+ /**
+  * Обирає реалізацію {@link ImageStorage}: Supabase, якщо задані URL проєкту й секретний ключ, інакше заглушку.
+@@ -13,6 +17,8 @@ import org.springframework.context.annotation.Configuration;
+ public class StorageConfig {
+ 
+     private static final Logger LOG = LoggerFactory.getLogger(StorageConfig.class);
++    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
++    private static final Duration READ_TIMEOUT = Duration.ofSeconds(30);
+ 
+     @Bean
+     ImageStorage imageStorage(@Value("${storage.supabase.url:}") String url,
+@@ -22,6 +28,9 @@ public class StorageConfig {
+             LOG.warn("Supabase Storage is not configured; image uploads will return 503");
+             return new UnavailableImageStorage();
+         }
+-        return new SupabaseImageStorage(url, secretKey, bucket);
++        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
++        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
++        requestFactory.setReadTimeout(READ_TIMEOUT);
++        return new SupabaseImageStorage(RestClient.builder().requestFactory(requestFactory), url, secretKey, bucket);
+     }
+ }
+diff --git a/src/main/java/ua/edu/ukma/community/storage/SupabaseImageStorage.java b/src/main/java/ua/edu/ukma/community/storage/SupabaseImageStorage.java
+index 6205468..d4417c0 100644
+--- a/src/main/java/ua/edu/ukma/community/storage/SupabaseImageStorage.java
++++ b/src/main/java/ua/edu/ukma/community/storage/SupabaseImageStorage.java
+@@ -2,13 +2,17 @@ package ua.edu.ukma.community.storage;
+ 
+ import org.slf4j.Logger;
+ import org.slf4j.LoggerFactory;
+-import org.springframework.http.client.SimpleClientHttpRequestFactory;
++import org.springframework.core.ParameterizedTypeReference;
++import org.springframework.http.HttpMethod;
++import org.springframework.http.MediaType;
+ import org.springframework.web.client.RestClient;
+ import org.springframework.web.client.RestClientException;
+ import ua.edu.ukma.community.common.error.ApiException;
+ import ua.edu.ukma.community.common.error.ErrorCode;
+ 
+-import java.time.Duration;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.Map;
+ 
+ /**
+  * Картинки в Supabase Storage через його REST API.
+@@ -19,24 +23,29 @@ import java.time.Duration;
+ public class SupabaseImageStorage implements ImageStorage {
+ 
+     private static final Logger LOG = LoggerFactory.getLogger(SupabaseImageStorage.class);
+-    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+-    private static final Duration READ_TIMEOUT = Duration.ofSeconds(30);
+     // імена файлів унікальні, тож кешувати можна довго
+     private static final String CACHE_CONTROL = "max-age=31536000";
++    /** Скільки записів просимо за один запит списку і скільки видаляємо за один запит видалення. */
++    static final int PAGE_SIZE = 1000;
++    /** Захист від нескінченної рекурсії: у нас максимум organizations/{id}/events/{id}/файл. */
++    private static final int MAX_DEPTH = 5;
++    private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_TYPE =
++            new ParameterizedTypeReference<>() {
++            };
+ 
+     private final RestClient client;
+     private final String bucket;
+     private final String publicPrefix;
+ 
+-    public SupabaseImageStorage(String projectUrl, String secretKey, String bucket) {
++    /**
++     * @param builder    білдер з налаштованими таймаутами (див. {@link StorageConfig}); у тестах — з моком сервера
++     * @param projectUrl {@code https://<project-ref>.supabase.co}
++     */
++    public SupabaseImageStorage(RestClient.Builder builder, String projectUrl, String secretKey, String bucket) {
+         String base = projectUrl.endsWith("/") ? projectUrl.substring(0, projectUrl.length() - 1) : projectUrl;
+-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+-        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
+-        requestFactory.setReadTimeout(READ_TIMEOUT);
+-        this.client = RestClient.builder()
++        this.client = builder
+                 .baseUrl(base + "/storage/v1")
+                 .defaultHeader("apikey", secretKey)
+-                .requestFactory(requestFactory)
+                 .build();
+         this.bucket = bucket;
+         this.publicPrefix = base + "/storage/v1/object/public/" + bucket + "/";
+@@ -59,11 +68,6 @@ public class SupabaseImageStorage implements ImageStorage {
+         return publicPrefix + key;
+     }
+ 
+-    // ключ збираємо рядком, а не через {змінні} шаблону: інакше RestClient закодує "/" у ключі як %2F
+-    private String objectPath(String key) {
+-        return "/object/" + bucket + "/" + key;
+-    }
+-
+     @Override
+     public void deleteQuietly(String publicUrl) {
+         if (publicUrl == null || !publicUrl.startsWith(publicPrefix)) {
+@@ -79,4 +83,63 @@ public class SupabaseImageStorage implements ImageStorage {
+             LOG.warn("Supabase Storage delete failed for {}/{}: {}", bucket, key, e.getMessage());
+         }
+     }
++
++    @Override
++    public void deleteFolderQuietly(String folder) {
++        try {
++            List<String> keys = new ArrayList<>();
++            collectKeys(folder, 0, keys);
++            for (int from = 0; from < keys.size(); from += PAGE_SIZE) {
++                List<String> batch = keys.subList(from, Math.min(from + PAGE_SIZE, keys.size()));
++                client.method(HttpMethod.DELETE)
++                        .uri("/object/" + bucket)
++                        .contentType(MediaType.APPLICATION_JSON)
++                        .body(Map.of("prefixes", batch))
++                        .retrieve()
++                        .toBodilessEntity();
++            }
++            LOG.info("Deleted {} file(s) under {}/{}", keys.size(), bucket, folder);
++        } catch (RestClientException e) {
++            LOG.warn("Supabase Storage folder cleanup failed for {}/{}: {}", bucket, folder, e.getMessage());
++        }
++    }
++
++    /**
++     * Збирає повні ключі всіх файлів у папці й підпапках. Supabase повертає вміст лише одного рівня:
++     * файли мають {@code id}, а підпапки — {@code id = null}.
++     */
++    private void collectKeys(String folder, int depth, List<String> keys) {
++        if (depth > MAX_DEPTH) {
++            return;
++        }
++        int offset = 0;
++        while (true) {
++            List<Map<String, Object>> page = client.post()
++                    .uri("/object/list/" + bucket)
++                    .contentType(MediaType.APPLICATION_JSON)
++                    .body(Map.of("prefix", folder, "limit", PAGE_SIZE, "offset", offset))
++                    .retrieve()
++                    .body(LIST_TYPE);
++            if (page == null || page.isEmpty()) {
++                return;
++            }
++            for (Map<String, Object> item : page) {
++                String path = folder + "/" + item.get("name");
++                if (item.get("id") == null) {
++                    collectKeys(path, depth + 1, keys);
++                } else {
++                    keys.add(path);
++                }
++            }
++            if (page.size() < PAGE_SIZE) {
++                return;
++            }
++            offset += PAGE_SIZE;
++        }
++    }
++
++    // ключ збираємо рядком, а не через {змінні} шаблону: інакше RestClient закодує "/" у ключі як %2F
++    private String objectPath(String key) {
++        return "/object/" + bucket + "/" + key;
++    }
+ }
+diff --git a/src/main/java/ua/edu/ukma/community/storage/UnavailableImageStorage.java b/src/main/java/ua/edu/ukma/community/storage/UnavailableImageStorage.java
+index 97935d1..32435d5 100644
+--- a/src/main/java/ua/edu/ukma/community/storage/UnavailableImageStorage.java
++++ b/src/main/java/ua/edu/ukma/community/storage/UnavailableImageStorage.java
+@@ -19,4 +19,9 @@ public class UnavailableImageStorage implements ImageStorage {
+     public void deleteQuietly(String publicUrl) {
+         // нічого не зберігали, нічого й видаляти
+     }
++
++    @Override
++    public void deleteFolderQuietly(String folder) {
++        // нічого не зберігали, нічого й видаляти
++    }
+ }
+diff --git a/src/test/java/ua/edu/ukma/community/organization/OrganizationLogoServiceTest.java b/src/test/java/ua/edu/ukma/community/organization/OrganizationLogoServiceTest.java
+index 9ab5919..188aac9 100644
+--- a/src/test/java/ua/edu/ukma/community/organization/OrganizationLogoServiceTest.java
++++ b/src/test/java/ua/edu/ukma/community/organization/OrganizationLogoServiceTest.java
+@@ -84,6 +84,14 @@ class OrganizationLogoServiceTest {
+         verify(images).deleteQuietly("https://cdn/old.png");
+     }
+ 
++    @Test
++    @DisplayName("після видалення організації прибирається вся її папка у сховищі")
++    void organizationDeletionCleansFolder() {
++        logos.onOrganizationDeleted(new OrganizationDeleted(ORG_ID));
++
++        verify(images).deleteFolderQuietly("organizations/" + ORG_ID);
++    }
++
+     @Test
+     @DisplayName("неіснуюча організація → 404 ще до завантаження файлу")
+     void unknownOrganization() {
+diff --git a/src/test/java/ua/edu/ukma/community/storage/SupabaseImageStorageTest.java b/src/test/java/ua/edu/ukma/community/storage/SupabaseImageStorageTest.java
+new file mode 100644
+index 0000000..2864e49
+--- /dev/null
++++ b/src/test/java/ua/edu/ukma/community/storage/SupabaseImageStorageTest.java
+@@ -0,0 +1,126 @@
++package ua.edu.ukma.community.storage;
++
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.http.HttpMethod;
++import org.springframework.http.HttpStatus;
++import org.springframework.http.MediaType;
++import org.springframework.test.web.client.MockRestServiceServer;
++import org.springframework.web.client.RestClient;
++import ua.edu.ukma.community.common.error.ApiException;
++import ua.edu.ukma.community.common.error.ErrorCode;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.assertj.core.api.Assertions.assertThatNoException;
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
++import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
++import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
++import static org.springframework.test.web.client.match.MockRestRequestMatchers.headerDoesNotExist;
++import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
++import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
++import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
++import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
++
++@DisplayName("SupabaseImageStorage: запити до Supabase Storage")
++class SupabaseImageStorageTest {
++
++    static final String PROJECT = "https://demo.supabase.co";
++    static final String API = PROJECT + "/storage/v1";
++    static final String KEY = "sb_secret_test";
++
++    MockRestServiceServer server;
++    SupabaseImageStorage storage;
++
++    @BeforeEach
++    void setUp() {
++        RestClient.Builder builder = RestClient.builder();
++        server = MockRestServiceServer.bindTo(builder).build();
++        storage = new SupabaseImageStorage(builder, PROJECT, KEY, "images");
++    }
++
++    @Test
++    @DisplayName("upload: ключ у шляху без %2F, секрет лише в apikey, повертає публічний URL")
++    void uploadSendsFileAndReturnsPublicUrl() {
++        server.expect(requestTo(API + "/object/images/organizations/42/logo-abc.png"))
++                .andExpect(method(HttpMethod.POST))
++                .andExpect(header("apikey", KEY))
++                .andExpect(headerDoesNotExist("Authorization"))
++                .andExpect(header("Content-Type", "image/png"))
++                .andRespond(withSuccess("{\"Key\":\"images/organizations/42/logo-abc.png\"}",
++                        MediaType.APPLICATION_JSON));
++
++        String url = storage.upload("organizations/42/logo-abc.png", new byte[] {1, 2, 3}, "image/png");
++
++        assertThat(url).isEqualTo(PROJECT + "/storage/v1/object/public/images/organizations/42/logo-abc.png");
++        server.verify();
++    }
++
++    @Test
++    @DisplayName("upload: помилка Supabase → 503 STORAGE_UNAVAILABLE")
++    void uploadFailureIsStorageUnavailable() {
++        server.expect(requestTo(API + "/object/images/x.png"))
++                .andRespond(withStatus(HttpStatus.BAD_REQUEST).body("{\"error\":\"Bucket not found\"}"));
++
++        assertThatThrownBy(() -> storage.upload("x.png", new byte[] {1}, "image/png"))
++                .isInstanceOf(ApiException.class)
++                .extracting(e -> ((ApiException) e).code()).isEqualTo(ErrorCode.STORAGE_UNAVAILABLE);
++    }
++
++    @Test
++    @DisplayName("deleteQuietly: видаляє лише свої URL, чужі ігнорує")
++    void deleteQuietlyOnlyOwnUrls() {
++        server.expect(requestTo(API + "/object/images/organizations/42/logo-abc.png"))
++                .andExpect(method(HttpMethod.DELETE))
++                .andRespond(withSuccess("{\"message\":\"Successfully deleted\"}", MediaType.APPLICATION_JSON));
++
++        storage.deleteQuietly(PROJECT + "/storage/v1/object/public/images/organizations/42/logo-abc.png");
++        storage.deleteQuietly("https://evil.example.com/whatever.png");
++        storage.deleteQuietly(null);
++
++        server.verify();
++    }
++
++    @Test
++    @DisplayName("deleteFolderQuietly: обходить підпапки й видаляє всі файли одним запитом")
++    void deleteFolderWalksSubfoldersAndDeletesAllFiles() {
++        server.expect(requestTo(API + "/object/list/images"))
++                .andExpect(method(HttpMethod.POST))
++                .andExpect(content().json("{\"prefix\":\"organizations/42\",\"offset\":0}"))
++                .andRespond(withSuccess("""
++                        [{"name":"logo-a.png","id":"f1"},{"name":"events","id":null}]""",
++                        MediaType.APPLICATION_JSON));
++        server.expect(requestTo(API + "/object/list/images"))
++                .andExpect(content().json("{\"prefix\":\"organizations/42/events\"}"))
++                .andRespond(withSuccess("""
++                        [{"name":"e1","id":null}]""", MediaType.APPLICATION_JSON));
++        server.expect(requestTo(API + "/object/list/images"))
++                .andExpect(content().json("{\"prefix\":\"organizations/42/events/e1\"}"))
++                .andRespond(withSuccess("""
++                        [{"name":"image-b.jpg","id":"f2"}]""", MediaType.APPLICATION_JSON));
++        server.expect(requestTo(API + "/object/images"))
++                .andExpect(method(HttpMethod.DELETE))
++                .andExpect(content().json("""
++                        {"prefixes":["organizations/42/logo-a.png","organizations/42/events/e1/image-b.jpg"]}"""))
++                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
++
++        storage.deleteFolderQuietly("organizations/42");
++
++        server.verify();
++    }
++
++    @Test
++    @DisplayName("deleteFolderQuietly: порожня папка — нічого не видаляємо; помилка сховища не кидає виняток")
++    void deleteFolderEmptyAndFailure() {
++        server.expect(requestTo(API + "/object/list/images"))
++                .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
++        storage.deleteFolderQuietly("organizations/empty");
++        server.verify();
++
++        server.reset();
++        server.expect(requestTo(API + "/object/list/images"))
++                .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
++        assertThatNoException().isThrownBy(() -> storage.deleteFolderQuietly("organizations/42"));
++        server.verify();
++    }
++}

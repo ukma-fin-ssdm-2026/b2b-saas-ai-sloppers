@@ -143,6 +143,20 @@ curl -X PUT -F "file=@poster.jpg" http://localhost:8080/api/v1/events/<id>/image
 
 **Без бази взагалі** (in-memory з демо-даними): `./mvnw spring-boot:run -Dspring-boot.run.profiles=inmemory`.
 
+### Реєстрація, вхід і ролі
+
+| Змінна | Що це |
+| ------ | ----- |
+| `AUTH_JWT_SECRET` | секрет підпису JWT, щонайменше 32 символи (`openssl rand -base64 48`). Без нього ключ генерується при старті, і після перезапуску всім доведеться увійти знову |
+| `AUTH_ADMIN_EMAILS` | пошти через кому, які при реєстрації отримують роль Global Admin |
+| `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | SMTP для листів з кодом. Без них код пишеться в лог бекенду (`docker compose logs backend`) |
+
+Сценарій: `POST /api/v1/auth/register` → код з листа (або з логу) → `POST /api/v1/auth/verify` → `POST /api/v1/auth/login` → токен у Swagger UI через кнопку **Authorize**.
+
+Ролі: **Global Admin** створює й видаляє організації та призначає голів будь-якої організації; **голова** керує профілем, подіями й головами своєї організації. Прав голови в адміна автоматично немає: щоб модерувати події, він призначає головою себе. Каталог і події для гостей відкриті без входу.
+
+Організація створюється одразу з першим головою (`headEmail` у `POST /organizations`): це має бути зареєстрований користувач з підтвердженою поштою.
+
 ## Специфікація API
 
 [docs/api/openapi-generated.yaml](docs/api/openapi-generated.yaml) генерується з анотацій у коді, руками її не редагують. Після змін у контролерах або DTO перегенеруйте файл і закомітьте:
