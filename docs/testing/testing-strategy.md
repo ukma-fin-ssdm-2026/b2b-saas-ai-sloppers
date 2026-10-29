@@ -8,12 +8,13 @@
 
 | Рівень (V-модель) | Зараз | Інструменти |
 | ----------------- | ----- | ----------- |
-| Модульний | Є: `organization`, `event` | JUnit 5, Mockito, AssertJ, фікстури `TestFixtures` |
+| Модульний | Є: backend `organization`/`event`; frontend `auth`/`mock`/`api`/`datetime` | JUnit 5 + Mockito + AssertJ; Vitest + Testing Library; фікстури `TestFixtures` / `testFixtures.ts` |
 | Інтеграційний | Немає | плануємо MockMvc / Testcontainers Postgres |
 | Системний | Немає | наскрізний гість → каталог orgs → події |
 | Приймальний | Немає | демо за US з Lab 2 |
 
-Запуск: `./mvnw test`. Тести в `src/test/java/` (стандарт Maven). Фронт (`web-src`) модульних тестів не має — перевіряється збіркою `tsc` + Vite в CI.
+Запуск бекенду: `./mvnw test` (`src/test/java/`).  
+Запуск фронту: `cd web-src && npm test` (або `npm run test:coverage`, поріг рядків **5%** як у JaCoCo). CI job **Build and Test Frontend** ганяє coverage + build.
 
 ## Покриття
 

@@ -1,0 +1,170 @@
+.org-detail__back {
+  color: inherit;
+  text-decoration: none;
+}
+
+.org-detail__back:hover {
+  color: #f2f2f2;
+}
+
+.org-detail__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.1rem;
+  margin-bottom: 1.25rem;
+}
+
+.org-detail__logo-wrap {
+  flex-shrink: 0;
+}
+
+.org-detail__logo,
+.org-detail__logo-fallback {
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border: 1px solid #2f2f2f;
+  background: #161616;
+}
+
+.org-detail__logo-fallback {
+  display: grid;
+  place-items: center;
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 1.4rem;
+  color: #cfcfcf;
+}
+
+.org-detail__heading {
+  min-width: 0;
+}
+
+.org-detail__title {
+  margin-bottom: 0.35rem;
+}
+
+.org-detail__slug {
+  margin: 0;
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.85rem;
+  color: #8e8e8e;
+}
+
+.org-detail__description {
+  margin: 0 0 1.5rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #d8d8d8;
+  white-space: pre-wrap;
+}
+
+.org-detail__contacts {
+  margin: 0 0 2.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.org-detail__contact {
+  display: grid;
+  grid-template-columns: 6.5rem 1fr;
+  gap: 0.5rem 1rem;
+  align-items: baseline;
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.95rem;
+}
+
+.org-detail__contact dt {
+  margin: 0;
+  color: #8e8e8e;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.org-detail__contact dd {
+  margin: 0;
+}
+
+.org-detail__contact a {
+  color: #f2f2f2;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.org-detail__contact a:hover {
+  color: #fff;
+}
+
+.org-detail__section-title {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+
+.org-events-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.org-event-card {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr;
+  gap: 0.9rem;
+  padding: 1rem 0.15rem;
+  border-top: 1px solid #2a2a2a;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+}
+
+.org-events-list > li:last-child .org-event-card {
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.org-event-card:hover {
+  background: #111;
+}
+
+.org-event-card:focus-visible {
+  outline: 1px solid #cfcfcf;
+  outline-offset: 2px;
+}
+
+.org-event-card__image,
+.org-event-card__image-fallback {
+  width: 4.5rem;
+  height: 4.5rem;
+  object-fit: cover;
+  border: 1px solid #2f2f2f;
+  background: #161616;
+}
+
+.org-event-card__body {
+  min-width: 0;
+}
+
+.org-event-card__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 400;
+}
+
+.org-event-card__meta,
+.org-event-card__location {
+  margin: 0;
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.85rem;
+  color: #8e8e8e;
+}
+
+.org-event-card__location {
+  margin-top: 0.25rem;
+  color: #b0b0b0;
+}
