@@ -1,6 +1,6 @@
 import { DEMO_TOKEN } from './credentials'
 
-export type AuthRole = 'admin'
+export type AuthRole = 'admin' | 'user'
 
 export interface AuthSession {
   username: string
@@ -30,10 +30,15 @@ export function clearSession(): void {
   sessionStorage.removeItem(SESSION_KEY)
 }
 
+export function createSession(
+  username: string,
+  role: AuthRole,
+  token = DEMO_TOKEN,
+): AuthSession {
+  return { username, role, token }
+}
+
+/** @deprecated use createSession */
 export function createDemoSession(username: string): AuthSession {
-  return {
-    username,
-    role: 'admin',
-    token: DEMO_TOKEN,
-  }
+  return createSession(username, 'admin')
 }

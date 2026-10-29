@@ -37,11 +37,12 @@ Vite проксує `/api` -> `http://localhost:8080`, тож у коді вик
 |------|------|
 | `/organizations`, `/organizations/:id` | Публічний каталог / профіль |
 | `/events`, `/events/:id` | Дайджест / деталі + календар |
-| `/login` | Демо-вхід (UI-gate, не backend Auth) |
-| `/admin/*` | Адмін проти live API (потрібен логін) |
+| `/login` | Вхід (demo admin або mock @ukma.edu.ua) |
+| `/register`, `/verify` | Реєстрація + код (US-001 mock на фронті) |
+| `/admin/*` | Адмін: org CRUD/logo + кабінет подій |
 | `/lab/*` | Моки в пам’яті браузера (потрібен логін) |
 
-Демо-креденшали за замовчуванням: `bot` / `huyesosik` (або `VITE_DEMO_*` з `.env.example`).
+Демо-адмін: `bot` / `huyesosik` (або `VITE_DEMO_*`). Реєстрація — лише `@ukma.edu.ua`, код показується на `/verify` (немає email-бекенду). При `401` з API — сесія скидається й редірект на `/login`.
 
 ## Структура
 

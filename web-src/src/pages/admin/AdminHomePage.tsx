@@ -13,7 +13,7 @@ function AdminHomePage() {
             <div className="panel-row__main">
               <h2 className="panel-row__title">Організації</h2>
               <p className="panel-row__meta">
-                CRUD, autoPublish, логотип, черга подій
+                CRUD, logo, autoPublish → далі кабінет подій організації
               </p>
             </div>
             <div className="panel-row__actions">

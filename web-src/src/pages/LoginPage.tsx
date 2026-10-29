@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import './OrganizationsPage.css'
 import './panel.css'
@@ -8,15 +8,19 @@ function LoginPage() {
   const { isAuthenticated, login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from =
-    (location.state as { from?: string } | null)?.from ?? '/admin'
+  const [searchParams] = useSearchParams()
 
-  const [username, setUsername] = useState('')
+  const fromState = (location.state as { from?: string; verifiedEmail?: string } | null)
+  const fromQuery = searchParams.get('from')
+  const from = fromState?.from ?? fromQuery ?? '/admin'
+  const verifiedEmail = fromState?.verifiedEmail
+
+  const [username, setUsername] = useState(verifiedEmail ?? '')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   if (isAuthenticated) {
-    return <Navigate to={from} replace />
+    return <Navigate to={from.startsWith('/') ? from : '/admin'} replace />
   }
 
   const onSubmit = (event: FormEvent) => {
@@ -26,7 +30,8 @@ function LoginPage() {
       setError(result.error)
       return
     }
-    navigate(from, { replace: true })
+    const target = from.startsWith('/') ? from : '/admin'
+    navigate(target, { replace: true })
   }
 
   return (
@@ -34,10 +39,13 @@ function LoginPage() {
       <div className="panel-page__inner">
         <p className="panel-page__eyebrow">Доступ</p>
         <h1 className="panel-page__title">Вхід</h1>
+        {verifiedEmail ? (
+          <p className="panel-ok">Email підтверджено. Увійдіть паролем.</p>
+        ) : null}
 
         <form className="panel-form" onSubmit={onSubmit}>
           <div className="panel-field">
-            <label htmlFor="login-user">Логін</label>
+            <label htmlFor="login-user">Email або логін</label>
             <input
               id="login-user"
               autoComplete="username"
@@ -62,6 +70,12 @@ function LoginPage() {
             <button type="submit" className="orgs-btn">
               Увійти
             </button>
+            <Link to="/register" className="orgs-btn">
+              Реєстрація
+            </Link>
+            <Link to="/verify" className="orgs-btn">
+              Підтвердити код
+            </Link>
             <Link to="/organizations" className="orgs-btn">
               На сайт
             </Link>

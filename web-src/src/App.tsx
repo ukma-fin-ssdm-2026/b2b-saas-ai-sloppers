@@ -7,6 +7,7 @@ import IntroOverlay from './components/IntroOverlay'
 import AdminHomePage from './pages/admin/AdminHomePage'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminOrganizationDetailPage from './pages/admin/AdminOrganizationDetailPage'
+import AdminOrganizationEventsPage from './pages/admin/AdminOrganizationEventsPage'
 import AdminOrganizationsPage from './pages/admin/AdminOrganizationsPage'
 import EventDetailPage from './pages/EventDetailPage'
 import EventsPage from './pages/EventsPage'
@@ -16,6 +17,8 @@ import LabPlaygroundPage from './pages/lab/LabPlaygroundPage'
 import LoginPage from './pages/LoginPage'
 import OrganizationDetailPage from './pages/OrganizationDetailPage'
 import OrganizationsPage from './pages/OrganizationsPage'
+import RegisterPage from './pages/RegisterPage'
+import VerifyPage from './pages/VerifyPage'
 import './App.css'
 
 const INTRO_SEEN_KEY = 'community-intro-seen'
@@ -74,6 +77,8 @@ function App() {
               <Route path="/events" element={<EventsPage />} />
               <Route path="/events/:eventId" element={<EventDetailPage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/verify" element={<VerifyPage />} />
 
               <Route
                 path="/admin"
@@ -91,6 +96,10 @@ function App() {
                 <Route
                   path="organizations/:organizationId"
                   element={<AdminOrganizationDetailPage />}
+                />
+                <Route
+                  path="organizations/:organizationId/events"
+                  element={<AdminOrganizationEventsPage />}
                 />
               </Route>
 

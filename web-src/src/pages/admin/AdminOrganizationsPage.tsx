@@ -134,7 +134,13 @@ function AdminOrganizationsPage() {
               </div>
               <div className="panel-row__actions">
                 <Link className="orgs-btn" to={`/admin/organizations/${org.id}`}>
-                  Керувати
+                  Профіль
+                </Link>
+                <Link
+                  className="orgs-btn"
+                  to={`/admin/organizations/${org.id}/events`}
+                >
+                  Події
                 </Link>
               </div>
             </div>

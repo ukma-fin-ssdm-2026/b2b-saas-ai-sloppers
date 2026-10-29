@@ -1,14 +1,6 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import {
-  ApiError,
-  approveEvent,
-  createEvent,
-  listOrganizationEvents,
-  rejectEvent,
-  unpublishEvent,
-  updateEvent,
-} from '../../api/events'
+import { ApiError } from '../../api/client'
 import {
   deleteOrganization,
   deleteOrganizationLogo,
@@ -16,17 +8,13 @@ import {
   updateOrganization,
   uploadOrganizationLogo,
 } from '../../api/organizations'
-import type { Event } from '../../types/event'
 import type { Organization } from '../../types/organization'
-import { formatEventDateTime } from '../../utils/datetime'
 
 function AdminOrganizationDetailPage() {
   const { organizationId } = useParams<{ organizationId: string }>()
   const navigate = useNavigate()
 
   const [org, setOrg] = useState<Organization | null>(null)
-  const [events, setEvents] = useState<Event[]>([])
-  const [statusFilter, setStatusFilter] = useState<string>('PENDING')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -38,19 +26,6 @@ function AdminOrganizationDetailPage() {
   const [instagramHandle, setInstagramHandle] = useState('')
   const [contactEmail, setContactEmail] = useState('')
   const [autoPublish, setAutoPublish] = useState(false)
-
-  const [eventTitle, setEventTitle] = useState('')
-  const [eventStartsAt, setEventStartsAt] = useState('')
-  const [eventLocation, setEventLocation] = useState('')
-
-  const refreshEvents = useCallback(async (orgId: string, status: string) => {
-    const page = await listOrganizationEvents(orgId, {
-      status: status ? (status as Event['status']) : undefined,
-      limit: 50,
-      offset: 0,
-    })
-    setEvents(page.data)
-  }, [])
 
   useEffect(() => {
     if (!organizationId) return
@@ -69,7 +44,6 @@ function AdminOrganizationDetailPage() {
         setInstagramHandle(loaded.instagramHandle ?? '')
         setContactEmail(loaded.contactEmail ?? '')
         setAutoPublish(loaded.autoPublish)
-        await refreshEvents(organizationId!, statusFilter)
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -87,7 +61,7 @@ function AdminOrganizationDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [organizationId, reload, refreshEvents, statusFilter])
+  }, [organizationId, reload])
 
   const onSave = async (event: FormEvent) => {
     event.preventDefault()
@@ -159,48 +133,6 @@ function AdminOrganizationDetailPage() {
     }
   }
 
-  const onCreateEvent = async (event: FormEvent) => {
-    event.preventDefault()
-    if (!organizationId) return
-    setError(null)
-    try {
-      await createEvent(organizationId, {
-        title: eventTitle.trim(),
-        startsAt: new Date(eventStartsAt).toISOString(),
-        location: eventLocation.trim() || undefined,
-      })
-      setEventTitle('')
-      setEventLocation('')
-      setMessage('Подію створено (опубліковано)')
-      setReload((n) => n + 1)
-    } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? `Подія: помилка (${err.status})`
-          : 'Не вдалося створити подію',
-      )
-    }
-  }
-
-  const runEventAction = async (
-    action: 'approve' | 'reject' | 'unpublish',
-    eventId: string,
-  ) => {
-    try {
-      if (action === 'approve') await approveEvent(eventId)
-      if (action === 'reject') await rejectEvent(eventId)
-      if (action === 'unpublish') await unpublishEvent(eventId)
-      setMessage(`OK: ${action}`)
-      if (organizationId) await refreshEvents(organizationId, statusFilter)
-    } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? `${action} не вдалося (${err.status})`
-          : `${action} не вдалося`,
-      )
-    }
-  }
-
   if (loading) {
     return <p className="panel-row__meta">Завантаження…</p>
   }
@@ -220,6 +152,14 @@ function AdminOrganizationDetailPage() {
         <Link to="/admin/organizations">← Організації</Link>
       </p>
       <h2 className="panel-row__title">{org.name}</h2>
+      <div className="panel-actions" style={{ marginBottom: '1.25rem' }}>
+        <Link
+          className="orgs-btn"
+          to={`/admin/organizations/${org.id}/events`}
+        >
+          Кабінет подій
+        </Link>
+      </div>
       {message ? <p className="panel-ok">{message}</p> : null}
       {error ? <p className="panel-error">{error}</p> : null}
 
@@ -273,13 +213,17 @@ function AdminOrganizationDetailPage() {
             checked={autoPublish}
             onChange={(e) => setAutoPublish(e.target.checked)}
           />
-          autoPublish
+          autoPublish (спаршені події без модерації)
         </label>
         <div className="panel-actions">
           <button type="submit" className="orgs-btn">
-            Зберегти
+            Зберегти (PATCH)
           </button>
-          <button type="button" className="orgs-btn" onClick={() => void onDelete()}>
+          <button
+            type="button"
+            className="orgs-btn"
+            onClick={() => void onDelete()}
+          >
             Видалити
           </button>
         </div>
@@ -315,144 +259,6 @@ function AdminOrganizationDetailPage() {
           </button>
         ) : null}
       </div>
-
-      <h3 className="panel-row__title" style={{ marginTop: '2rem' }}>
-        Створити подію
-      </h3>
-      <form className="panel-form" onSubmit={(e) => void onCreateEvent(e)}>
-        <div className="panel-field">
-          <label htmlFor="ev-title">Назва</label>
-          <input
-            id="ev-title"
-            value={eventTitle}
-            onChange={(e) => setEventTitle(e.target.value)}
-            required
-            minLength={3}
-          />
-        </div>
-        <div className="panel-field">
-          <label htmlFor="ev-start">Початок</label>
-          <input
-            id="ev-start"
-            type="datetime-local"
-            value={eventStartsAt}
-            onChange={(e) => setEventStartsAt(e.target.value)}
-            required
-          />
-        </div>
-        <div className="panel-field">
-          <label htmlFor="ev-loc">Локація</label>
-          <input
-            id="ev-loc"
-            value={eventLocation}
-            onChange={(e) => setEventLocation(e.target.value)}
-          />
-        </div>
-        <button type="submit" className="orgs-btn">
-          Створити
-        </button>
-      </form>
-
-      <h3 className="panel-row__title">Події організації</h3>
-      <div className="panel-field" style={{ marginBottom: '1rem' }}>
-        <label htmlFor="status-filter">Фільтр статусу</label>
-        <select
-          id="status-filter"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="">Усі</option>
-          <option value="PENDING">PENDING</option>
-          <option value="PUBLISHED">PUBLISHED</option>
-          <option value="REJECTED">REJECTED</option>
-          <option value="UNPUBLISHED">UNPUBLISHED</option>
-        </select>
-      </div>
-
-      <ul className="panel-list">
-        {events.map((ev) => (
-          <li key={ev.id}>
-            <div className="panel-row">
-              <div className="panel-row__main">
-                <h4 className="panel-row__title">
-                  <span className="panel-badge">{ev.status}</span>
-                  {ev.title}
-                </h4>
-                <p className="panel-row__meta">
-                  {formatEventDateTime(ev.startsAt)}
-                  {ev.verified ? '' : ' · unverified'}
-                  {ev.scraped ? ' · scraped' : ''}
-                </p>
-              </div>
-              <div className="panel-row__actions">
-                {ev.status === 'PENDING' ? (
-                  <>
-                    <button
-                      type="button"
-                      className="orgs-btn"
-                      onClick={() => void runEventAction('approve', ev.id)}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      className="orgs-btn"
-                      onClick={() => void runEventAction('reject', ev.id)}
-                    >
-                      Reject
-                    </button>
-                  </>
-                ) : null}
-                {ev.status === 'PUBLISHED' ? (
-                  <button
-                    type="button"
-                    className="orgs-btn"
-                    onClick={() => void runEventAction('unpublish', ev.id)}
-                  >
-                    Unpublish
-                  </button>
-                ) : null}
-                {ev.status === 'PUBLISHED' && !ev.verified ? (
-                  <button
-                    type="button"
-                    className="orgs-btn"
-                    onClick={() => void runEventAction('approve', ev.id)}
-                  >
-                    Verify
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="orgs-btn"
-                  onClick={() => {
-                    const next = window.prompt('Нова назва', ev.title)
-                    if (!next || next === ev.title) return
-                    void updateEvent(ev.id, { title: next })
-                      .then(() => {
-                        setMessage('Подію оновлено')
-                        if (organizationId) {
-                          return refreshEvents(organizationId, statusFilter)
-                        }
-                      })
-                      .catch((err: unknown) => {
-                        setError(
-                          err instanceof ApiError
-                            ? `PATCH (${err.status})`
-                            : 'PATCH failed',
-                        )
-                      })
-                  }}
-                >
-                  Rename
-                </button>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-      {events.length === 0 ? (
-        <p className="panel-row__meta">Немає подій для цього фільтра.</p>
-      ) : null}
     </section>
   )
 }

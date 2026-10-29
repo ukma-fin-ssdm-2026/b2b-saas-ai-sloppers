@@ -198,3 +198,8 @@
   font-size: 0.9rem;
   color: #cfcfcf;
 }
+
+.panel-tab--active {
+  border-color: #cfcfcf;
+  color: #fff;
+}

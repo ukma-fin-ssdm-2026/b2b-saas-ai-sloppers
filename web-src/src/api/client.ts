@@ -1,4 +1,4 @@
-import { readSession } from '../auth/session'
+import { clearSession, readSession } from '../auth/session'
 
 export const API_BASE = '/api/v1'
 
@@ -16,9 +16,23 @@ export class ApiError extends Error {
 
 export type ApiRequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: HeadersInit
-  /** Explicit token; otherwise session token is used when present */
   token?: string | null
   skipAuth?: boolean
+}
+
+let handlingUnauthorized = false
+
+function redirectToLoginOn401(): void {
+  if (handlingUnauthorized) return
+  handlingUnauthorized = true
+  clearSession()
+  const path = `${window.location.pathname}${window.location.search}`
+  const loginUrl = `/login?from=${encodeURIComponent(path)}`
+  if (!window.location.pathname.startsWith('/login')) {
+    window.location.assign(loginUrl)
+  } else {
+    handlingUnauthorized = false
+  }
 }
 
 export async function apiFetch<T>(
@@ -48,6 +62,9 @@ export async function apiFetch<T>(
   const response = await fetch(url, { ...init, headers })
 
   if (!response.ok) {
+    if (response.status === 401 && !skipAuth) {
+      redirectToLoginOn401()
+    }
     const body = await response.text()
     throw new ApiError(
       response.status,
