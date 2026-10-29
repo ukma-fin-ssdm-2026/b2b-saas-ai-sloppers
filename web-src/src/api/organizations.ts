@@ -1,6 +1,7 @@
 import type {
   ListOrganizationsParams,
   OffsetPageOrganization,
+  Organization,
 } from '../types/organization'
 import { apiFetch } from './client'
 
@@ -25,4 +26,10 @@ export async function listOrganizations(
   return apiFetch<OffsetPageOrganization>(
     `/organizations${qs ? `?${qs}` : ''}`,
   )
+}
+
+export async function getOrganization(
+  organizationId: string,
+): Promise<Organization> {
+  return apiFetch<Organization>(`/organizations/${organizationId}`)
 }
