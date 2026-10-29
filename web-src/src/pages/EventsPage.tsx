@@ -186,13 +186,7 @@ function EventsPage() {
   return (
     <main className="orgs-page events-page">
       <div className="orgs-page__inner">
-        <p className="orgs-page__eyebrow">
-          <Link to="/organizations" className="events-page__nav-link">
-            Організації
-          </Link>
-          <span aria-hidden="true"> · </span>
-          <span>Події</span>
-        </p>
+        <p className="orgs-page__eyebrow">Головна</p>
         <h1 className="orgs-page__title">Події</h1>
 
         <div className="events-filters">

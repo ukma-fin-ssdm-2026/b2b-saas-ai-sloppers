@@ -1,14 +1,3 @@
-.events-page__nav-link {
-  color: inherit;
-  text-decoration: none;
-}
-
-.events-page__nav-link:hover {
-  color: #f2f2f2;
-  text-decoration: underline;
-  text-underline-offset: 0.15em;
-}
-
 .events-filters {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));

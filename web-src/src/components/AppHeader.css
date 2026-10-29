@@ -1,0 +1,58 @@
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  border-bottom: 1px solid #222;
+  background: rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(8px);
+}
+
+.app-header__inner {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.app-header__brand {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1rem;
+  color: #f2f2f2;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.app-header__brand:hover {
+  color: #fff;
+}
+
+.app-header__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem 1rem;
+}
+
+.app-header__link {
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8e8e8e;
+  text-decoration: none;
+}
+
+.app-header__link:hover {
+  color: #f2f2f2;
+}
+
+.app-header__link--active {
+  color: #f2f2f2;
+}
+
+.app-header__link:focus-visible {
+  outline: 1px solid #cfcfcf;
+  outline-offset: 3px;
+}
