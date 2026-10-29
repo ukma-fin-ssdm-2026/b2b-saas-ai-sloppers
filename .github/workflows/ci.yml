@@ -116,6 +116,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Unit tests
+        run: npm run test
+
       # tsc -b (type check) + vite build
       - name: Build
         run: npm run build
