@@ -13,3 +13,13 @@ export function formatEventDateTime(iso: string): string {
   if (Number.isNaN(date.getTime())) return iso
   return KYIV_FORMATTER.format(date)
 }
+
+export function dateInputToFromParam(ymd: string): string {
+  return `${ymd}T00:00:00Z`
+}
+
+export function dateInputToToParam(ymd: string): string {
+  const date = new Date(`${ymd}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() + 1)
+  return date.toISOString().replace(/\.\d{3}Z$/, 'Z')
+}

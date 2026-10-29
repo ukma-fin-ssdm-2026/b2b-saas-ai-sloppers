@@ -115,7 +115,13 @@ function OrganizationsPage() {
   return (
     <main className="orgs-page">
       <div className="orgs-page__inner">
-        <p className="orgs-page__eyebrow">Могилянка</p>
+        <p className="orgs-page__eyebrow">
+          <span>Організації</span>
+          <span aria-hidden="true"> · </span>
+          <Link to="/events" className="orgs-page__nav-link">
+            Події
+          </Link>
+        </p>
         <h1 className="orgs-page__title">Організації</h1>
 
         <div className="orgs-page__toolbar">

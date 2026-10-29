@@ -20,6 +20,17 @@
   color: #9a9a9a;
 }
 
+.orgs-page__nav-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.orgs-page__nav-link:hover {
+  color: #f2f2f2;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .orgs-page__title {
   margin: 0 0 1.25rem;
   font-size: clamp(1.75rem, 4vw, 2.5rem);
