@@ -5,6 +5,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
+
+import java.time.Duration;
 
 /**
  * Обирає реалізацію {@link ImageStorage}: Supabase, якщо задані URL проєкту й секретний ключ, інакше заглушку.
@@ -13,6 +17,8 @@ import org.springframework.context.annotation.Configuration;
 public class StorageConfig {
 
     private static final Logger LOG = LoggerFactory.getLogger(StorageConfig.class);
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration READ_TIMEOUT = Duration.ofSeconds(30);
 
     @Bean
     ImageStorage imageStorage(@Value("${storage.supabase.url:}") String url,
@@ -22,6 +28,9 @@ public class StorageConfig {
             LOG.warn("Supabase Storage is not configured; image uploads will return 503");
             return new UnavailableImageStorage();
         }
-        return new SupabaseImageStorage(url, secretKey, bucket);
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(CONNECT_TIMEOUT);
+        requestFactory.setReadTimeout(READ_TIMEOUT);
+        return new SupabaseImageStorage(RestClient.builder().requestFactory(requestFactory), url, secretKey, bucket);
     }
 }

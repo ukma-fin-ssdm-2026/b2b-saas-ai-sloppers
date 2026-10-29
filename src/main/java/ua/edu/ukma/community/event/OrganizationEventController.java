@@ -13,6 +13,8 @@ import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import ua.edu.ukma.community.auth.CurrentUser;
+import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.config.OpenApiConfig;
@@ -29,9 +31,13 @@ public class OrganizationEventController {
     private static final String ORG_ID_EXAMPLE = "3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60";
 
     private final EventService events;
+    private final CurrentUser currentUser;
+    private final OrgRolePolicy policy;
 
-    public OrganizationEventController(EventService events) {
+    public OrganizationEventController(EventService events, CurrentUser currentUser, OrgRolePolicy policy) {
         this.events = events;
+        this.currentUser = currentUser;
+        this.policy = policy;
     }
 
     @GetMapping
@@ -64,6 +70,7 @@ public class OrganizationEventController {
                     schema = @Schema(defaultValue = "0", minimum = "0"))
             @RequestParam(name = "offset", defaultValue = "0")
             @Min(value = 0, message = "offset має бути ≥ 0") int offset) {
+        policy.requireHead(currentUser.require(), organizationId);
         return events.listForOrganization(organizationId, status, verified, limit, offset).map(EventResponse::from);
     }
 
@@ -82,6 +89,7 @@ public class OrganizationEventController {
             @Parameter(description = "Ідентифікатор організації (UUID)", example = ORG_ID_EXAMPLE)
             @PathVariable("organizationId") UUID organizationId,
             @Valid @RequestBody EventCreateRequest request) {
+        policy.requireHead(currentUser.require(), organizationId);
         Event created = events.create(organizationId, request);
         URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path(ApiPaths.V1 + "/events/{id}").buildAndExpand(created.id()).toUri();
