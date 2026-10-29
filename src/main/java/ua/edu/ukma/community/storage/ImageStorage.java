@@ -11,4 +11,6 @@ public interface ImageStorage {
     String upload(String key, byte[] data, String contentType);
 
     void deleteQuietly(String publicUrl);
+
+    void deleteFolderQuietly(String folder);
 }

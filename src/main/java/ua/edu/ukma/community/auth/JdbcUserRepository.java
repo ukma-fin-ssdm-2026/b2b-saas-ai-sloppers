@@ -19,6 +19,7 @@ public class JdbcUserRepository implements UserRepository {
     private static final String COLUMNS = """
             id, email, password_hash, status, global_admin, verification_code_hash, verification_expires_at, \
             verification_attempts, verification_sent_at, created_at, updated_at""";
+    private static final String UPSERT = "INSERT INTO app_user (" + COLUMNS + ") ";
 
     private final JdbcClient jdbc;
     private final RowMapper<User> mapper;
@@ -63,8 +64,7 @@ public class JdbcUserRepository implements UserRepository {
     @Override
     public User save(User u) {
         VerificationCode code = u.verification();
-        jdbc.sql("""
-                        INSERT INTO app_user (%s)
+        jdbc.sql(UPSERT + """
                         VALUES (:id, :email, :passwordHash, :status, :globalAdmin, :codeHash, :codeExpiresAt,
                                 :codeAttempts, :codeSentAt, :createdAt, :updatedAt)
                         ON CONFLICT (id) DO UPDATE SET
@@ -76,7 +76,7 @@ public class JdbcUserRepository implements UserRepository {
                             verification_expires_at = EXCLUDED.verification_expires_at,
                             verification_attempts = EXCLUDED.verification_attempts,
                             verification_sent_at = EXCLUDED.verification_sent_at,
-                            updated_at = EXCLUDED.updated_at""".formatted(COLUMNS))
+                            updated_at = EXCLUDED.updated_at""")
                 .param("id", u.id())
                 .param("email", u.email())
                 .param("passwordHash", u.passwordHash())

@@ -48,10 +48,10 @@ public class RegistrationService {
         }
         OffsetDateTime now = OffsetDateTime.now(clock);
         String code = newCode();
-        User user = users.save(new User(UUID.randomUUID(), email, passwords.encode(password), UserStatus.PENDING,
-                properties.isAdminEmail(email), verification(code, now), now, now));
+        User user = new User(UUID.randomUUID(), email, passwords.encode(password), UserStatus.PENDING,
+                properties.isAdminEmail(email), verification(code, now), now, now);
         codeSender.send(email, code);
-        return user;
+        return users.save(user);
     }
 
     public synchronized void verify(String rawEmail, String code) {
@@ -93,8 +93,8 @@ public class RegistrationService {
                     "Новий код можна запросити через " + wait + " с");
         }
         String code = newCode();
-        users.save(user.withVerification(verification(code, now), now));
         codeSender.send(email, code);
+        users.save(user.withVerification(verification(code, now), now));
     }
 
     private VerificationCode verification(String code, OffsetDateTime now) {

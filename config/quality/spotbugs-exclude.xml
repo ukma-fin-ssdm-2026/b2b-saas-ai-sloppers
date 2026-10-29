@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Винятки SpotBugs / find-sec-bugs. Кожен виняток — підтверджене хибне спрацьовування з поясненням.
+  Справжні знахідки виправляються в коді, а не тут.
+-->
+<FindBugsFilter>
+
+    <!--
+      "May expose internal representation": SpotBugs вважає змінним станом будь-який об'єкт,
+      переданий у конструктор. У Spring це інжектовані біни (сервіси, репозиторії), які за задумом
+      спільні між класами. Відоме хибне спрацьовування для Spring-проєктів.
+    -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+      find-sec-bugs позначає кожен метод контролера як точку входу зовнішніх даних, щоб його
+      переглянули вручну. Це інформаційна позначка, а не вразливість: вхідні дані перевіряються
+      Bean Validation і OrgRolePolicy.
+    -->
+    <Match>
+        <Bug pattern="SPRING_ENDPOINT"/>
+    </Match>
+
+    <!--
+      Тести навмисно ігнорують результат виклику, передають null і приводять виняток до ApiException,
+      щоб перевірити, що потрібний виняток узагалі кидається.
+    -->
+    <Match>
+        <Class name="~.*Test(\$.*)?"/>
+        <Bug pattern="BC_UNCONFIRMED_CAST,RV_RETURN_VALUE_IGNORED_INFERRED,RV_RETURN_VALUE_IGNORED_BAD_PRACTICE,NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE,NP_NULL_PARAM_DEREF_NONVIRTUAL"/>
+    </Match>
+
+    <Match>
+        <Bug pattern="CRLF_INJECTION_LOGS"/>
+        <Or>
+            <Class name="ua.edu.ukma.community.auth.LogCodeSender"/>
+            <Class name="ua.edu.ukma.community.auth.MailCodeSender"/>
+            <Class name="ua.edu.ukma.community.storage.SupabaseImageStorage"/>
+        </Or>
+    </Match>
+
+</FindBugsFilter>

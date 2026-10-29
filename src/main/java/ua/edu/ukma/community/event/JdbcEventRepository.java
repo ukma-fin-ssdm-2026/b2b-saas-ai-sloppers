@@ -20,6 +20,7 @@ public class JdbcEventRepository implements EventRepository {
     private static final String COLUMNS = """
             id, organization_id, title, description, starts_at, location, original_url, image_url, source_id, \
             external_post_id, status, verified, created_at, updated_at""";
+    private static final String UPSERT = "INSERT INTO event (" + COLUMNS + ") ";
 
     private final JdbcClient jdbc;
     private final RowMapper<Event> mapper;
@@ -78,8 +79,7 @@ public class JdbcEventRepository implements EventRepository {
 
     @Override
     public Event save(Event e) {
-        jdbc.sql("""
-                        INSERT INTO event (%s)
+        jdbc.sql(UPSERT + """
                         VALUES (:id, :organizationId, :title, :description, :startsAt, :location, :originalUrl,
                                 :imageUrl, :sourceId, :externalPostId, :status, :verified, :createdAt, :updatedAt)
                         ON CONFLICT (id) DO UPDATE SET
@@ -91,7 +91,7 @@ public class JdbcEventRepository implements EventRepository {
                             image_url = EXCLUDED.image_url,
                             status = EXCLUDED.status,
                             verified = EXCLUDED.verified,
-                            updated_at = EXCLUDED.updated_at""".formatted(COLUMNS))
+                            updated_at = EXCLUDED.updated_at""")
                 .param("id", e.id())
                 .param("organizationId", e.organizationId())
                 .param("title", e.title())

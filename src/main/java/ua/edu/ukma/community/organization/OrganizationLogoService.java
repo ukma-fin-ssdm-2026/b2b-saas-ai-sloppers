@@ -1,5 +1,6 @@
 package ua.edu.ukma.community.organization;
 
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import ua.edu.ukma.community.common.error.ApiException;
@@ -41,6 +42,11 @@ public class OrganizationLogoService {
         }
         organizations.changeLogo(organizationId, null);
         images.deleteQuietly(current.logoUrl());
+    }
+
+    @EventListener
+    public void onOrganizationDeleted(OrganizationDeleted deleted) {
+        images.deleteFolderQuietly(folder(deleted.organizationId()));
     }
 
     static String folder(UUID organizationId) {

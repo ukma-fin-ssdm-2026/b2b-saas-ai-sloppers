@@ -63,7 +63,7 @@ class RegistrationServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"student@gmail.com", "student@ukma.edu.ua.evil.com", "student@sub.ukma.edu.ua",
-            "a@b@ukma.edu.ua", "@ukma.edu.ua"})
+            "a@b@ukma.edu.ua", "@ukma.edu.ua", "student@u\u212Ama.edu.ua"})
     @DisplayName("TC-002: інший домен → 400, акаунт не створено, лист не надіслано")
     void rejectsOtherDomains(String email) {
         assertThatThrownBy(() -> service.register(email, "password123"))
@@ -162,6 +162,53 @@ class RegistrationServiceTest {
         service.resendCode(EMAIL);
 
         assertThat(sentCodes).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("лист не пішов → акаунт не створено, повторна реєстрація проходить без 409")
+    void mailFailureDoesNotLeaveAccount() {
+        CodeSender failingOnce = new CodeSender() {
+            private boolean failed;
+
+            @Override
+            public void send(String email, String code) {
+                if (!failed) {
+                    failed = true;
+                    throw new ApiException(ErrorCode.MAIL_UNAVAILABLE, "smtp down");
+                }
+                sentCodes.add(code);
+            }
+        };
+        service = new RegistrationService(users, FAST_BCRYPT, failingOnce, PROPERTIES, clock);
+
+        assertThatThrownBy(() -> service.register(EMAIL, "password123"))
+                .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.MAIL_UNAVAILABLE));
+        assertThat(users.findByEmail(EMAIL)).isEmpty();
+
+        service.register(EMAIL, "password123");
+        assertThat(users.findByEmail(EMAIL)).isPresent();
+        assertThat(sentCodes).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("resend: лист не пішов → старий код діє, повторити можна одразу, без паузи")
+    void resendMailFailureKeepsOldCode() {
+        service.register(EMAIL, "password123");
+        String oldCode = lastCode();
+        clock.advance(Duration.ofSeconds(61));
+        RegistrationService failing = new RegistrationService(users, FAST_BCRYPT, (email, code) -> {
+            throw new ApiException(ErrorCode.MAIL_UNAVAILABLE, "smtp down");
+        }, PROPERTIES, clock);
+
+        assertThatThrownBy(() -> failing.resendCode(EMAIL))
+                .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.MAIL_UNAVAILABLE));
+
+        service.resendCode(EMAIL);
+        assertThat(sentCodes).hasSize(2);
+        if (!oldCode.equals(lastCode())) {
+            assertThatThrownBy(() -> service.verify(EMAIL, oldCode))
+                    .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.INVALID_VERIFICATION_CODE));
+        }
     }
 
     @Test

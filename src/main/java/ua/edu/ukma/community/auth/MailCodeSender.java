@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import ua.edu.ukma.community.common.LogSafe;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.common.error.ErrorCode;
 
@@ -37,7 +38,8 @@ public class MailCodeSender implements CodeSender {
         try {
             mail.send(message);
         } catch (MailException e) {
-            LOG.error("Failed to send verification code to {}: {}", email, e.getMessage());
+            LOG.error("Failed to send verification code to {}: {}", LogSafe.of(email),
+                    LogSafe.of(e.getMessage()));
             throw new ApiException(ErrorCode.MAIL_UNAVAILABLE,
                     "Не вдалося надіслати лист з кодом. Спробуйте запросити код ще раз трохи згодом");
         }

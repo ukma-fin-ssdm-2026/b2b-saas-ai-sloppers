@@ -25,9 +25,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import ua.edu.ukma.community.auth.CurrentUser;
-import ua.edu.ukma.community.auth.HeadService;
 import ua.edu.ukma.community.auth.OrgRolePolicy;
-import ua.edu.ukma.community.auth.User;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.config.OpenApiConfig;
@@ -43,14 +41,14 @@ public class OrganizationController {
     private static final String ORG_ID_EXAMPLE = "3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60";
 
     private final OrganizationService organizations;
-    private final HeadService heads;
+    private final OrganizationCreationService creation;
     private final CurrentUser currentUser;
     private final OrgRolePolicy policy;
 
-    public OrganizationController(OrganizationService organizations, HeadService heads, CurrentUser currentUser,
-                                  OrgRolePolicy policy) {
+    public OrganizationController(OrganizationService organizations, OrganizationCreationService creation,
+                                  CurrentUser currentUser, OrgRolePolicy policy) {
         this.organizations = organizations;
-        this.heads = heads;
+        this.creation = creation;
         this.currentUser = currentUser;
         this.policy = policy;
     }
@@ -104,12 +102,7 @@ public class OrganizationController {
     @ApiResponse(responseCode = "403", ref = OpenApiConfig.FORBIDDEN)
     @ApiResponse(responseCode = "409", ref = OpenApiConfig.CONFLICT)
     public ResponseEntity<Organization> createOrganization(@Valid @RequestBody OrganizationCreateRequest request) {
-        User actor = currentUser.require();
-        policy.requireGlobalAdmin(actor);
-        // спершу перевіряємо голову, щоб не створити організацію без голови (FR-011)
-        User head = heads.requireActiveUser(request.headEmail());
-        Organization created = organizations.create(request);
-        heads.appointFirstHead(actor, created.id(), head);
+        Organization created = creation.create(currentUser.require(), request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(created.id()).toUri();
         return ResponseEntity.created(location).body(created);

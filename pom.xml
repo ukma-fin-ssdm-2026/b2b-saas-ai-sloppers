@@ -170,6 +170,7 @@
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Low</threshold>
+                    <excludeFilterFile>config/quality/spotbugs-exclude.xml</excludeFilterFile>
                     <failOnError>false</failOnError>
                     <includeTests>true</includeTests>
                     <plugins>
