@@ -1,3 +1,5 @@
+import { readSession } from '../auth/session'
+
 export const API_BASE = '/api/v1'
 
 export class ApiError extends Error {
@@ -14,18 +16,22 @@ export class ApiError extends Error {
 
 export type ApiRequestOptions = Omit<RequestInit, 'headers'> & {
   headers?: HeadersInit
+  /** Explicit token; otherwise session token is used when present */
   token?: string | null
+  skipAuth?: boolean
 }
 
 export async function apiFetch<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
-  const { token, headers: initHeaders, ...init } = options
+  const { token, skipAuth, headers: initHeaders, ...init } = options
 
   const headers = new Headers(initHeaders)
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
+  const resolvedToken =
+    token !== undefined ? token : skipAuth ? null : (readSession()?.token ?? null)
+  if (resolvedToken) {
+    headers.set('Authorization', `Bearer ${resolvedToken}`)
   }
   if (
     init.body !== undefined &&

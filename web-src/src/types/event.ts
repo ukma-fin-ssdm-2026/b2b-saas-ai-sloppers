@@ -31,3 +31,26 @@ export interface ListEventsParams {
   offset?: number
   limit?: number
 }
+
+export interface ListOrganizationEventsParams {
+  status?: EventStatus
+  verified?: boolean
+  offset?: number
+  limit?: number
+}
+
+export interface EventCreateRequest {
+  title: string
+  startsAt: string
+  description?: string
+  location?: string
+  originalUrl?: string
+}
+
+export interface EventUpdateRequest {
+  title?: string
+  description?: string
+  startsAt?: string
+  location?: string
+  originalUrl?: string
+}

@@ -20,3 +20,20 @@ export interface ListOrganizationsParams {
   limit?: number
   q?: string
 }
+
+export interface OrganizationCreateRequest {
+  name: string
+  slug: string
+  description?: string
+  instagramHandle?: string
+  contactEmail?: string
+}
+
+export interface OrganizationUpdateRequest {
+  name?: string
+  slug?: string
+  description?: string
+  instagramHandle?: string
+  contactEmail?: string
+  autoPublish?: boolean
+}

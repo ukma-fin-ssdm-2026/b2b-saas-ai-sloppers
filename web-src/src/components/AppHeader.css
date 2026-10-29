@@ -56,3 +56,10 @@
   outline: 1px solid #cfcfcf;
   outline-offset: 3px;
 }
+
+.app-header__button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}

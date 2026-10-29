@@ -31,19 +31,32 @@ Vite проксує `/api` -> `http://localhost:8080`, тож у коді вик
 | `npm run preview` | прев’ю зібраного білду                 |
 | `npm run lint`    | лінтер                                 |
 
+## Маршрути
+
+| Шлях | Опис |
+|------|------|
+| `/organizations`, `/organizations/:id` | Публічний каталог / профіль |
+| `/events`, `/events/:id` | Дайджест / деталі + календар |
+| `/login` | Демо-вхід (UI-gate, не backend Auth) |
+| `/admin/*` | Адмін проти live API (потрібен логін) |
+| `/lab/*` | Моки в пам’яті браузера (потрібен логін) |
+
+Демо-креденшали за замовчуванням: `bot` / `huyesosik` (або `VITE_DEMO_*` з `.env.example`).
+
 ## Структура
 
 ```
 web-src/
 ├── src/
-│   ├── api/              # client.ts + organizations.ts
-│   ├── components/       # IntroOverlay, TextType
-│   ├── pages/            # Organizations, Events (+ detail placeholders)
-│   ├── types/            # Organization, Event, OffsetPage
-│   ├── App.tsx           # React Router
+│   ├── api/              # HTTP-клієнт + org/events/calendar
+│   ├── auth/             # демо-сесія, RequireAuth
+│   ├── mock/             # in-memory store для /lab
+│   ├── components/
+│   ├── pages/            # public + admin/ + lab/
+│   ├── types/
+│   ├── App.tsx
 │   └── main.tsx
-├── vite.config.ts        # proxy /api → :8080
+├── .env.example
+├── vite.config.ts
 └── package.json
 ```
-
-Маршрути: `/` → `/organizations`, `/organizations/:organizationId`, `/events`, `/events/:eventId`.
