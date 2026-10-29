@@ -1,7 +1,10 @@
+import type { OffsetPage } from './pagination'
+
 export interface Organization {
   id: string
   name: string
   slug: string
+  autoPublish: boolean
   createdAt: string
   updatedAt: string
   description?: string
@@ -10,17 +13,7 @@ export interface Organization {
   logoUrl?: string
 }
 
-export interface OffsetPagination {
-  offset: number
-  limit: number
-  total: number
-  hasMore: boolean
-}
-
-export interface OffsetPageOrganization {
-  data: Organization[]
-  pagination: OffsetPagination
-}
+export type OffsetPageOrganization = OffsetPage<Organization>
 
 export interface ListOrganizationsParams {
   offset?: number

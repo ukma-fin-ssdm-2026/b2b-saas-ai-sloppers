@@ -36,12 +36,14 @@ Vite проксує `/api` -> `http://localhost:8080`, тож у коді вик
 ```
 web-src/
 ├── src/
-│   ├── api/              # HTTP-клієнт
+│   ├── api/              # client.ts + organizations.ts
 │   ├── components/       # IntroOverlay, TextType
-│   ├── pages/            # OrganizationsPage
-│   ├── types/            # типи з OpenAPI
-│   ├── App.tsx
+│   ├── pages/            # Organizations, Events (+ detail placeholders)
+│   ├── types/            # Organization, Event, OffsetPage
+│   ├── App.tsx           # React Router
 │   └── main.tsx
 ├── vite.config.ts        # proxy /api → :8080
 └── package.json
 ```
+
+Маршрути: `/` → `/organizations`, `/organizations/:organizationId`, `/events`, `/events/:eventId`.

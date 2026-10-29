@@ -2,18 +2,9 @@ import type {
   ListOrganizationsParams,
   OffsetPageOrganization,
 } from '../types/organization'
+import { apiFetch } from './client'
 
-const API_BASE = '/api/v1'
-
-export class ApiError extends Error {
-  status: number
-
-  constructor(status: number, message: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-  }
-}
+export { ApiError } from './client'
 
 export async function listOrganizations(
   params: ListOrganizationsParams = {},
@@ -31,17 +22,7 @@ export async function listOrganizations(
   }
 
   const qs = query.toString()
-  const url = `${API_BASE}/organizations${qs ? `?${qs}` : ''}`
-
-  const response = await fetch(url)
-
-  if (!response.ok) {
-    const body = await response.text()
-    throw new ApiError(
-      response.status,
-      body || `Request failed with status ${response.status}`,
-    )
-  }
-
-  return (await response.json()) as OffsetPageOrganization
+  return apiFetch<OffsetPageOrganization>(
+    `/organizations${qs ? `?${qs}` : ''}`,
+  )
 }
