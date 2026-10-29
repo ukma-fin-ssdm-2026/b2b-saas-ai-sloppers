@@ -24,12 +24,16 @@ Vite проксує `/api` -> `http://localhost:8080`, тож у коді вик
 
 ## Скрипти
 
-| Команда           | Опис                                   |
-| ----------------- | -------------------------------------- |
-| `npm run dev`     | dev-сервер Vite                        |
-| `npm run build`   | TypeScript + production-білд у `dist/` |
-| `npm run preview` | прев’ю зібраного білду                 |
-| `npm run lint`    | лінтер                                 |
+| Команда              | Опис                                         |
+| -------------------- | -------------------------------------------- |
+| `npm run dev`        | dev-сервер Vite                              |
+| `npm run build`      | TypeScript + production-білд у `dist/`       |
+| `npm run preview`    | прев’ю зібраного білду                       |
+| `npm test`           | модульні тести (Vitest), як `./mvnw test`    |
+| `npm run test:coverage` | тести + покриття (поріг рядків 5%)        |
+| `npm run lint`       | лінтер                                       |
+
+Тести лежать поруч із кодом (`*.test.ts(x)`): `auth`, `mock/store`, `api/client`, `utils/datetime`. Фікстури — `src/test/support/testFixtures.ts` (аналог бекенд `TestFixtures`).
 
 ## Маршрути
 
