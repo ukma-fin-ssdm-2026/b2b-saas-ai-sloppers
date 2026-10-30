@@ -22,10 +22,13 @@ spec:
         app.kubernetes.io/name: frontend
         app.kubernetes.io/part-of: community
     spec:
+      # private GHCR packages; created by infra/helpers/up.sh
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: frontend
           # CI replaces :local with @sha256 in the deploy branch
-          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/frontend@sha256:788e7335ea68ec914f8bc57cb5348ce55c000a43de0e72ccd14207d200af77e8
+          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/frontend@sha256:cbe5fd88b0d148105fe469f29c9d64309297d76008c31bda0a39e5fa0e7649d9
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

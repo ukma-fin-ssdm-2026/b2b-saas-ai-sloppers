@@ -23,10 +23,13 @@ spec:
         app.kubernetes.io/name: db-migrate
     spec:
       restartPolicy: Never
+      # private GHCR packages; created by infra/helpers/up.sh
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: flyway
           # CI replaces :local with @sha256 in the deploy branch
-          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/migrations@sha256:8294a85703ee2349111e491c7e350775b80e4889c675141defdcc44f9342a394
+          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/migrations@sha256:47eedcd24b45d885dd67ddcc664c6820cfe876069357730cefe702264a947390
           imagePullPolicy: IfNotPresent
           args: ["migrate"]
           env:
