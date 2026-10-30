@@ -18,7 +18,7 @@
 5. **Вхід: Ingress** (NGINX addon Minikube): назовні веде лише на frontend, TLS. nginx у frontend проксує `/api` на backend усередині кластера (Service типу ClusterIP), тож backend ззовні недоступний.
 6. **CI/CD за GitOps:**
    - GitHub Actions на push у `main` збирає образи `frontend` і `backend` і пушить їх у GHCR.
-   - Тієї ж миті Actions бере вихідні маніфести з `k8s/` у `main`, підставляє digest нових образів і комітить результат у згенеровану гілку **`deploy`**. У `main` ці коміти не потрапляють.
+   - Тієї ж миті Actions бере вихідні маніфести з `infra/kube/` у `main`, підставляє digest нових образів і комітить результат у згенеровану гілку **`deploy`**. У `main` ці коміти не потрапляють.
    - ArgoCD стежить за гілкою `deploy` (`targetRevision: deploy`) і сам застосовує зміни в кластер. Кластер ходить назовні сам, тому Actions не потрібен доступ до Minikube.
    - Відкат — revert коміту в `deploy`.
 7. **Міграції БД** — окреме рішення, див. [ADR-005](ADR-005-database-migrations.md).

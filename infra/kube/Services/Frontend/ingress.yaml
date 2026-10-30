@@ -1,0 +1,29 @@
+# The only entry point from outside (ADR-004 p.5). /api goes through the frontend nginx.
+# TLS Secret frontend-tls is created by hand (self-signed for community.local).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: community
+  annotations:
+    # default is 1m; image uploads allow up to 6MB (spring.servlet.multipart.max-request-size)
+    nginx.ingress.kubernetes.io/proxy-body-size: "6m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - community.local
+      secretName: frontend-tls
+  rules:
+    - host: community.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  name: http
