@@ -22,6 +22,10 @@ spec:
       labels:
         app.kubernetes.io/name: backend
         app.kubernetes.io/part-of: community
+      annotations:
+        # CI writes the digest of the migrations image here. ArgoCD ignores hooks when it
+        # decides whether to sync, so a new migration must change the Deployment as well.
+        community/migrations-digest: local
     spec:
       containers:
         - name: backend
@@ -87,7 +91,8 @@ spec:
               cpu: 250m
               memory: 512Mi
             limits:
-              memory: 768Mi
+              memory: 512Mi
+              cpu: 250m
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

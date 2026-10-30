@@ -12,8 +12,8 @@ spec:
   source:
     repoURL: https://cloudnative-pg.github.io/charts
     chart: cloudnative-pg
-    # operator 1.27.0; pinned so an upstream release does not change the cluster
-    targetRevision: 0.26.0
+    # operator 1.30.1; pinned so an upstream release does not change the cluster
+    targetRevision: 0.29.1
   destination:
     server: https://kubernetes.default.svc
     namespace: cnpg-system

@@ -42,7 +42,7 @@ docker build -t $R/migrations:local infra/migrations
 
 # оператор CloudNativePG
 kubectl apply --server-side -f \
-  https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.27/releases/cnpg-1.27.0.yaml
+  https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.30/releases/cnpg-1.30.1.yaml
 
 # секрети
 kubectl create secret generic backend-secrets --from-literal=AUTH_JWT_SECRET="$(openssl rand -base64 48)"
