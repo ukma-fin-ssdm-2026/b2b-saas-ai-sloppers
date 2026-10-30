@@ -1,0 +1,58 @@
+# Flyway migrations as an ArgoCD Sync hook (ADR-005 p.3-5).
+# Recreated on every sync; with no new files Flyway exits as a no-op.
+# If it fails, the sync stops and the backend Deployment (wave 2) is not applied.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migrate
+  labels:
+    app.kubernetes.io/name: db-migrate
+    app.kubernetes.io/part-of: community
+  annotations:
+    # Sync, not PreSync: PreSync runs before wave 0, the database would not exist yet
+    argocd.argoproj.io/hook: Sync
+    # a Job spec is immutable: delete the previous Job before creating a new one
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: db-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: flyway
+          # CI replaces :local with @sha256 in the deploy branch
+          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/migrations@sha256:8294a85703ee2349111e491c7e350775b80e4889c675141defdcc44f9342a394
+          imagePullPolicy: IfNotPresent
+          args: ["migrate"]
+          env:
+            # not jdbc-uri from the Secret: it contains the password and Flyway logs the URL
+            - name: FLYWAY_URL
+              value: jdbc:postgresql://postgres-rw:5432/community
+            - name: FLYWAY_USER
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-app
+                  key: username
+            - name: FLYWAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-app
+                  key: password
+            # in case the Cluster is reported healthy before the primary accepts connections
+            - name: FLYWAY_CONNECT_RETRIES
+              value: "10"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

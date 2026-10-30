@@ -1,0 +1,27 @@
+# CloudNativePG operator: installs the Cluster CRD, so it goes before the backend.
+# Waves between Applications need the Application health check enabled in argocd-cm.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cnpg-operator
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: default
+  source:
+    repoURL: https://cloudnative-pg.github.io/charts
+    chart: cloudnative-pg
+    # operator 1.30.1; pinned so an upstream release does not change the cluster
+    targetRevision: 0.29.1
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # CNPG CRDs are too large for the client-side last-applied annotation
+      - ServerSideApply=true

@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: community
+  annotations:
+    # after the database (0) and migrations (1)
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  # Scraper (@Scheduled) runs inside the backend: two pods would scrape twice (ADR-004 p.3)
+  replicas: 1
+  # RollingUpdate would briefly run two pods for the same reason
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backend
+        app.kubernetes.io/part-of: community
+      annotations:
+        # CI writes the digest of the migrations image here. ArgoCD ignores hooks when it
+        # decides whether to sync, so a new migration must change the Deployment as well.
+        community/migrations-digest: "sha256:8294a85703ee2349111e491c7e350775b80e4889c675141defdcc44f9342a394"
+    spec:
+      containers:
+        - name: backend
+          # CI replaces :local with @sha256 in the deploy branch
+          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/backend@sha256:5b143cbd299a87fbaa969b5b63a44d6205e5dfe52d3929b67a5d2e65b79750ac
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # postgres-rw always points to the current primary
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://postgres-rw:5432/community
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-app
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-app
+                  key: password
+            # failover: drop connections to the old primary in seconds, not minutes
+            - name: SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT
+              value: "5000"
+            - name: SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT
+              value: "2000"
+            - name: SPRING_DATASOURCE_HIKARI_KEEPALIVE_TIME
+              value: "30000"
+            - name: SPRING_DATASOURCE_HIKARI_MAX_LIFETIME
+              value: "600000"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-XX:MaxRAMPercentage=75"
+          # AUTH_JWT_SECRET, AUTH_ADMIN_EMAILS, SUPABASE_*, SPRING_MAIL_*, MAIL_FROM.
+          # Created by hand from .env, never stored in git (NFR-010).
+          envFrom:
+            - secretRef:
+                name: backend-secrets
+          # up to 150 s for the JVM to start before liveness kicks in
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          # no database check: a failover must not restart a healthy backend
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          # includes the database: no traffic while postgres-rw is unreachable
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 512Mi
+              cpu: 250m
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
