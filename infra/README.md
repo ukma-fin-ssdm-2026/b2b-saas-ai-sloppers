@@ -24,10 +24,22 @@ infra/
 | Secret | Звідки |
 |--------|--------|
 | `postgres-app` | генерує CloudNativePG (логін/пароль власника БД `community`) |
-| `backend-secrets` | вручну з `.env`: `AUTH_JWT_SECRET`, `AUTH_ADMIN_EMAILS`, `SUPABASE_*`, `SPRING_MAIL_*`, `MAIL_FROM` |
-| `frontend-tls` | вручну, самопідписаний сертифікат для `community.local` |
+| `backend-secrets` | з `.env`: `AUTH_JWT_SECRET`, `AUTH_ADMIN_EMAILS`, `SUPABASE_*`, `SPRING_MAIL_*`, `MAIL_FROM` |
+| `frontend-tls` | самопідписаний сертифікат для `community.local` |
+| `ghcr-pull` | логін до приватних пакетів GHCR, із `GHCR_USERNAME` і `GHCR_TOKEN` у `.env` |
 
-### Ручний запуск у Minikube (до CI)
+### Запуск кластера
+
+```bash
+cp .env.example .env   # заповнити обов'язкові змінні
+infra/helpers/up.sh
+```
+
+Скрипт піднімає Minikube (профіль `community`), ArgoCD і секрети, застосовує root Application і чекає, поки backend і frontend стануть `Healthy`. Потрібен запущений Docker, а гілка `deploy` має містити актуальні маніфести (workflow **Build and Deploy**). Запускати повторно безпечно.
+
+Зупинити кластер: `minikube stop -p community`
+
+### Ручний запуск у Minikube (без ArgoCD)
 
 ```bash
 minikube start --cpus 4 --memory 6g

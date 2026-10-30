@@ -27,6 +27,9 @@ spec:
         # decides whether to sync, so a new migration must change the Deployment as well.
         community/migrations-digest: local
     spec:
+      # private GHCR packages; created by infra/helpers/up.sh
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: backend
           # CI replaces :local with @sha256 in the deploy branch
