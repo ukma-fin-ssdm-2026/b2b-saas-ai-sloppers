@@ -38,7 +38,10 @@ infra/helpers/up.sh
 Скрипт піднімає Minikube (профіль `community`), ArgoCD і секрети, застосовує root Application, чекає, поки backend і frontend стануть `Healthy`, запускає тунель ngrok у Docker і виводить його публічний URL. Потрібен запущений Docker, а гілка `deploy` має містити актуальні маніфести (workflow **Build and Deploy**). Запускати повторно безпечно.
 
 - Зупинити тунель: `docker rm -f community-ngrok`
-- Зупинити кластер: `minikube stop -p community`
+- Зупинити кластер, зберігши дані: `minikube stop -p community`
+- Видалити кластер разом із базою, щоб почати заново: `infra/helpers/down.sh`
+
+Docker Desktop: щонайменше 40 ГБ у Settings → Resources → Disk usage limit. Вузол Minikube використовує цей диск, і при нестачі місця скрипт зупиняється з помилкою.
 
 ### Ручний запуск у Minikube (без ArgoCD)
 

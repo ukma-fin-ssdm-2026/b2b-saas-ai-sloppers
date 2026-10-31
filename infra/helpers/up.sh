@@ -9,6 +9,7 @@ ARGOCD_VERSION=v3.5.6
 HOST=community.local
 NGROK_IMAGE=ngrok/ngrok:3.39.13-alpine
 NGROK_CONTAINER=community-ngrok
+MIN_FREE_DISK_GB=5
 WAIT_TIMEOUT_SECONDS=900
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -40,10 +41,21 @@ check_prerequisites() {
   done
 }
 
+check_node_disk() {
+  # the node lives on the Docker Desktop disk; when it fills up, database pods fail with
+  # "no space left on device"
+  local free_gb
+  free_gb="$(docker exec "$PROFILE" df -Pk / | awk 'NR == 2 { print int($4 / 1024 / 1024) }')"
+  if [ "$free_gb" -lt "$MIN_FREE_DISK_GB" ]; then
+    fail "only $free_gb GB free on the node, need $MIN_FREE_DISK_GB: raise the disk limit in Docker Desktop or free space (docker system df)"
+  fi
+}
+
 start_cluster() {
   log "Starting Minikube (profile $PROFILE)"
   minikube start -p "$PROFILE" --driver=docker \
     --kubernetes-version="$KUBERNETES_VERSION" --cpus=max --memory=6g
+  check_node_disk
   minikube addons enable ingress -p "$PROFILE"
   k -n ingress-nginx rollout status deployment/ingress-nginx-controller --timeout=5m
 }
