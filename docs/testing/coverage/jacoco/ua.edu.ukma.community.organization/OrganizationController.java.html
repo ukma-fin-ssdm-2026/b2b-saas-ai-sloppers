@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import ua.edu.ukma.community.auth.CurrentUser;
+import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.config.OpenApiConfig;
@@ -39,10 +41,17 @@ public class OrganizationController {
     private static final String ORG_ID_EXAMPLE = &quot;3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60&quot;;
 
     private final OrganizationService organizations;
+    private final OrganizationCreationService creation;
+    private final CurrentUser currentUser;
+    private final OrgRolePolicy policy;
 
-<span class="nc" id="L43">    public OrganizationController(OrganizationService organizations) {</span>
-<span class="nc" id="L44">        this.organizations = organizations;</span>
-<span class="nc" id="L45">    }</span>
+    public OrganizationController(OrganizationService organizations, OrganizationCreationService creation,
+<span class="fc" id="L49">                                  CurrentUser currentUser, OrgRolePolicy policy) {</span>
+<span class="fc" id="L50">        this.organizations = organizations;</span>
+<span class="fc" id="L51">        this.creation = creation;</span>
+<span class="fc" id="L52">        this.currentUser = currentUser;</span>
+<span class="fc" id="L53">        this.policy = policy;</span>
+<span class="fc" id="L54">    }</span>
 
     @GetMapping
     @Operation(operationId = &quot;listOrganizations&quot;, summary = &quot;Список організацій&quot;,
@@ -64,7 +73,7 @@ public class OrganizationController {
                     schema = @Schema(defaultValue = &quot;0&quot;, minimum = &quot;0&quot;))
             @RequestParam(name = &quot;offset&quot;, defaultValue = &quot;0&quot;)
             @Min(value = 0, message = &quot;offset має бути ≥ 0&quot;) int offset) {
-<span class="nc" id="L67">        return organizations.list(q, limit, offset);</span>
+<span class="fc" id="L76">        return organizations.list(q, limit, offset);</span>
     }
 
     @GetMapping(&quot;/{organizationId}&quot;)
@@ -76,14 +85,15 @@ public class OrganizationController {
     public Organization getOrganization(
             @Parameter(description = &quot;Ідентифікатор організації (UUID)&quot;, example = ORG_ID_EXAMPLE)
             @PathVariable(&quot;organizationId&quot;) UUID organizationId) {
-<span class="nc" id="L79">        return organizations.get(organizationId);</span>
+<span class="nc" id="L88">        return organizations.get(organizationId);</span>
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = &quot;createOrganization&quot;, summary = &quot;Створити організацію&quot;,
-            description = &quot;Лише суперадмін. Slug має бути унікальним.&quot;)
+            description = &quot;Лише Global Admin. Slug має бути унікальним. Перший голова (headEmail) &quot;
+                    + &quot;призначається одразу: організація без голови не створюється.&quot;)
     @ApiResponse(responseCode = &quot;201&quot;, description = &quot;Організацію створено&quot;,
             headers = @Header(name = &quot;Location&quot;, description = &quot;URL нової організації&quot;,
                     schema = @Schema(type = &quot;string&quot;, format = &quot;uri&quot;)))
@@ -92,10 +102,10 @@ public class OrganizationController {
     @ApiResponse(responseCode = &quot;403&quot;, ref = OpenApiConfig.FORBIDDEN)
     @ApiResponse(responseCode = &quot;409&quot;, ref = OpenApiConfig.CONFLICT)
     public ResponseEntity&lt;Organization&gt; createOrganization(@Valid @RequestBody OrganizationCreateRequest request) {
-<span class="nc" id="L95">        Organization created = organizations.create(request);</span>
-<span class="nc" id="L96">        URI location = ServletUriComponentsBuilder.fromCurrentRequest()</span>
-<span class="nc" id="L97">                .path(&quot;/{id}&quot;).buildAndExpand(created.id()).toUri();</span>
-<span class="nc" id="L98">        return ResponseEntity.created(location).body(created);</span>
+<span class="fc" id="L105">        Organization created = creation.create(currentUser.require(), request);</span>
+<span class="fc" id="L106">        URI location = ServletUriComponentsBuilder.fromCurrentRequest()</span>
+<span class="fc" id="L107">                .path(&quot;/{id}&quot;).buildAndExpand(created.id()).toUri();</span>
+<span class="fc" id="L108">        return ResponseEntity.created(location).body(created);</span>
     }
 
     @PatchMapping(&quot;/{organizationId}&quot;)
@@ -112,14 +122,15 @@ public class OrganizationController {
             @Parameter(description = &quot;Ідентифікатор організації (UUID)&quot;, example = ORG_ID_EXAMPLE)
             @PathVariable(&quot;organizationId&quot;) UUID organizationId,
             @Valid @RequestBody OrganizationUpdateRequest request) {
-<span class="nc" id="L115">        return organizations.update(organizationId, request);</span>
+<span class="fc" id="L125">        policy.requireHeadOrAdmin(currentUser.require(), organizationId);</span>
+<span class="fc" id="L126">        return organizations.update(organizationId, request);</span>
     }
 
     @DeleteMapping(&quot;/{organizationId}&quot;)
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = &quot;deleteOrganization&quot;, summary = &quot;Видалити організацію&quot;,
-            description = &quot;Лише суперадмін. Разом з організацією видаляються її події.&quot;)
+            description = &quot;Лише Global Admin. Разом з організацією видаляються її події, голови й файли.&quot;)
     @ApiResponse(responseCode = &quot;204&quot;, description = &quot;Організацію видалено&quot;)
     @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
     @ApiResponse(responseCode = &quot;401&quot;, ref = OpenApiConfig.UNAUTHORIZED)
@@ -128,7 +139,8 @@ public class OrganizationController {
     public void deleteOrganization(
             @Parameter(description = &quot;Ідентифікатор організації (UUID)&quot;, example = ORG_ID_EXAMPLE)
             @PathVariable(&quot;organizationId&quot;) UUID organizationId) {
-<span class="nc" id="L131">        organizations.delete(organizationId);</span>
-<span class="nc" id="L132">    }</span>
+<span class="fc" id="L142">        policy.requireGlobalAdmin(currentUser.require());</span>
+<span class="fc" id="L143">        organizations.delete(organizationId);</span>
+<span class="fc" id="L144">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

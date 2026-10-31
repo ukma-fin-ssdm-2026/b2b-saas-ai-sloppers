@@ -13,6 +13,8 @@ import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import ua.edu.ukma.community.auth.CurrentUser;
+import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.config.OpenApiConfig;
@@ -29,10 +31,14 @@ public class OrganizationEventController {
     private static final String ORG_ID_EXAMPLE = &quot;3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60&quot;;
 
     private final EventService events;
+    private final CurrentUser currentUser;
+    private final OrgRolePolicy policy;
 
-<span class="nc" id="L33">    public OrganizationEventController(EventService events) {</span>
-<span class="nc" id="L34">        this.events = events;</span>
-<span class="nc" id="L35">    }</span>
+<span class="fc" id="L37">    public OrganizationEventController(EventService events, CurrentUser currentUser, OrgRolePolicy policy) {</span>
+<span class="fc" id="L38">        this.events = events;</span>
+<span class="fc" id="L39">        this.currentUser = currentUser;</span>
+<span class="fc" id="L40">        this.policy = policy;</span>
+<span class="fc" id="L41">    }</span>
 
     @GetMapping
     @SecurityRequirement(name = OpenApiConfig.BEARER)
@@ -64,7 +70,8 @@ public class OrganizationEventController {
                     schema = @Schema(defaultValue = &quot;0&quot;, minimum = &quot;0&quot;))
             @RequestParam(name = &quot;offset&quot;, defaultValue = &quot;0&quot;)
             @Min(value = 0, message = &quot;offset має бути ≥ 0&quot;) int offset) {
-<span class="nc" id="L67">        return events.listForOrganization(organizationId, status, verified, limit, offset).map(EventResponse::from);</span>
+<span class="nc" id="L73">        policy.requireHead(currentUser.require(), organizationId);</span>
+<span class="nc" id="L74">        return events.listForOrganization(organizationId, status, verified, limit, offset).map(EventResponse::from);</span>
     }
 
     @PostMapping
@@ -82,10 +89,11 @@ public class OrganizationEventController {
             @Parameter(description = &quot;Ідентифікатор організації (UUID)&quot;, example = ORG_ID_EXAMPLE)
             @PathVariable(&quot;organizationId&quot;) UUID organizationId,
             @Valid @RequestBody EventCreateRequest request) {
-<span class="nc" id="L85">        Event created = events.create(organizationId, request);</span>
-<span class="nc" id="L86">        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()</span>
-<span class="nc" id="L87">                .path(ApiPaths.V1 + &quot;/events/{id}&quot;).buildAndExpand(created.id()).toUri();</span>
-<span class="nc" id="L88">        return ResponseEntity.created(location).body(EventResponse.from(created));</span>
+<span class="fc" id="L92">        policy.requireHead(currentUser.require(), organizationId);</span>
+<span class="fc" id="L93">        Event created = events.create(organizationId, request);</span>
+<span class="fc" id="L94">        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()</span>
+<span class="fc" id="L95">                .path(ApiPaths.V1 + &quot;/events/{id}&quot;).buildAndExpand(created.id()).toUri();</span>
+<span class="fc" id="L96">        return ResponseEntity.created(location).body(EventResponse.from(created));</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

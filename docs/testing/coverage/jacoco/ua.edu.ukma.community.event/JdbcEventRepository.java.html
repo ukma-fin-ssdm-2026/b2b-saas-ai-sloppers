@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdbcEventRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.event</a> &gt; <span class="el_source">JdbcEventRepository.java</span></div><h1>JdbcEventRepository.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.event;
+
+import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Repository;
+
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+
+@Repository
+@Profile(&quot;!inmemory&quot;)
+public class JdbcEventRepository implements EventRepository {
+
+    private static final String COLUMNS = &quot;&quot;&quot;
+            id, organization_id, title, description, starts_at, location, original_url, image_url, source_id, \
+            external_post_id, status, verified, created_at, updated_at&quot;&quot;&quot;;
+    private static final String UPSERT = &quot;INSERT INTO event (&quot; + COLUMNS + &quot;) &quot;;
+
+    private final JdbcClient jdbc;
+    private final RowMapper&lt;Event&gt; mapper;
+
+<span class="nc" id="L28">    public JdbcEventRepository(JdbcClient jdbc, Clock clock) {</span>
+<span class="nc" id="L29">        this.jdbc = jdbc;</span>
+<span class="nc" id="L30">        ZoneId zone = clock.getZone();</span>
+<span class="nc" id="L31">        this.mapper = (rs, rowNum) -&gt; new Event(</span>
+<span class="nc" id="L32">                rs.getObject(&quot;id&quot;, UUID.class),</span>
+<span class="nc" id="L33">                rs.getObject(&quot;organization_id&quot;, UUID.class),</span>
+<span class="nc" id="L34">                rs.getString(&quot;title&quot;),</span>
+<span class="nc" id="L35">                rs.getString(&quot;description&quot;),</span>
+<span class="nc" id="L36">                inZone(rs.getObject(&quot;starts_at&quot;, OffsetDateTime.class), zone),</span>
+<span class="nc" id="L37">                rs.getString(&quot;location&quot;),</span>
+<span class="nc" id="L38">                rs.getString(&quot;original_url&quot;),</span>
+<span class="nc" id="L39">                rs.getString(&quot;image_url&quot;),</span>
+<span class="nc" id="L40">                rs.getObject(&quot;source_id&quot;, UUID.class),</span>
+<span class="nc" id="L41">                rs.getString(&quot;external_post_id&quot;),</span>
+<span class="nc" id="L42">                EventStatus.valueOf(rs.getString(&quot;status&quot;)),</span>
+<span class="nc" id="L43">                rs.getBoolean(&quot;verified&quot;),</span>
+<span class="nc" id="L44">                inZone(rs.getObject(&quot;created_at&quot;, OffsetDateTime.class), zone),</span>
+<span class="nc" id="L45">                inZone(rs.getObject(&quot;updated_at&quot;, OffsetDateTime.class), zone));</span>
+<span class="nc" id="L46">    }</span>
+
+    @Override
+    public Optional&lt;Event&gt; findById(UUID id) {
+<span class="nc" id="L50">        return jdbc.sql(&quot;SELECT &quot; + COLUMNS + &quot; FROM event WHERE id = ?&quot;)</span>
+<span class="nc" id="L51">                .param(id)</span>
+<span class="nc" id="L52">                .query(mapper)</span>
+<span class="nc" id="L53">                .optional();</span>
+    }
+
+    @Override
+    public List&lt;Event&gt; findAll() {
+<span class="nc" id="L58">        return jdbc.sql(&quot;SELECT &quot; + COLUMNS + &quot; FROM event&quot;)</span>
+<span class="nc" id="L59">                .query(mapper)</span>
+<span class="nc" id="L60">                .list();</span>
+    }
+
+    @Override
+    public List&lt;Event&gt; findByOrganizationId(UUID organizationId) {
+<span class="nc" id="L65">        return jdbc.sql(&quot;SELECT &quot; + COLUMNS + &quot; FROM event WHERE organization_id = ?&quot;)</span>
+<span class="nc" id="L66">                .param(organizationId)</span>
+<span class="nc" id="L67">                .query(mapper)</span>
+<span class="nc" id="L68">                .list();</span>
+    }
+
+    @Override
+    public Optional&lt;Event&gt; findBySourcePost(UUID sourceId, String externalPostId) {
+<span class="nc" id="L73">        return jdbc.sql(&quot;SELECT &quot; + COLUMNS + &quot; FROM event WHERE source_id = ? AND external_post_id = ?&quot;)</span>
+<span class="nc" id="L74">                .param(sourceId)</span>
+<span class="nc" id="L75">                .param(externalPostId)</span>
+<span class="nc" id="L76">                .query(mapper)</span>
+<span class="nc" id="L77">                .optional();</span>
+    }
+
+    @Override
+    public Event save(Event e) {
+<span class="nc" id="L82">        jdbc.sql(UPSERT + &quot;&quot;&quot;</span>
+                        VALUES (:id, :organizationId, :title, :description, :startsAt, :location, :originalUrl,
+                                :imageUrl, :sourceId, :externalPostId, :status, :verified, :createdAt, :updatedAt)
+                        ON CONFLICT (id) DO UPDATE SET
+                            title = EXCLUDED.title,
+                            description = EXCLUDED.description,
+                            starts_at = EXCLUDED.starts_at,
+                            location = EXCLUDED.location,
+                            original_url = EXCLUDED.original_url,
+                            image_url = EXCLUDED.image_url,
+                            status = EXCLUDED.status,
+                            verified = EXCLUDED.verified,
+                            updated_at = EXCLUDED.updated_at&quot;&quot;&quot;)
+<span class="nc" id="L95">                .param(&quot;id&quot;, e.id())</span>
+<span class="nc" id="L96">                .param(&quot;organizationId&quot;, e.organizationId())</span>
+<span class="nc" id="L97">                .param(&quot;title&quot;, e.title())</span>
+<span class="nc" id="L98">                .param(&quot;description&quot;, e.description())</span>
+<span class="nc" id="L99">                .param(&quot;startsAt&quot;, e.startsAt())</span>
+<span class="nc" id="L100">                .param(&quot;location&quot;, e.location())</span>
+<span class="nc" id="L101">                .param(&quot;originalUrl&quot;, e.originalUrl())</span>
+<span class="nc" id="L102">                .param(&quot;imageUrl&quot;, e.imageUrl())</span>
+<span class="nc" id="L103">                .param(&quot;sourceId&quot;, e.sourceId())</span>
+<span class="nc" id="L104">                .param(&quot;externalPostId&quot;, e.externalPostId())</span>
+<span class="nc" id="L105">                .param(&quot;status&quot;, e.status().name())</span>
+<span class="nc" id="L106">                .param(&quot;verified&quot;, e.verified())</span>
+<span class="nc" id="L107">                .param(&quot;createdAt&quot;, e.createdAt())</span>
+<span class="nc" id="L108">                .param(&quot;updatedAt&quot;, e.updatedAt())</span>
+<span class="nc" id="L109">                .update();</span>
+<span class="nc" id="L110">        return e;</span>
+    }
+
+    @Override
+    public void deleteByOrganizationId(UUID organizationId) {
+<span class="nc" id="L115">        jdbc.sql(&quot;DELETE FROM event WHERE organization_id = ?&quot;)</span>
+<span class="nc" id="L116">                .param(organizationId)</span>
+<span class="nc" id="L117">                .update();</span>
+<span class="nc" id="L118">    }</span>
+
+    private static OffsetDateTime inZone(OffsetDateTime value, ZoneId zone) {
+<span class="nc bnc" id="L121" title="All 2 branches missed.">        return value == null ? null : value.atZoneSameInstant(zone).toOffsetDateTime();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

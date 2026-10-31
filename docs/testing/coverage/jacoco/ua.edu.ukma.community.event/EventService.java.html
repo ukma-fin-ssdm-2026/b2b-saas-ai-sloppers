@@ -76,7 +76,7 @@ public class EventService {
 <span class="fc" id="L76">        OffsetDateTime now = OffsetDateTime.now(clock);</span>
 <span class="fc" id="L77">        return events.save(new Event(UUID.randomUUID(), organizationId, request.title().trim(),</span>
 <span class="fc" id="L78">                request.description(), request.startsAt(), request.location(), request.originalUrl(),</span>
-                null, null, EventStatus.PUBLISHED, true, now, now));
+                null, null, null, EventStatus.PUBLISHED, true, now, now));
     }
 
     public synchronized Event update(UUID id, EventUpdateRequest request) {
@@ -84,42 +84,46 @@ public class EventService {
 <span class="nc" id="L84">                request.startsAt(), request.location(), request.originalUrl(), OffsetDateTime.now(clock)));</span>
     }
 
+    public synchronized Event changeImage(UUID id, String imageUrl) {
+<span class="nc" id="L88">        return change(id, event -&gt; event.withImage(imageUrl, OffsetDateTime.now(clock)));</span>
+    }
+
     public synchronized Event approve(UUID id) {
-<span class="fc" id="L88">        return change(id, event -&gt; event.approve(OffsetDateTime.now(clock)));</span>
+<span class="fc" id="L92">        return change(id, event -&gt; event.approve(OffsetDateTime.now(clock)));</span>
     }
 
     public synchronized Event reject(UUID id) {
-<span class="nc" id="L92">        return change(id, event -&gt; event.reject(OffsetDateTime.now(clock)));</span>
+<span class="nc" id="L96">        return change(id, event -&gt; event.reject(OffsetDateTime.now(clock)));</span>
     }
 
     public synchronized Event unpublish(UUID id) {
-<span class="nc" id="L96">        return change(id, event -&gt; event.unpublish(OffsetDateTime.now(clock)));</span>
+<span class="nc" id="L100">        return change(id, event -&gt; event.unpublish(OffsetDateTime.now(clock)));</span>
     }
 
 
     public synchronized Optional&lt;Event&gt; ingest(ScrapedEvent scraped) {
-<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (events.findBySourcePost(scraped.sourceId(), scraped.externalPostId()).isPresent()) {</span>
-<span class="fc" id="L102">            return Optional.empty();</span>
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        if (events.findBySourcePost(scraped.sourceId(), scraped.externalPostId()).isPresent()) {</span>
+<span class="fc" id="L106">            return Optional.empty();</span>
         }
-<span class="fc" id="L104">        Organization organization = organizations.get(scraped.organizationId());</span>
-<span class="fc bfc" id="L105" title="All 2 branches covered.">        EventStatus status = organization.autoPublish() ? EventStatus.PUBLISHED : EventStatus.PENDING;</span>
-<span class="fc" id="L106">        OffsetDateTime now = OffsetDateTime.now(clock);</span>
-<span class="fc" id="L107">        return Optional.of(events.save(new Event(UUID.randomUUID(), organization.id(), scraped.title(),</span>
-<span class="fc" id="L108">                null, scraped.startsAt(), null, scraped.originalUrl(), scraped.sourceId(),</span>
-<span class="fc" id="L109">                scraped.externalPostId(), status, false, now, now)));</span>
+<span class="fc" id="L108">        Organization organization = organizations.get(scraped.organizationId());</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">        EventStatus status = organization.autoPublish() ? EventStatus.PUBLISHED : EventStatus.PENDING;</span>
+<span class="fc" id="L110">        OffsetDateTime now = OffsetDateTime.now(clock);</span>
+<span class="fc" id="L111">        return Optional.of(events.save(new Event(UUID.randomUUID(), organization.id(), scraped.title(),</span>
+<span class="fc" id="L112">                null, scraped.startsAt(), null, scraped.originalUrl(), null, scraped.sourceId(),</span>
+<span class="fc" id="L113">                scraped.externalPostId(), status, false, now, now)));</span>
     }
 
     @EventListener
     public synchronized void onOrganizationDeleted(OrganizationDeleted deleted) {
-<span class="fc" id="L114">        events.deleteByOrganizationId(deleted.organizationId());</span>
-<span class="fc" id="L115">    }</span>
+<span class="fc" id="L118">        events.deleteByOrganizationId(deleted.organizationId());</span>
+<span class="fc" id="L119">    }</span>
 
     private Event change(UUID id, UnaryOperator&lt;Event&gt; transition) {
-<span class="fc" id="L118">        return events.save(transition.apply(get(id)));</span>
+<span class="fc" id="L122">        return events.save(transition.apply(get(id)));</span>
     }
 
     private static ApiException notFound(UUID id) {
-<span class="fc" id="L122">        return new ApiException(ErrorCode.EVENT_NOT_FOUND, &quot;Подію &quot; + id + &quot; не знайдено&quot;);</span>
+<span class="fc" id="L126">        return new ApiException(ErrorCode.EVENT_NOT_FOUND, &quot;Подію &quot; + id + &quot; не знайдено&quot;);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

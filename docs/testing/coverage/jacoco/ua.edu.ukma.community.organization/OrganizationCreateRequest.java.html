@@ -29,7 +29,13 @@ import jakarta.validation.constraints.Size;
 
         @Schema(description = &quot;Контактна пошта&quot;, example = &quot;fido@ukma.edu.ua&quot;)
         @Email(message = &quot;Некоректна адреса пошти&quot;)
-        String contactEmail
+        String contactEmail,
+
+        @Schema(description = &quot;Пошта першого голови: зареєстрований користувач з підтвердженою поштою. &quot;
+                + &quot;Організація без голови не створюється (FR-011, FR-014)&quot;, example = &quot;head@ukma.edu.ua&quot;,
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotBlank(message = &quot;Пошта першого голови обов'язкова&quot;)
+        String headEmail
 ) {
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

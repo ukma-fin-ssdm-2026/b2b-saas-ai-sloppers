@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RegistrationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.auth</a> &gt; <span class="el_source">RegistrationService.java</span></div><h1>RegistrationService.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.auth;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import ua.edu.ukma.community.common.error.ApiException;
+import ua.edu.ukma.community.common.error.ErrorCode;
+import ua.edu.ukma.community.common.error.FieldViolation;
+
+import java.security.SecureRandom;
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.UUID;
+
+
+@Service
+public class RegistrationService {
+
+    private static final int CODE_BOUND = 1_000_000;
+
+    private final UserRepository users;
+    private final PasswordEncoder passwords;
+    private final CodeSender codeSender;
+    private final AuthProperties properties;
+    private final Clock clock;
+<span class="fc" id="L26">    private final SecureRandom random = new SecureRandom();</span>
+
+    public RegistrationService(UserRepository users, PasswordEncoder passwords, CodeSender codeSender,
+<span class="fc" id="L29">                               AuthProperties properties, Clock clock) {</span>
+<span class="fc" id="L30">        this.users = users;</span>
+<span class="fc" id="L31">        this.passwords = passwords;</span>
+<span class="fc" id="L32">        this.codeSender = codeSender;</span>
+<span class="fc" id="L33">        this.properties = properties;</span>
+<span class="fc" id="L34">        this.clock = clock;</span>
+<span class="fc" id="L35">    }</span>
+
+
+    public synchronized User register(String rawEmail, String password) {
+<span class="fc" id="L39">        String email = Emails.normalize(rawEmail);</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">        if (!Emails.hasDomain(email, properties.allowedDomain())) {</span>
+<span class="fc" id="L41">            throw new ApiException(ErrorCode.VALIDATION_ERROR, &quot;Запит містить невалідні поля&quot;,</span>
+<span class="fc" id="L42">                    List.of(new FieldViolation(&quot;email&quot;,</span>
+<span class="fc" id="L43">                            &quot;Реєстрація лише з університетською поштою @&quot; + properties.allowedDomain(), rawEmail)));</span>
+        }
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        if (users.findByEmail(email).isPresent()) {</span>
+<span class="fc" id="L46">            throw new ApiException(ErrorCode.EMAIL_ALREADY_REGISTERED,</span>
+                    &quot;Акаунт з цією поштою вже існує. Увійдіть або запросіть код підтвердження повторно&quot;);
+        }
+<span class="fc" id="L49">        OffsetDateTime now = OffsetDateTime.now(clock);</span>
+<span class="fc" id="L50">        String code = newCode();</span>
+<span class="fc" id="L51">        User user = new User(UUID.randomUUID(), email, passwords.encode(password), UserStatus.PENDING,</span>
+<span class="fc" id="L52">                properties.isAdminEmail(email), verification(code, now), now, now);</span>
+<span class="fc" id="L53">        codeSender.send(email, code);</span>
+<span class="fc" id="L54">        return users.save(user);</span>
+    }
+
+    public synchronized void verify(String rawEmail, String code) {
+<span class="fc" id="L58">        String email = Emails.normalize(rawEmail);</span>
+<span class="fc" id="L59">        User user = users.findByEmail(email).orElseThrow(RegistrationService::invalidCode);</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        if (user.isActive()) {</span>
+<span class="fc" id="L61">            throw new ApiException(ErrorCode.ACCOUNT_ALREADY_VERIFIED, &quot;Пошту вже підтверджено, можна входити&quot;);</span>
+        }
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        if (user.status() == UserStatus.BLOCKED) {</span>
+<span class="nc" id="L64">            throw new ApiException(ErrorCode.ACCOUNT_BLOCKED, &quot;Акаунт заблоковано&quot;);</span>
+        }
+<span class="fc" id="L66">        OffsetDateTime now = OffsetDateTime.now(clock);</span>
+<span class="fc" id="L67">        VerificationCode current = user.verification();</span>
+<span class="pc bpc" id="L68" title="1 of 4 branches missed.">        if (current == null || !current.usable(now)) {</span>
+<span class="fc" id="L69">            throw new ApiException(ErrorCode.VERIFICATION_CODE_EXPIRED,</span>
+                    &quot;Код прострочений або вичерпано спроби. Запросіть новий код&quot;);
+        }
+<span class="pc bpc" id="L72" title="1 of 4 branches missed.">        if (code == null || !passwords.matches(code.trim(), current.codeHash())) {</span>
+<span class="fc" id="L73">            VerificationCode failed = current.withFailedAttempt();</span>
+<span class="fc" id="L74">            users.save(user.withVerification(failed, now));</span>
+<span class="fc" id="L75">            throw new ApiException(ErrorCode.INVALID_VERIFICATION_CODE, &quot;Неправильний код&quot;,</span>
+<span class="fc" id="L76">                    List.of(new FieldViolation(&quot;code&quot;, &quot;Залишилось спроб: &quot; + failed.attemptsLeft(), null)));</span>
+        }
+<span class="fc" id="L78">        users.save(user.activated(now));</span>
+<span class="fc" id="L79">    }</span>
+
+    public synchronized void resendCode(String rawEmail) {
+<span class="fc" id="L82">        String email = Emails.normalize(rawEmail);</span>
+<span class="fc" id="L83">        User user = users.findByEmail(email).orElse(null);</span>
+<span class="fc bfc" id="L84" title="All 4 branches covered.">        if (user == null || user.status() != UserStatus.PENDING) {</span>
+<span class="fc" id="L85">            return;</span>
+        }
+<span class="fc" id="L87">        OffsetDateTime now = OffsetDateTime.now(clock);</span>
+<span class="fc" id="L88">        VerificationCode current = user.verification();</span>
+<span class="pc bpc" id="L89" title="1 of 4 branches missed.">        if (current != null &amp;&amp; now.isBefore(current.sentAt().plus(properties.resendCooldown()))) {</span>
+<span class="fc" id="L90">            long wait = java.time.Duration.between(now, current.sentAt().plus(properties.resendCooldown()))</span>
+<span class="fc" id="L91">                    .toSeconds() + 1;</span>
+<span class="fc" id="L92">            throw new ApiException(ErrorCode.TOO_MANY_REQUESTS,</span>
+                    &quot;Новий код можна запросити через &quot; + wait + &quot; с&quot;);
+        }
+<span class="fc" id="L95">        String code = newCode();</span>
+<span class="fc" id="L96">        codeSender.send(email, code);</span>
+<span class="fc" id="L97">        users.save(user.withVerification(verification(code, now), now));</span>
+<span class="fc" id="L98">    }</span>
+
+    private VerificationCode verification(String code, OffsetDateTime now) {
+<span class="fc" id="L101">        return new VerificationCode(passwords.encode(code), now.plus(properties.codeTtl()),</span>
+<span class="fc" id="L102">                properties.codeAttempts(), now);</span>
+    }
+
+    private String newCode() {
+<span class="fc" id="L106">        return String.format(&quot;%06d&quot;, random.nextInt(CODE_BOUND));</span>
+    }
+
+    private static ApiException invalidCode() {
+<span class="fc" id="L110">        return new ApiException(ErrorCode.INVALID_VERIFICATION_CODE, &quot;Неправильний код&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
