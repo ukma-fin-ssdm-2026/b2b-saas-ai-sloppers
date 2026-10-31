@@ -1,5 +1,9 @@
 # b2b-saas-ai-sloppers
 
+[![CI](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/ci.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/ci.yml)
+[![API Docs](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/api-docs.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/api-docs.yml)
+[![Lint](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/lint.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/lint.yml)
+
 **Платформа для студентських організацій**: єдиний каталог організацій і подій,
 автоматичний збір анонсів із соцмереж організацій з подальшою модерацією координатором,
 експорт подій у календар та дошка пропозицій для пошуку команди чи компанії.
@@ -22,11 +26,15 @@
 - [docs/requirements/user-stories.md](docs/requirements/user-stories.md) - користувацькі історії
 - [docs/requirements/requirements.md](docs/requirements/requirements.md) - функціональні (FR) і нефункціональні (NFR) вимоги
 - [docs/requirements/rtm.md](docs/requirements/rtm.md) - матриця простежуваності (RTM)
+- [Project-Description.md](Project-Description.md) - міні-ТЗ: опис ідеї, ролі користувачів, межі системи
 
 ## Архітектура (Lab 3)
 
 - [docs/architecture/](docs/architecture/) — огляд папки
 - [docs/architecture/high-level-design.md](docs/architecture/high-level-design.md) — високорівневий дизайн
+- [docs/architecture/traceability-matrix.md](docs/architecture/traceability-matrix.md) — вимоги ↔ компоненти, сценарії якості
+- [docs/architecture/data-model.md](docs/architecture/data-model.md) — модель даних із позначеними чутливими полями
+- [docs/architecture/threat-model.md](docs/architecture/threat-model.md) — моделювання загроз за STRIDE
 - [docs/architecture/uml/](docs/architecture/uml/) — UML (PlantUML)
 - [docs/architecture/decisions/](docs/architecture/decisions/) — ADR
 
@@ -34,9 +42,22 @@
 
 - [docs/testing/testing-strategy.md](docs/testing/testing-strategy.md) — стратегія рівнів, покриття, CI
 - [docs/testing/README.md](docs/testing/README.md) — як запускати тести та оновлювати звіт JaCoCo
+- [docs/testing/debugging-log.md](docs/testing/debugging-log.md) — журнал налагодження (челендж «зламай і відлагодь»)
 - [docs/testing/coverage/jacoco/](docs/testing/coverage/jacoco/index.html) — знімок покриття
 
 Локально: `./mvnw test` (поріг рядків — у `pom.xml`, зараз 5%).
+
+## Якість коду (Lab 5)
+
+- [docs/code-quality/static-analysis.md](docs/code-quality/static-analysis.md) — статичний аналіз: Checkstyle, SpotBugs + find-sec-bugs, npm audit
+- [docs/code-quality/review-report.md](docs/code-quality/review-report.md) — огляд коду команди noproblem
+- [docs/code-quality/progress.md](docs/code-quality/progress.md) — прогрес реалізації
+
+## Валідація (Lab 7)
+
+- [docs/validation/test-plan.md](docs/validation/test-plan.md) — план тестування
+- [docs/validation/review-log.md](docs/validation/review-log.md) — журнал взаємного огляду та рішення за зауваженнями
+- [docs/validation/comment.md](docs/validation/comment.md) — відгук команди unispace на наш план
 
 ## Основні можливості
 
@@ -167,6 +188,8 @@ curl -X PUT -F "file=@poster.jpg" http://localhost:8080/api/v1/events/<id>/image
 
 Команда на час генерації піднімає застосунок на порту 8080, тож зупиніть `docker compose` перед запуском. Workflow **API Docs** на кожному PR перегенеровує специфікацію і падає, якщо закомічений файл застарів або невалідний.
 
+Опублікована документація: **https://ukma-fin-ssdm-2026.github.io/b2b-saas-ai-sloppers/** (Swagger UI, оновлюється workflow **Deploy API Docs**). Сервер у специфікації вказано як `http://localhost:8080`, тож «Try it out» працює лише з локально піднятим бекендом.
+
 Статична сторінка в репо: [docs/api/index.html](docs/api/index.html). Локально: `cd docs/api && npx --yes serve -p 5500`.
 
 ## Документи
@@ -176,5 +199,16 @@ curl -X PUT -F "file=@poster.jpg" http://localhost:8080/api/v1/events/<id>/image
 - [docs/issue-workflow.md](docs/issue-workflow.md): робочий процес задач і мітки
 - [docs/api/api-design.md](docs/api/api-design.md): проєктування API
 - [docs/api/quality-attributes.md](docs/api/quality-attributes.md): атрибути якості API
+- [docs/api/openapi-generated.yaml](docs/api/openapi-generated.yaml): специфікація OpenAPI (генерується з коду)
+- [docs/architecture/high-level-design.md](docs/architecture/high-level-design.md): архітектурний огляд
+- [docs/architecture/traceability-matrix.md](docs/architecture/traceability-matrix.md): вимоги ↔ компоненти
+- [docs/architecture/data-model.md](docs/architecture/data-model.md): модель даних
+- [docs/architecture/threat-model.md](docs/architecture/threat-model.md): модель загроз (STRIDE)
+- [docs/architecture/decisions/](docs/architecture/decisions/): ADR-001…ADR-005
+- [docs/code-quality/static-analysis.md](docs/code-quality/static-analysis.md): статичний аналіз і безпека (Lab 5)
+- [docs/code-quality/review-report.md](docs/code-quality/review-report.md): огляд коду іншої команди (Lab 5)
 - [docs/code-quality/progress.md](docs/code-quality/progress.md): прогрес реалізації (Lab 5)
 - [docs/testing/testing-strategy.md](docs/testing/testing-strategy.md): стратегія тестування (Lab 6)
+- [docs/testing/debugging-log.md](docs/testing/debugging-log.md): журнал налагодження (Lab 6)
+- [docs/validation/test-plan.md](docs/validation/test-plan.md): план тестування (Lab 7)
+- [docs/validation/review-log.md](docs/validation/review-log.md): журнал взаємного огляду (Lab 7)
