@@ -1,79 +1,82 @@
-## Quick guide for working with local dev and minikube deployment
+# Інфраструктура
 
-Рішення: [ADR-004](../docs/architecture/decisions/ADR-004-deployment-and-gitops.md) (Minikube, GitOps), [ADR-005](../docs/architecture/decisions/ADR-005-database-migrations.md) (міграції).
+Застосунок розгортається в локальному кластері Minikube: frontend, backend і PostgreSQL. Зміни в кластер доставляє ArgoCD із гілки `deploy`.
 
-### Структура
+## Архітектура
+
+- [Діаграма розгортання](../docs/architecture/uml/deployment.md)
+- [ADR-004](../docs/architecture/decisions/ADR-004-deployment-and-gitops.md): Minikube і GitOps
+- [ADR-005](../docs/architecture/decisions/ADR-005-database-migrations.md): міграції БД
 
 ```
 infra/
-├── migrations/                 SQL-міграції Flyway + Dockerfile образу migrations
+├── helpers/            up.sh і down.sh: підняти й видалити кластер
+├── migrations/         SQL-міграції Flyway і Dockerfile їхнього образу
 └── kube/
-    ├── argocd/
-    │   ├── root.yaml           app-of-apps, застосовується вручну один раз
-    │   └── apps/               cnpg-operator (wave -1), backend (0), frontend (1)
+    ├── argocd/         root Application і Applications: cnpg-operator, backend, frontend
     └── Services/
-        ├── Backend/            Deployment + Service (wave 2)
-        │   └── database/       CNPG Cluster (wave 0) + Flyway Job (Sync hook, wave 1)
-        └── Frontend/           Deployment + Service + Ingress (community.local)
+        ├── Backend/    Deployment і Service; database/: кластер БД і Job міграцій
+        └── Frontend/   Deployment, Service і Ingress
 ```
 
-Порядок у Application `backend`: кластер БД → міграції → backend. Якщо міграція падає, backend не оновлюється.
+## Що потрібно для запуску
 
-### Секрети (не в git)
+1. Docker. Потрібно 2 CPU, 6 ГБ пам'яті й щонайменше 12 ГБ диска (Docker Desktop: Settings → Resources).
+2. Minikube. На macOS `kubectl` встановиться разом із ним:
+   ```bash
+   brew install minikube
+   ```
+3. Файл `.env` у корені репозиторію:
+   ```bash
+   cp .env.example .env
+   ```
 
-| Secret | Звідки |
-|--------|--------|
-| `postgres-app` | генерує CloudNativePG (логін/пароль власника БД `community`) |
-| `backend-secrets` | з `.env`: `AUTH_JWT_SECRET`, `AUTH_ADMIN_EMAILS`, `SUPABASE_*`, `SPRING_MAIL_*`, `MAIL_FROM` |
-| `frontend-tls` | самопідписаний сертифікат для `community.local` |
-| `ghcr-pull` | логін до приватних пакетів GHCR, із `GHCR_USERNAME` і `GHCR_TOKEN` у `.env` |
+Обов'язкові змінні:
 
-### Запуск кластера
+| Змінна | Що це |
+|---|---|
+| `GHCR_USERNAME`, `GHCR_TOKEN` | логін власника токена і [токен GitHub (classic)](https://github.com/settings/tokens/new?scopes=read:packages) зі скоупом `read:packages`, щоб завантажувати приватні образи |
+| `NGROK_AUTHTOKEN` | [токен ngrok](https://dashboard.ngrok.com/get-started/your-authtoken), у кожного свій |
+| `AUTH_JWT_SECRET` | ключ для JWT: `openssl rand -base64 48` |
+
+Решта змінних у `.env.example` необов'язкові. Файл `.env` у git не потрапляє.
+
+## Запуск
 
 ```bash
-cp .env.example .env   # заповнити обов'язкові змінні
 infra/helpers/up.sh
 ```
 
-Скрипт піднімає Minikube (профіль `community`), ArgoCD і секрети, застосовує root Application, чекає, поки backend і frontend стануть `Healthy`, запускає тунель ngrok у Docker і виводить його публічний URL. Потрібен запущений Docker, а гілка `deploy` має містити актуальні маніфести (workflow **Build and Deploy**). Запускати повторно безпечно.
+Скрипт можна запускати повторно. Він виконує такі кроки:
 
-- Зупинити тунель: `docker rm -f community-ngrok`
-- Зупинити кластер, зберігши дані: `minikube stop -p community`
-- Видалити кластер разом із базою, щоб почати заново: `infra/helpers/down.sh`
+1. Перевіряє, що встановлено потрібні інструменти, запущено Docker і заповнено `.env`.
+2. Запускає Minikube (профіль `community`) з Ingress і перевіряє, що на вузлі є вільне місце.
+3. Встановлює ArgoCD.
+4. Створює в кластері секрети: логін до GHCR, змінні backend із `.env` і TLS-сертифікат.
+5. Застосовує root Application. Далі ArgoCD сам розгортає оператор бази, backend і frontend із гілки `deploy`.
+6. Чекає, поки backend і frontend стануть `Healthy`.
+7. Запускає тунель ngrok у Docker і виводить публічний URL сайту та доступ до ArgoCD.
 
-Docker Desktop: щонайменше 40 ГБ у Settings → Resources → Disk usage limit. Вузол Minikube використовує цей диск, і при нестачі місця скрипт зупиняється з помилкою.
+## Зупинка
 
-### Ручний запуск у Minikube (без ArgoCD)
+Щоб видалити все:
 
 ```bash
-minikube start --cpus 4 --memory 6g
-minikube addons enable ingress
-
-# образи збираються прямо в Minikube з тегом :local, як у маніфестах
-eval $(minikube docker-env)
-R=ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers
-docker build -t $R/backend:local -f src/main/docker/Dockerfile .
-docker build -t $R/frontend:local web-src
-docker build -t $R/migrations:local infra/migrations
-
-# оператор CloudNativePG
-kubectl apply --server-side -f \
-  https://raw.githubusercontent.com/cloudnative-pg/cloudnative-pg/release-1.30/releases/cnpg-1.30.1.yaml
-
-# секрети
-kubectl create secret generic backend-secrets --from-literal=AUTH_JWT_SECRET="$(openssl rand -base64 48)"
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 -subj /CN=community.local \
-  -addext subjectAltName=DNS:community.local -keyout tls.key -out tls.crt
-kubectl create secret tls frontend-tls --cert tls.crt --key tls.key
-
-# без ArgoCD hook-анотації ігноруються, тому порядок хвиль відтворюємо через wait
-kubectl apply -f infra/kube/Services/Backend/database/cluster.yaml
-kubectl wait cluster/postgres --for=condition=Ready --timeout=5m
-kubectl apply -f infra/kube/Services/Backend/database/migrate-job.yaml
-kubectl wait job/db-migrate --for=condition=complete --timeout=3m
-kubectl apply -f infra/kube/Services/Backend/ -f infra/kube/Services/Frontend/
+infra/helpers/down.sh
 ```
 
-Доступ: додати `$(minikube ip) community.local` у `/etc/hosts` (на macOS з драйвером docker — `minikube tunnel` і `127.0.0.1 community.local`), відкрити https://community.local.
+Скрипт питає підтвердження, зупиняє тунель ngrok і видаляє кластер разом із базою. `.env` і гілка `deploy` лишаються.
 
-Повторний запуск міграцій вручну: `kubectl delete job db-migrate`, потім знову `kubectl apply` для Job.
+Щоб лише призупинити кластер і зберегти дані: `minikube stop -p community`. Повернутися до роботи можна через `up.sh`.
+
+## Як викочуються зміни
+
+1. Зміни потрапляють у `main`.
+2. Ви вручну запускаєте workflow: Actions → **Build and Deploy** → **Run workflow**.
+3. Workflow збирає образи backend, frontend і migrations, пушить їх у GHCR і комітить у гілку `deploy` маніфести з хешами (digest) нових образів.
+4. ArgoCD стежить за гілкою `deploy` і сам підхоплює зміни. Перевірка відбувається приблизно раз на 3 хвилини.
+5. Відповідний Application перезапускає потрібний под із новим образом:
+   - **`backend`** (backend і міграції): спершу виконується Job міграцій, потім перезапускається backend. Якщо міграція впала, backend лишається на старій версії.
+   - **`frontend`**: перезапускається frontend, без простою.
+
+Гілка `deploy` генерується автоматично, руками її не редагуємо.

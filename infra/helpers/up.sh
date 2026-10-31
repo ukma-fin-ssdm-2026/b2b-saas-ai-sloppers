@@ -9,7 +9,7 @@ ARGOCD_VERSION=v3.5.6
 HOST=community.local
 NGROK_IMAGE=ngrok/ngrok:3.39.13-alpine
 NGROK_CONTAINER=community-ngrok
-MIN_FREE_DISK_GB=5
+MIN_FREE_DISK_GB=3
 WAIT_TIMEOUT_SECONDS=900
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"

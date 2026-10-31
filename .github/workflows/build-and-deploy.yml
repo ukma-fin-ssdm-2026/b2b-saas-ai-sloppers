@@ -6,10 +6,6 @@ name: Build and Deploy
 
 on:
   workflow_dispatch:
-  # TEMPORARY: workflow_dispatch needs the file on main, this allows a first run before the merge.
-  # Remove before merging to main.
-  push:
-    branches: [feat/add-deployments]
 
 permissions:
   contents: write # push to the deploy branch
