@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>User.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.auth</a> &gt; <span class="el_source">User.java</span></div><h1>User.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.auth;
+
+import java.time.OffsetDateTime;
+import java.util.Objects;
+import java.util.UUID;
+
+
+public record User(
+        UUID id,
+        String email,
+        String passwordHash,
+        UserStatus status,
+        boolean globalAdmin,
+        VerificationCode verification,
+        OffsetDateTime createdAt,
+        OffsetDateTime updatedAt
+) {
+
+<span class="fc" id="L19">    public User {</span>
+<span class="fc" id="L20">        Objects.requireNonNull(id, &quot;id&quot;);</span>
+<span class="fc" id="L21">        Objects.requireNonNull(email, &quot;email&quot;);</span>
+<span class="fc" id="L22">        Objects.requireNonNull(passwordHash, &quot;passwordHash&quot;);</span>
+<span class="fc" id="L23">        Objects.requireNonNull(status, &quot;status&quot;);</span>
+<span class="fc" id="L24">        Objects.requireNonNull(createdAt, &quot;createdAt&quot;);</span>
+<span class="fc" id="L25">        Objects.requireNonNull(updatedAt, &quot;updatedAt&quot;);</span>
+<span class="fc" id="L26">    }</span>
+
+    public boolean isActive() {
+<span class="fc bfc" id="L29" title="All 2 branches covered.">        return status == UserStatus.ACTIVE;</span>
+    }
+
+    public User withVerification(VerificationCode code, OffsetDateTime now) {
+<span class="fc" id="L33">        return new User(id, email, passwordHash, status, globalAdmin, code, createdAt, now);</span>
+    }
+
+    public User activated(OffsetDateTime now) {
+<span class="fc" id="L37">        return new User(id, email, passwordHash, UserStatus.ACTIVE, globalAdmin, null, createdAt, now);</span>
+    }
+
+    /** Без хеша пароля: запис може потрапити в лог (NFR-008). */
+    @Override
+    public String toString() {
+<span class="fc" id="L43">        return &quot;User[id=&quot; + id + &quot;, email=&quot; + email + &quot;, status=&quot; + status + &quot;, globalAdmin=&quot; + globalAdmin + &quot;]&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

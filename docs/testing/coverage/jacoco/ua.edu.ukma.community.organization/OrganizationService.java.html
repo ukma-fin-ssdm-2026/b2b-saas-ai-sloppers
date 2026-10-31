@@ -41,57 +41,74 @@ public class OrganizationService {
     }
 
     public Organization get(UUID id) {
-<span class="fc" id="L44">        return organizations.findById(id).orElseThrow(() -&gt; notFound(id));</span>
+<span class="fc" id="L44">        return organizations.findById(id).orElseThrow(() -&gt; notFound(id.toString()));</span>
+    }
+
+    public Organization getBySlug(String slug) {
+<span class="fc" id="L48">        String normalized = normalizeSlug(slug);</span>
+<span class="fc" id="L49">        return organizations.findBySlug(normalized).orElseThrow(() -&gt; notFound(normalized));</span>
     }
 
     public boolean exists(UUID id) {
-<span class="nc" id="L48">        return organizations.findById(id).isPresent();</span>
+<span class="nc" id="L53">        return organizations.findById(id).isPresent();</span>
     }
 
     public synchronized Organization create(OrganizationCreateRequest request) {
-<span class="fc" id="L52">        ensureSlugFree(request.slug(), null);</span>
-<span class="fc" id="L53">        OffsetDateTime now = OffsetDateTime.now(clock);</span>
-<span class="fc" id="L54">        return organizations.save(new Organization(UUID.randomUUID(), request.name().trim(), request.slug(),</span>
-<span class="fc" id="L55">                request.description(), request.instagramHandle(), request.contactEmail(), false, now, now));</span>
+<span class="fc" id="L57">        ensureSlugFree(request.slug(), null);</span>
+<span class="fc" id="L58">        OffsetDateTime now = OffsetDateTime.now(clock);</span>
+<span class="fc" id="L59">        return organizations.save(new Organization(UUID.randomUUID(), request.name().trim(), request.slug(),</span>
+<span class="fc" id="L60">                request.description(), request.instagramHandle(), request.contactEmail(), null, false, now, now));</span>
     }
 
     public synchronized Organization update(UUID id, OrganizationUpdateRequest request) {
-<span class="fc" id="L59">        Organization current = get(id);</span>
-<span class="fc bfc" id="L60" title="All 2 branches covered.">        if (request.slug() != null) {</span>
-<span class="fc" id="L61">            ensureSlugFree(request.slug(), id);</span>
+<span class="fc" id="L64">        Organization current = get(id);</span>
+<span class="fc bfc" id="L65" title="All 2 branches covered.">        if (request.slug() != null) {</span>
+<span class="fc" id="L66">            ensureSlugFree(request.slug(), id);</span>
         }
-<span class="fc" id="L63">        return organizations.save(new Organization(current.id(),</span>
-<span class="pc bpc" id="L64" title="1 of 2 branches missed.">                request.name() != null ? request.name().trim() : current.name(),</span>
-<span class="fc bfc" id="L65" title="All 2 branches covered.">                request.slug() != null ? request.slug() : current.slug(),</span>
-<span class="fc bfc" id="L66" title="All 2 branches covered.">                request.description() != null ? request.description() : current.description(),</span>
-<span class="pc bpc" id="L67" title="1 of 2 branches missed.">                request.instagramHandle() != null ? request.instagramHandle() : current.instagramHandle(),</span>
-<span class="pc bpc" id="L68" title="1 of 2 branches missed.">                request.contactEmail() != null ? request.contactEmail() : current.contactEmail(),</span>
-<span class="fc bfc" id="L69" title="All 2 branches covered.">                request.autoPublish() != null ? request.autoPublish() : current.autoPublish(),</span>
-<span class="fc" id="L70">                current.createdAt(), OffsetDateTime.now(clock)));</span>
+<span class="fc" id="L68">        return organizations.save(new Organization(current.id(),</span>
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">                request.name() != null ? request.name().trim() : current.name(),</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">                request.slug() != null ? request.slug() : current.slug(),</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">                request.description() != null ? request.description() : current.description(),</span>
+<span class="pc bpc" id="L72" title="1 of 2 branches missed.">                request.instagramHandle() != null ? request.instagramHandle() : current.instagramHandle(),</span>
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">                request.contactEmail() != null ? request.contactEmail() : current.contactEmail(),</span>
+<span class="fc" id="L74">                current.logoUrl(),</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">                request.autoPublish() != null ? request.autoPublish() : current.autoPublish(),</span>
+<span class="fc" id="L76">                current.createdAt(), OffsetDateTime.now(clock)));</span>
+    }
+
+    public synchronized Organization changeLogo(UUID id, String logoUrl) {
+<span class="fc" id="L80">        Organization current = get(id);</span>
+<span class="fc" id="L81">        return organizations.save(new Organization(current.id(), current.name(), current.slug(),</span>
+<span class="fc" id="L82">                current.description(), current.instagramHandle(), current.contactEmail(), logoUrl,</span>
+<span class="fc" id="L83">                current.autoPublish(), current.createdAt(), OffsetDateTime.now(clock)));</span>
     }
 
     public synchronized void delete(UUID id) {
-<span class="fc bfc" id="L74" title="All 2 branches covered.">        if (!organizations.deleteById(id)) {</span>
-<span class="fc" id="L75">            throw notFound(id);</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (!organizations.deleteById(id)) {</span>
+<span class="fc" id="L88">            throw notFound(id.toString());</span>
         }
-<span class="fc" id="L77">        events.publishEvent(new OrganizationDeleted(id));</span>
-<span class="fc" id="L78">    }</span>
+<span class="fc" id="L90">        events.publishEvent(new OrganizationDeleted(id));</span>
+<span class="fc" id="L91">    }</span>
 
     private static boolean matches(Organization organization, String needle) {
-<span class="fc bfc" id="L81" title="All 2 branches covered.">        return needle.isEmpty()</span>
-<span class="fc bfc" id="L82" title="All 2 branches covered.">                || organization.name().toLowerCase(Locale.ROOT).contains(needle)</span>
-<span class="fc bfc" id="L83" title="All 2 branches covered.">                || organization.slug().contains(needle);</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        return needle.isEmpty()</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">                || organization.name().toLowerCase(Locale.ROOT).contains(needle)</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">                || organization.slug().contains(needle);</span>
     }
 
     private void ensureSlugFree(String slug, UUID exceptId) {
-<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (organizations.existsBySlug(slug, exceptId)) {</span>
-<span class="fc" id="L88">            throw new ApiException(ErrorCode.SLUG_ALREADY_EXISTS, &quot;Організація з таким slug уже існує&quot;,</span>
-<span class="fc" id="L89">                    List.of(new FieldViolation(&quot;slug&quot;, &quot;Slug зайнятий&quot;, slug)));</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (organizations.existsBySlug(slug, exceptId)) {</span>
+<span class="fc" id="L101">            throw new ApiException(ErrorCode.SLUG_ALREADY_EXISTS, &quot;Організація з таким slug уже існує&quot;,</span>
+<span class="fc" id="L102">                    List.of(new FieldViolation(&quot;slug&quot;, &quot;Slug зайнятий&quot;, slug)));</span>
         }
-<span class="fc" id="L91">    }</span>
+<span class="fc" id="L104">    }</span>
 
-    private static ApiException notFound(UUID id) {
-<span class="fc" id="L94">        return new ApiException(ErrorCode.ORGANIZATION_NOT_FOUND, &quot;Організацію &quot; + id + &quot; не знайдено&quot;);</span>
+    private static String normalizeSlug(String slug) {
+<span class="fc" id="L107">        return slug.trim().toLowerCase(Locale.ROOT);</span>
+    }
+
+    private static ApiException notFound(String key) {
+<span class="fc" id="L111">        return new ApiException(ErrorCode.ORGANIZATION_NOT_FOUND, &quot;Організацію &quot; + key + &quot; не знайдено&quot;);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

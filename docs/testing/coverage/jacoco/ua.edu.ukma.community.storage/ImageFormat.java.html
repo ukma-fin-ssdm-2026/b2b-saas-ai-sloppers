@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ImageFormat.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.storage</a> &gt; <span class="el_source">ImageFormat.java</span></div><h1>ImageFormat.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.storage;
+
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Optional;
+
+
+<span class="fc" id="L8">public enum ImageFormat {</span>
+<span class="fc" id="L9">    JPEG(&quot;image/jpeg&quot;, &quot;jpg&quot;),</span>
+<span class="fc" id="L10">    PNG(&quot;image/png&quot;, &quot;png&quot;),</span>
+<span class="fc" id="L11">    WEBP(&quot;image/webp&quot;, &quot;webp&quot;);</span>
+
+<span class="fc" id="L13">    private static final byte[] JPEG_MAGIC = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};</span>
+<span class="fc" id="L14">    private static final byte[] PNG_MAGIC = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'};</span>
+<span class="fc" id="L15">    private static final byte[] RIFF = &quot;RIFF&quot;.getBytes(StandardCharsets.US_ASCII);</span>
+<span class="fc" id="L16">    private static final byte[] WEBP_TAG = &quot;WEBP&quot;.getBytes(StandardCharsets.US_ASCII);</span>
+    private static final int WEBP_TAG_OFFSET = 8;
+
+    private final String contentType;
+    private final String extension;
+
+<span class="fc" id="L22">    ImageFormat(String contentType, String extension) {</span>
+<span class="fc" id="L23">        this.contentType = contentType;</span>
+<span class="fc" id="L24">        this.extension = extension;</span>
+<span class="fc" id="L25">    }</span>
+
+    public String contentType() {
+<span class="fc" id="L28">        return contentType;</span>
+    }
+
+    public String extension() {
+<span class="fc" id="L32">        return extension;</span>
+    }
+
+    public static Optional&lt;ImageFormat&gt; detect(byte[] data) {
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        if (startsWith(data, 0, JPEG_MAGIC)) {</span>
+<span class="fc" id="L37">            return Optional.of(JPEG);</span>
+        }
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        if (startsWith(data, 0, PNG_MAGIC)) {</span>
+<span class="fc" id="L40">            return Optional.of(PNG);</span>
+        }
+<span class="pc bpc" id="L42" title="1 of 4 branches missed.">        if (startsWith(data, 0, RIFF) &amp;&amp; startsWith(data, WEBP_TAG_OFFSET, WEBP_TAG)) {</span>
+<span class="fc" id="L43">            return Optional.of(WEBP);</span>
+        }
+<span class="fc" id="L45">        return Optional.empty();</span>
+    }
+
+    private static boolean startsWith(byte[] data, int offset, byte[] prefix) {
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        return data.length &gt;= offset + prefix.length</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">                &amp;&amp; Arrays.equals(data, offset, offset + prefix.length, prefix, 0, prefix.length);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>
