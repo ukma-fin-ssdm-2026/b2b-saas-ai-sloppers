@@ -25,7 +25,7 @@ spec:
       annotations:
         # CI writes the digest of the migrations image here. ArgoCD ignores hooks when it
         # decides whether to sync, so a new migration must change the Deployment as well.
-        community/migrations-digest: "sha256:900510c2334886d7bbadb8ca24408f8479874bfee768192633edb4a144d97047"
+        community/migrations-digest: "sha256:e76b5aad4c260d6dd5bad363c12ae1c1f407faa4d8cbbebf3c0c205b6900d275"
     spec:
       # private GHCR packages; created by infra/helpers/up.sh
       imagePullSecrets:
@@ -33,7 +33,7 @@ spec:
       containers:
         - name: backend
           # CI replaces :local with @sha256 in the deploy branch
-          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/backend@sha256:c9c55e2f21efa48dfce408c2ac8474d7f33e531495b6a0db42659c6fb2a58da4
+          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/backend@sha256:e898ff2ab1e6741955d38e9c8ec496467539fae51a7954652c1a67a76ea50fb6
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -91,11 +91,11 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              cpu: 1
+              cpu: 250m
               memory: 512Mi
             limits:
-              memory: 512Mi
               cpu: 1
+              memory: 768Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
