@@ -29,7 +29,7 @@ spec:
       containers:
         - name: flyway
           # CI replaces :local with @sha256 in the deploy branch
-          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/migrations@sha256:e76b5aad4c260d6dd5bad363c12ae1c1f407faa4d8cbbebf3c0c205b6900d275
+          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/migrations@sha256:0b104274095f73bd07781c689688ecb7fa4438ca6fb490983ec82aa8be0d0627
           imagePullPolicy: IfNotPresent
           args: ["migrate"]
           env:
