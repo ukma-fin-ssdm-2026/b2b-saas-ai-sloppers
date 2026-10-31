@@ -1,0 +1,53 @@
+# PostgreSQL managed by CloudNativePG (ADR-004 p.4, NFR-004).
+# The name "postgres" gives Services postgres-rw / postgres-ro / postgres-r
+# and Secret postgres-app (username, password, host, dbname, jdbc-uri).
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: postgres
+  labels:
+    app.kubernetes.io/name: postgres
+    app.kubernetes.io/part-of: community
+  annotations:
+    # wave 0: the database comes before the migrate Job (1) and the backend (2)
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  # primary + standby with streaming replication, one PVC each
+  instances: 2
+  # same major version as docker-compose
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+
+  # NFR-004: the service must recover within 30 s. Defaults are tuned for
+  # production with WAL archiving (stopDelay 1800 s, switchoverDelay 3600 s).
+  # Preliminary values, to be confirmed by deleting the primary pod.
+  primaryUpdateStrategy: unsupervised
+  failoverDelay: 0
+  switchoverDelay: 10
+  stopDelay: 30
+  smartShutdownTimeout: 5
+
+  bootstrap:
+    initdb:
+      # same names as in docker-compose
+      database: community
+      owner: community
+
+  storage:
+    # default StorageClass (Minikube: standard)
+    size: 1Gi
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  postgresql:
+    parameters:
+      max_connections: "50"
+
+  affinity:
+    enablePodAntiAffinity: true
+    # Minikube has one node: "required" would leave the standby Pending
+    podAntiAffinityType: preferred

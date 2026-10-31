@@ -40,6 +40,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
+        <!-- /actuator/health: liveness/readiness probes in Kubernetes (NFR-003) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
         <!-- Auth: Spring Security + JWT (HS256) + листи з кодом підтвердження -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

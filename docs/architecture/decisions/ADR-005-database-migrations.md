@@ -22,12 +22,12 @@ ADR-003 фіксує PostgreSQL як єдину БД, ADR-004 відкладає
 2. **Міграції лежать у [`infra/migrations/`](../../../infra/migrations/)**, а не в ресурсах backend. Це єдине джерело для всіх середовищ.
 3. **Накочує окремий одноразовий контейнер** на офіційному образі `flyway/flyway`, а не backend під час старту:
    - **локально** — сервіс `migrate` у [`docker-compose.yml`](../../../docker-compose.yml): стартує після `db` (`service_healthy`), backend стартує лише після його успішного завершення (`service_completed_successfully`);
-   - **у Minikube** — Kubernetes Job як ArgoCD sync hook. SQL-файли потрапляють у Job через ConfigMap, який Kustomize генерує з `infra/migrations/`; власний образ і реєстр не потрібні.
+   - **у Minikube** — Kubernetes Job як ArgoCD sync hook на образі `migrations` ([`infra/migrations/Dockerfile`](../../../infra/migrations/Dockerfile): `FROM flyway/flyway` + SQL з тієї ж папки). Образ збирає CI разом із backend і frontend і публікує в GHCR, digest підставляється в гілку `deploy` (ADR-004 п.6).
 4. **Порядок у кластері задають sync waves:** CNPG `Cluster` → Job з міграціями → Deployment backend. Використовуємо hook `Sync`, а не `PreSync`: PreSync виконався б до створення кластера БД на першому розгортанні.
 5. **Якщо міграція не пройшла, синхронізація зупиняється:** новий backend не застосовується, попередня версія працює далі.
 6. **Міграції сумісні з попередньою версією коду** (спочатку додати, видаляти окремим релізом). Уже застосовані файли не редагуються.
 
-Стан реалізації: пп. 1–3 для локального оточення зроблено; Job, ConfigMap і хвилі для Minikube будуть додані разом із маніфестами з ADR-004.
+Стан реалізації: пп. 1–3 для локального оточення зроблено. Для Minikube додано образ `migrations`, Job [`migrate-job.yaml`](../../../infra/kube/Services/Backend/database/migrate-job.yaml) і хвилі (Cluster 0 → Job 1 → backend 2); збирання образу в CI — разом із workflow публікації образів.
 
 ## Alternatives considered
 
@@ -36,7 +36,7 @@ ADR-003 фіксує PostgreSQL як єдину БД, ADR-004 відкладає
 | Flyway усередині backend (Spring Boot мігрує на старті) | Найпростіше, але механізм схований у конфігурації застосунку, backend потребує DDL-прав, а зараз він узагалі не працює з БД. Лишається запасним варіантом: ті самі SQL-файли підходять без змін |
 | Init-скрипти PostgreSQL (`docker-entrypoint-initdb.d`, `postInitApplicationSQL` у CNPG) | Виконуються лише на порожньому томі: другу міграцію на наявну базу не накотять |
 | GitHub Actions накочує міграції | Actions не має доступу до Minikube; це push-деплой в обхід ArgoCD |
-| Власний образ із міграціями (`FROM flyway/flyway` + `COPY`) | Потребує реєстру образів, якого ще немає. Можливий після появи GHCR |
+| ConfigMap із SQL, згенерований Kustomize (`configMapGenerator`) | Тягне Kustomize лише заради одного ресурсу; ліміт ConfigMap 1 МіБ. Після появи GHCR образ `migrations` простіший і версіонується digest-ом, як інші образи |
 | ArgoCD `PreSync` hook | На першому розгортанні бази ще не існує, Job не має куди підключитись |
 
 ## Consequences
@@ -48,10 +48,10 @@ ADR-003 фіксує PostgreSQL як єдину БД, ADR-004 відкладає
 - Невдала міграція блокує викочування нової версії, а не ламає робочу.
 
 **Мінуси / ризики**
-- Більше маніфестів, ніж із Flyway у застосунку: Job, ConfigMap, анотації хвиль.
+- Більше маніфестів, ніж із Flyway у застосунку: Job, образ `migrations`, анотації хвиль.
 - Автоматичного відкату схеми немає. PostgreSQL відкочує лише міграцію, що впала; попередні з того ж запуску лишаються застосованими.
 - Job у Kubernetes незмінна: потрібна політика `BeforeHookCreation`, щоб стара Job видалялась перед новою.
-- ConfigMap обмежений 1 МіБ; якщо міграцій стане більше, переходимо на власний образ.
+- Третій образ у CI: кожна зміна SQL — нове збирання і новий digest у `deploy`.
 - Тести backend не перевіряють міграції, доки застосунок не підключений до БД.
 
 ## Використання ШІ
