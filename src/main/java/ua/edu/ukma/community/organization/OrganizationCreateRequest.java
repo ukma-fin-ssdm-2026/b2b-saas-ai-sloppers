@@ -29,6 +29,12 @@ public record OrganizationCreateRequest(
 
         @Schema(description = "Контактна пошта", example = "fido@ukma.edu.ua")
         @Email(message = "Некоректна адреса пошти")
-        String contactEmail
+        String contactEmail,
+
+        @Schema(description = "Пошта першого голови: зареєстрований користувач з підтвердженою поштою. "
+                + "Організація без голови не створюється (FR-011, FR-014)", example = "head@ukma.edu.ua",
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotBlank(message = "Пошта першого голови обов'язкова")
+        String headEmail
 ) {
 }

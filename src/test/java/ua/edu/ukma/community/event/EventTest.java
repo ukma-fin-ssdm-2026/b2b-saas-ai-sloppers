@@ -94,11 +94,26 @@ class EventTest {
     }
 
     @Test
+    @DisplayName("відхилену подію не можна змінювати, решту — можна (requireNotRejected, withImage)")
+    void requireNotRejected() {
+        Event rejected = event(ORG_ID, EventStatus.REJECTED, true, STARTS);
+        Event pending = event(ORG_ID, EventStatus.PENDING, false, STARTS);
+
+        assertThatThrownBy(() -> rejected.requireNotRejected("змінити картинку"))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("змінити картинку");
+        assertThatThrownBy(() -> rejected.withImage("https://cdn/x.png", LATER))
+                .isInstanceOf(ApiException.class);
+        pending.requireNotRejected("змінити картинку");
+        assertThat(pending.withImage("https://cdn/x.png", LATER).imageUrl()).isEqualTo("https://cdn/x.png");
+    }
+
+    @Test
     @DisplayName("обов'язкові поля конструктора перевіряються на null")
     void constructorRejectsNullTitle() {
         assertThatNullPointerException()
                 .isThrownBy(() -> new Event(UUID.randomUUID(), ORG_ID, null, null, STARTS, null, null,
-                        null, null, EventStatus.PENDING, false, NOW, NOW))
+                        null, null, null, EventStatus.PENDING, false, NOW, NOW))
                 .withMessage("title");
     }
 }

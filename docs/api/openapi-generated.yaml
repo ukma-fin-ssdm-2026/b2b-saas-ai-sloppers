@@ -11,9 +11,132 @@ servers:
 - description: Generated server url
   url: http://localhost:8080
 tags:
+- description: "Реєстрація з поштою @ukma.edu.ua, вхід, поточний користувач"
+  name: Auth
 - description: Каталог студентських організацій
   name: Organizations
+- description: Голови організацій і журнал змін ролей
+  name: Heads
 paths:
+  /api/v1/auth/login:
+    post:
+      description: "Повертає JWT на 60 хв (FR-004, NFR-010). Неактивний акаунт — 403\
+        \ ACCOUNT_NOT_VERIFIED."
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+          description: Токен доступу
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      summary: Увійти
+      tags:
+      - Auth
+  /api/v1/auth/me:
+    get:
+      description: "Пошта, роль Global Admin і організації, де користувач голова."
+      operationId: me
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+          description: Поточний користувач
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - bearerAuth: []
+      summary: Поточний користувач
+      tags:
+      - Auth
+  /api/v1/auth/register:
+    post:
+      description: "Лише пошта @ukma.edu.ua (FR-001). Створює неактивний акаунт і\
+        \ надсилає 6-значний код (FR-002), дійсний 15 хв, 5 спроб (FR-003)."
+      operationId: register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+          description: "Акаунт створено, код надіслано"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "503":
+          $ref: "#/components/responses/MailUnavailable"
+      summary: Зареєструватися
+      tags:
+      - Auth
+  /api/v1/auth/resend-code:
+    post:
+      description: "Для непідтвердженого акаунта: новий код, старий стає недійсним\
+        . Не частіше ніж раз на хвилину. Для невідомої пошти теж 204, щоб не розкр\
+        ивати, які пошти зареєстровані."
+      operationId: resendCode
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResendCodeRequest"
+        required: true
+      responses:
+        "204":
+          description: "Якщо акаунт існує й не підтверджений, код надіслано"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/MailUnavailable"
+      summary: Надіслати код ще раз
+      tags:
+      - Auth
+  /api/v1/auth/verify:
+    post:
+      description: Після успіху можна входити. Неправильний код зменшує кількість
+        спроб.
+      operationId: verifyEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyRequest"
+        required: true
+      responses:
+        "204":
+          description: Пошту підтверджено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      summary: Підтвердити пошту кодом
+      tags:
+      - Auth
   /api/v1/events:
     get:
       description: "Публічна (доступна гостям). Лише опубліковані майбутні події,\
@@ -233,6 +356,92 @@ paths:
       summary: Посилання на Google Calendar
       tags:
       - Calendar
+  /api/v1/events/{eventId}/image:
+    delete:
+      description: "Голова організації-власника. Якщо картинки немає, нічого не зм\
+        інюється."
+      operationId: deleteEventImage
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Картинки більше немає
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Прибрати картинку події
+      tags:
+      - Events
+    put:
+      description: "Голова організації-власника. JPEG, PNG або WebP до 5 МБ, поле\
+        \ форми `file`. Відхилену подію змінити не можна (409). Попередня картинка\
+        \ видаляється зі сховища."
+      operationId: uploadEventImage
+      parameters:
+      - description: Ідентифікатор події (UUID)
+        example: e1000000-0000-4000-8000-000000000001
+        in: path
+        name: eventId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Файл картинки
+              required:
+              - file
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/EventResponse"
+          description: Подію з новим imageUrl повернуто
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "503":
+          $ref: "#/components/responses/StorageUnavailable"
+      security:
+      - bearerAuth: []
+      summary: Завантажити або замінити картинку події
+      tags:
+      - Events
   /api/v1/events/{eventId}/reject:
     post:
       description: "Голова організації. Лише з черги модерації: PENDING → REJECTED\
@@ -347,7 +556,8 @@ paths:
       tags:
       - Organizations
     post:
-      description: Лише суперадмін. Slug має бути унікальним.
+      description: "Лише Global Admin. Slug має бути унікальним. Перший голова (headEmail)\
+        \ призначається одразу: організація без голови не створюється."
       operationId: createOrganization
       requestBody:
         content:
@@ -384,7 +594,8 @@ paths:
       - Organizations
   /api/v1/organizations/{organizationId}:
     delete:
-      description: Лише суперадмін. Разом з організацією видаляються її події.
+      description: "Лише Global Admin. Разом з організацією видаляються її події,\
+        \ голови й файли."
       operationId: deleteOrganization
       parameters:
       - description: Ідентифікатор організації (UUID)
@@ -591,6 +802,234 @@ paths:
       summary: Створити подію вручну
       tags:
       - Events
+  /api/v1/organizations/{organizationId}/heads:
+    get:
+      description: Голова цієї організації або Global Admin.
+      operationId: listHeads
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrganizationHead"
+          description: Список голів
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Голови організації
+      tags:
+      - Heads
+    post:
+      description: "Global Admin — у будь-якій організації (FR-008), голова — у св\
+        оїй (FR-009). З replacesUserId знімає вказаного голову в тій самій операці\
+        ї (FR-012, лише Global Admin)."
+      operationId: appointHead
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointHeadRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrganizationHead"
+          description: Голову призначено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Призначити голову
+      tags:
+      - Heads
+  /api/v1/organizations/{organizationId}/heads/{userId}:
+    delete:
+      description: "Голова — у своїй організації, Global Admin — у будь-якій (FR-010).\
+        \ Останнього голову зняти не можна: 409 LAST_HEAD (FR-011)."
+      operationId: removeHead
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: Ідентифікатор користувача-голови (UUID)
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Голову знято
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Зняти голову
+      tags:
+      - Heads
+  /api/v1/organizations/{organizationId}/logo:
+    delete:
+      description: "Global Admin або голова цієї організації. Якщо логотипу немає\
+        , нічого не змінюється."
+      operationId: deleteOrganizationLogo
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Логотипу більше немає
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Прибрати логотип
+      tags:
+      - Organizations
+    put:
+      description: "Global Admin або голова цієї організації. JPEG, PNG або WebP д\
+        о 5 МБ, поле форми `file`. Формат визначається за вмістом файлу. Попередні\
+        й логотип видаляється зі сховища."
+      operationId: uploadOrganizationLogo
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Файл картинки
+              required:
+              - file
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/Organization"
+          description: Організацію з новим logoUrl повернуто
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "415":
+          $ref: "#/components/responses/UnsupportedMediaType"
+        "503":
+          $ref: "#/components/responses/StorageUnavailable"
+      security:
+      - bearerAuth: []
+      summary: Завантажити або замінити логотип
+      tags:
+      - Organizations
+  /api/v1/organizations/{organizationId}/role-log:
+    get:
+      description: "Хто, кому, яку роль призначив чи зняв і коли (FR-013). Голова\
+        \ цієї організації або Global Admin. Нові записи першими."
+      operationId: roleLog
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoleChange"
+          description: Журнал
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Журнал змін ролей
+      tags:
+      - Heads
 components:
   responses:
     BadRequest:
@@ -639,6 +1078,19 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
       description: Роль користувача не дозволяє цю дію (FORBIDDEN)
+    MailUnavailable:
+      content:
+        application/json:
+          example:
+            error:
+              code: MAIL_UNAVAILABLE
+              details: []
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#mail-unavailable
+              message: Не вдалося надіслати лист з кодом
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Не вдалося надіслати лист з кодом (MAIL_UNAVAILABLE)
     NotFound:
       content:
         application/json:
@@ -652,6 +1104,45 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
       description: Ресурс не знайдено (ORGANIZATION_NOT_FOUND)
+    PayloadTooLarge:
+      content:
+        application/json:
+          example:
+            error:
+              code: PAYLOAD_TOO_LARGE
+              details: []
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#payload-too-large
+              message: "Файл завеликий: не більше 5 МБ"
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Файл більший за 5 МБ (PAYLOAD_TOO_LARGE)
+    StorageUnavailable:
+      content:
+        application/json:
+          example:
+            error:
+              code: STORAGE_UNAVAILABLE
+              details: []
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#storage-unavailable
+              message: Не вдалося зберегти файл у сховищі
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: Файлове сховище недоступне або не налаштоване (STORAGE_UNAVAILABLE)
+    TooManyRequests:
+      content:
+        application/json:
+          example:
+            error:
+              code: TOO_MANY_REQUESTS
+              details: []
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#too-many-requests
+              message: Новий код можна запросити через 42 с
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: "Забагато запитів, спробуйте пізніше (TOO_MANY_REQUESTS)"
     Unauthorized:
       content:
         application/json:
@@ -665,6 +1156,23 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
       description: Відсутній або недійсний JWT (UNAUTHORIZED)
+    UnsupportedMediaType:
+      content:
+        application/json:
+          example:
+            error:
+              code: UNSUPPORTED_MEDIA_TYPE
+              details:
+              - field: file
+                message: Невідомий формат файлу
+                providedValue: logo.svg
+              documentation: https://ukma-fin-ssdm-2026.github.io/YOUR-REPO/api/errors#unsupported-media-type
+              message: "Підтримуються лише картинки JPEG, PNG і WebP"
+              requestId: req_7f3a9c21d04b4e18
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+      description: "Файл не є картинкою JPEG, PNG чи WebP або запит не multipart/form-data\
+        \ (UNSUPPORTED_MEDIA_TYPE)"
   schemas:
     ApiError:
       description: "Тіло помилки: код для програми, повідомлення для людини, детал\
@@ -677,14 +1185,30 @@ components:
           - VALIDATION_ERROR
           - INVALID_PARAMETER
           - MALFORMED_REQUEST
+          - INVALID_VERIFICATION_CODE
+          - VERIFICATION_CODE_EXPIRED
           - UNAUTHORIZED
+          - INVALID_CREDENTIALS
           - FORBIDDEN
+          - ACCOUNT_NOT_VERIFIED
+          - ACCOUNT_BLOCKED
           - ORGANIZATION_NOT_FOUND
           - EVENT_NOT_FOUND
+          - USER_NOT_FOUND
+          - HEAD_NOT_FOUND
           - ROUTE_NOT_FOUND
           - METHOD_NOT_ALLOWED
           - SLUG_ALREADY_EXISTS
           - INVALID_STATE_TRANSITION
+          - EMAIL_ALREADY_REGISTERED
+          - ACCOUNT_ALREADY_VERIFIED
+          - ALREADY_HEAD
+          - LAST_HEAD
+          - TOO_MANY_REQUESTS
+          - PAYLOAD_TOO_LARGE
+          - UNSUPPORTED_MEDIA_TYPE
+          - STORAGE_UNAVAILABLE
+          - MAIL_UNAVAILABLE
           - INTERNAL_ERROR
           example: VALIDATION_ERROR
         details:
@@ -710,6 +1234,22 @@ components:
       - code
       - message
       - requestId
+    AppointHeadRequest:
+      type: object
+      description: Призначити голову організації
+      properties:
+        email:
+          type: string
+          description: Пошта зареєстрованого користувача з підтвердженою поштою
+          example: head@ukma.edu.ua
+          minLength: 1
+        replacesUserId:
+          type: string
+          format: uuid
+          description: Якщо задано — цього голову буде знято в тій самій операції
+            (лише Global Admin)
+      required:
+      - email
     ErrorResponse:
       description: Єдина обгортка для всіх помилок API
       properties:
@@ -772,6 +1312,11 @@ components:
           format: uuid
           description: Ідентифікатор
           example: e1000000-0000-4000-8000-000000000001
+        imageUrl:
+          type: string
+          description: "Посилання на картинку (постер) у сховищі; null, якщо не за\
+            вантажено"
+          example: https://project.supabase.co/storage/v1/object/public/images/organizations/3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60/events/e1000000-0000-4000-8000-000000000001/image-4d5e6f.jpg
         location:
           type: string
           description: Місце проведення
@@ -888,6 +1433,21 @@ components:
           example: https://calendar.google.com/calendar/render?action=TEMPLATE&text=...
       required:
       - url
+    LoginRequest:
+      type: object
+      description: Вхід за поштою й паролем
+      properties:
+        email:
+          type: string
+          example: student@ukma.edu.ua
+          minLength: 1
+        password:
+          type: string
+          example: correct-horse-battery
+          minLength: 1
+      required:
+      - email
+      - password
     OffsetPageEventResponse:
       type: object
       description: "Сторінка результатів, пагінація зі зсувом (offset)"
@@ -960,6 +1520,11 @@ components:
           type: string
           description: "Instagram-акаунт без @, з якого скрейпер збирає події"
           example: ukma.debate
+        logoUrl:
+          type: string
+          description: "Посилання на логотип у сховищі; null, якщо логотип не зава\
+            нтажено"
+          example: https://project.supabase.co/storage/v1/object/public/images/organizations/3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60/logo-1a2b3c.png
         name:
           type: string
           description: Назва
@@ -995,6 +1560,12 @@ components:
           example: "Студентська IT-спільнота: хакатони та лекції"
           maxLength: 2000
           minLength: 0
+        headEmail:
+          type: string
+          description: "Пошта першого голови: зареєстрований користувач з підтверд\
+            женою поштою. Організація без голови не створюється (FR-011, FR-014)"
+          example: head@ukma.edu.ua
+          minLength: 1
         instagramHandle:
           type: string
           description: Instagram-акаунт без @
@@ -1014,8 +1585,33 @@ components:
           minLength: 3
           pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
       required:
+      - headEmail
       - name
       - slug
+    OrganizationHead:
+      type: object
+      description: Голова організації
+      properties:
+        appointedAt:
+          type: string
+          format: date-time
+          description: Коли призначено (ISO 8601)
+        appointedBy:
+          type: string
+          format: uuid
+          description: "Хто призначив; null, якщо цього користувача вже видалено"
+        email:
+          type: string
+          description: Пошта
+          example: head@ukma.edu.ua
+        userId:
+          type: string
+          format: uuid
+          description: Ідентифікатор користувача
+      required:
+      - appointedAt
+      - email
+      - userId
     OrganizationUpdateRequest:
       type: object
       description: "Часткове оновлення організації: передавайте лише поля, які змі\
@@ -1053,9 +1649,143 @@ components:
           maxLength: 50
           minLength: 3
           pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+    RegisterRequest:
+      type: object
+      description: Реєстрація з університетською поштою
+      properties:
+        email:
+          type: string
+          format: email
+          example: student@ukma.edu.ua
+          maxLength: 320
+          minLength: 0
+        password:
+          type: string
+          example: correct-horse-battery
+          maxLength: 72
+          minLength: 8
+      required:
+      - email
+      - password
+    ResendCodeRequest:
+      type: object
+      description: Запит нового коду підтвердження
+      properties:
+        email:
+          type: string
+          example: student@ukma.edu.ua
+          minLength: 1
+      required:
+      - email
+    RoleChange:
+      type: object
+      description: "Зміна ролі голови: хто, кому, що, коли (FR-013)"
+      properties:
+        action:
+          type: string
+          enum:
+          - APPOINTED
+          - REMOVED
+        actorEmail:
+          type: string
+          example: admin@ukma.edu.ua
+        actorUserId:
+          type: string
+          format: uuid
+          description: "Хто змінив; null, якщо цього користувача вже видалено"
+        createdAt:
+          type: string
+          format: date-time
+          description: Коли (ISO 8601)
+        id:
+          type: string
+          format: uuid
+        organizationId:
+          type: string
+          format: uuid
+        targetEmail:
+          type: string
+          example: head@ukma.edu.ua
+        targetUserId:
+          type: string
+          format: uuid
+          description: Кому змінили роль
+      required:
+      - action
+      - createdAt
+      - id
+      - organizationId
+      - targetEmail
+      - targetUserId
+    TokenResponse:
+      type: object
+      description: "JWT для заголовка Authorization: Bearer <accessToken>"
+      properties:
+        accessToken:
+          type: string
+        expiresIn:
+          type: integer
+          format: int64
+          description: Через скільки секунд токен стане недійсним
+          example: 3600
+        tokenType:
+          type: string
+          example: Bearer
+      required:
+      - accessToken
+      - expiresIn
+      - tokenType
+    UserResponse:
+      type: object
+      description: Користувач
+      properties:
+        email:
+          type: string
+          example: student@ukma.edu.ua
+        globalAdmin:
+          type: boolean
+          description: Чи має роль Global Admin
+        headOf:
+          type: array
+          description: "Організації, де користувач голова"
+          items:
+            type: string
+            format: uuid
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - PENDING
+          - ACTIVE
+          - BLOCKED
+          example: ACTIVE
+      required:
+      - email
+      - globalAdmin
+      - headOf
+      - id
+      - status
+    VerifyRequest:
+      type: object
+      description: Підтвердження пошти кодом з листа
+      properties:
+        code:
+          type: string
+          example: "042517"
+          minLength: 1
+          pattern: "\\s*\\d{6}\\s*"
+        email:
+          type: string
+          example: student@ukma.edu.ua
+          minLength: 1
+      required:
+      - code
+      - email
   securitySchemes:
     bearerAuth:
       bearerFormat: JWT
-      description: JWT власного AuthZ-сервісу (заплановано; у заглушках не перевіряється)
+      description: "JWT з POST /api/v1/auth/login, діє 60 хв"
       scheme: bearer
       type: http

@@ -11,6 +11,8 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
+import ua.edu.ukma.community.auth.CurrentUser;
+import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.config.OpenApiConfig;
@@ -27,9 +29,13 @@ public class EventController {
     static final String EVENT_ID_EXAMPLE = "e1000000-0000-4000-8000-000000000001";
 
     private final EventService events;
+    private final CurrentUser currentUser;
+    private final OrgRolePolicy policy;
 
-    public EventController(EventService events) {
+    public EventController(EventService events, CurrentUser currentUser, OrgRolePolicy policy) {
         this.events = events;
+        this.currentUser = currentUser;
+        this.policy = policy;
     }
 
     @GetMapping
@@ -91,6 +97,7 @@ public class EventController {
             @Parameter(description = "Ідентифікатор події (UUID)", example = EVENT_ID_EXAMPLE)
             @PathVariable("eventId") UUID eventId,
             @Valid @RequestBody EventUpdateRequest request) {
+        requireHeadOfEvent(eventId);
         return EventResponse.from(events.update(eventId, request));
     }
 
@@ -108,6 +115,7 @@ public class EventController {
     public EventResponse approveEvent(
             @Parameter(description = "Ідентифікатор події (UUID)", example = EVENT_ID_EXAMPLE)
             @PathVariable("eventId") UUID eventId) {
+        requireHeadOfEvent(eventId);
         return EventResponse.from(events.approve(eventId));
     }
 
@@ -124,6 +132,7 @@ public class EventController {
     public EventResponse rejectEvent(
             @Parameter(description = "Ідентифікатор події (UUID)", example = EVENT_ID_EXAMPLE)
             @PathVariable("eventId") UUID eventId) {
+        requireHeadOfEvent(eventId);
         return EventResponse.from(events.reject(eventId));
     }
 
@@ -140,6 +149,12 @@ public class EventController {
     public EventResponse unpublishEvent(
             @Parameter(description = "Ідентифікатор події (UUID)", example = EVENT_ID_EXAMPLE)
             @PathVariable("eventId") UUID eventId) {
+        requireHeadOfEvent(eventId);
         return EventResponse.from(events.unpublish(eventId));
+    }
+
+    /** Подію змінює лише голова організації-власника (FR-006); Global Admin — лише якщо він теж голова. */
+    private void requireHeadOfEvent(UUID eventId) {
+        policy.requireHead(currentUser.require(), events.get(eventId).organizationId());
     }
 }

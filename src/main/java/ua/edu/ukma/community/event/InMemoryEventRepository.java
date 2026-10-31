@@ -1,5 +1,6 @@
 package ua.edu.ukma.community.event;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 import ua.edu.ukma.community.organization.InMemoryOrganizationRepository;
 
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 
 @Repository
+@Profile("inmemory")
 public class InMemoryEventRepository implements EventRepository {
 
     public static final UUID DEBATE_TOURNAMENT_ID = UUID.fromString("e1000000-0000-4000-8000-000000000001");
@@ -30,15 +32,15 @@ public class InMemoryEventRepository implements EventRepository {
         OffsetDateTime evening = now.withHour(EVENING_HOUR);
         seed(new Event(DEBATE_TOURNAMENT_ID, InMemoryOrganizationRepository.DEBATE_CLUB_ID,
                 "Відкритий дебатний турнір", "Британський парламентський формат, реєстрація команд на місці.",
-                evening.plusDays(7), "НаУКМА, корпус 1", null, null, null,
+                evening.plusDays(7), "НаУКМА, корпус 1", null, null, null, null,
                 EventStatus.PUBLISHED, true, now, now));
         seed(new Event(HACKATHON_ID, InMemoryOrganizationRepository.CODING_CLUB_ID,
                 "аджентік студіос", null, evening.plusDays(14), null,
-                "https://www.instagram.com/p/demo-hackathon/", DEMO_SOURCE_ID, "demo-hackathon",
+                "https://www.instagram.com/p/demo-hackathon/", null, DEMO_SOURCE_ID, "demo-hackathon",
                 EventStatus.PUBLISHED, false, now, now));
         seed(new Event(FUNDRAISER_ID, InMemoryOrganizationRepository.VOLUNTEERS_ID,
                 "аукцон побачень", null, evening.plusDays(3), null,
-                "https://www.instagram.com/p/demo-fair/", DEMO_SOURCE_ID, "demo-fair",
+                "https://www.instagram.com/p/demo-fair/", null, DEMO_SOURCE_ID, "demo-fair",
                 EventStatus.PENDING, false, now, now));
     }
 

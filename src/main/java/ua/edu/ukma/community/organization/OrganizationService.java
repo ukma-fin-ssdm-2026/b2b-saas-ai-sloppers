@@ -57,7 +57,7 @@ public class OrganizationService {
         ensureSlugFree(request.slug(), null);
         OffsetDateTime now = OffsetDateTime.now(clock);
         return organizations.save(new Organization(UUID.randomUUID(), request.name().trim(), request.slug(),
-                request.description(), request.instagramHandle(), request.contactEmail(), false, now, now));
+                request.description(), request.instagramHandle(), request.contactEmail(), null, false, now, now));
     }
 
     public synchronized Organization update(UUID id, OrganizationUpdateRequest request) {
@@ -71,8 +71,16 @@ public class OrganizationService {
                 request.description() != null ? request.description() : current.description(),
                 request.instagramHandle() != null ? request.instagramHandle() : current.instagramHandle(),
                 request.contactEmail() != null ? request.contactEmail() : current.contactEmail(),
+                current.logoUrl(),
                 request.autoPublish() != null ? request.autoPublish() : current.autoPublish(),
                 current.createdAt(), OffsetDateTime.now(clock)));
+    }
+
+    public synchronized Organization changeLogo(UUID id, String logoUrl) {
+        Organization current = get(id);
+        return organizations.save(new Organization(current.id(), current.name(), current.slug(),
+                current.description(), current.instagramHandle(), current.contactEmail(), logoUrl,
+                current.autoPublish(), current.createdAt(), OffsetDateTime.now(clock)));
     }
 
     public synchronized void delete(UUID id) {

@@ -30,6 +30,14 @@
 - [docs/architecture/uml/](docs/architecture/uml/) — UML (PlantUML)
 - [docs/architecture/decisions/](docs/architecture/decisions/) — ADR
 
+## Тестування (Lab 6)
+
+- [docs/testing/testing-strategy.md](docs/testing/testing-strategy.md) — стратегія рівнів, покриття, CI
+- [docs/testing/README.md](docs/testing/README.md) — як запускати тести та оновлювати звіт JaCoCo
+- [docs/testing/coverage/jacoco/](docs/testing/coverage/jacoco/index.html) — знімок покриття
+
+Локально: `./mvnw test` (поріг рядків — у `pom.xml`, зараз 5%).
+
 ## Основні можливості
 
 - Каталог організацій з тегами, повнотекстовим пошуком і пагінацією
@@ -58,7 +66,8 @@
 ├── docs/
 │   ├── issue-workflow.md
 │   ├── requirements/      # Lab 2: US, FR, NFR, RTM
-│   └── architecture/      # Lab 3: HLD, UML, ADR
+│   ├── architecture/      # Lab 3: HLD, UML, ADR
+│   └── testing/           # Lab 6: стратегія, покриття, журнал налагодження
 ├── infra/
 │   └── migrations/        # SQL-міграції схеми БД (Flyway)
 ├── src/                   # backend (Spring Boot)
@@ -111,7 +120,42 @@ Swagger UI: http://localhost:8080/swagger-ui.html
 
 **Скинути базу:** `docker compose down -v`.
 
-Поки що backend тримає дані в пам'яті й до бази не підключається. Розгортання в Minikube буде додано окремо.
+Розгортання в Minikube буде додано окремо.
+
+### Віддалена база й картинки (Supabase)
+
+Скопіюйте `.env.example` у `.env` і заповніть паролі. `.env` у `.gitignore`, у репозиторій не потрапляє.
+
+| Змінна | Звідки взяти |
+| ------ | ------------ |
+| `DB_URL`, `DB_USER`, `DB_PASSWORD` | Supabase → **Connect** → Direct → JDBC, **Session pooler** |
+| `SUPABASE_URL` | `https://<project-ref>.supabase.co` |
+| `SUPABASE_SECRET_KEY` | Project Settings → **API Keys** → Secret keys (`sb_secret_...`) |
+
+Без `DB_URL` compose працює з локальним Postgres, як раніше. Без `SUPABASE_*` усе працює, лише завантаження картинок відповідає `503`.
+
+Логотипи організацій і картинки подій лежать у публічному бакеті Supabase Storage `images`, у базі зберігаються лише їхні URL:
+
+```bash
+curl -X PUT -F "file=@logo.png" http://localhost:8080/api/v1/organizations/<id>/logo
+curl -X PUT -F "file=@poster.jpg" http://localhost:8080/api/v1/events/<id>/image
+```
+
+**Без бази взагалі** (in-memory з демо-даними): `./mvnw spring-boot:run -Dspring-boot.run.profiles=inmemory`.
+
+### Реєстрація, вхід і ролі
+
+| Змінна | Що це |
+| ------ | ----- |
+| `AUTH_JWT_SECRET` | секрет підпису JWT, щонайменше 32 символи (`openssl rand -base64 48`). Без нього ключ генерується при старті, і після перезапуску всім доведеться увійти знову |
+| `AUTH_ADMIN_EMAILS` | пошти через кому, які при реєстрації отримують роль Global Admin |
+| `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | SMTP для листів з кодом. Без них код пишеться в лог бекенду (`docker compose logs backend`) |
+
+Сценарій: `POST /api/v1/auth/register` → код з листа (або з логу) → `POST /api/v1/auth/verify` → `POST /api/v1/auth/login` → токен у Swagger UI через кнопку **Authorize**.
+
+Ролі: **Global Admin** створює й видаляє організації та призначає голів будь-якої організації; **голова** керує профілем, подіями й головами своєї організації. Прав голови в адміна автоматично немає: щоб модерувати події, він призначає головою себе. Каталог і події для гостей відкриті без входу.
+
+Організація створюється одразу з першим головою (`headEmail` у `POST /organizations`): це має бути зареєстрований користувач з підтвердженою поштою.
 
 ## Специфікація API
 
@@ -133,3 +177,4 @@ Swagger UI: http://localhost:8080/swagger-ui.html
 - [docs/api/api-design.md](docs/api/api-design.md): проєктування API
 - [docs/api/quality-attributes.md](docs/api/quality-attributes.md): атрибути якості API
 - [docs/code-quality/progress.md](docs/code-quality/progress.md): прогрес реалізації (Lab 5)
+- [docs/testing/testing-strategy.md](docs/testing/testing-strategy.md): стратегія тестування (Lab 6)
