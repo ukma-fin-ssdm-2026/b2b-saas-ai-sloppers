@@ -27,3 +27,13 @@ spec:
                 name: frontend
                 port:
                   name: http
+    # no host: the ngrok tunnel arrives with its own host name
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  name: http

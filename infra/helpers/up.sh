@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Brings up the local cluster: Minikube, ArgoCD, secrets from .env, root Application.
+# Brings up the local cluster: Minikube, ArgoCD, secrets from .env, root Application, ngrok tunnel.
 # Safe to run again. ArgoCD takes the application itself from the deploy branch (ADR-004).
 set -euo pipefail
 
@@ -7,6 +7,8 @@ PROFILE=community
 KUBERNETES_VERSION=v1.36.4 # supported by CloudNativePG 1.30
 ARGOCD_VERSION=v3.5.6
 HOST=community.local
+NGROK_IMAGE=ngrok/ngrok:3.39.13-alpine
+NGROK_CONTAINER=community-ngrok
 WAIT_TIMEOUT_SECONDS=900
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -22,7 +24,7 @@ apply_stdin() { k apply -f - > /dev/null; }
 
 check_prerequisites() {
   local tool name
-  for tool in minikube kubectl openssl docker; do
+  for tool in minikube kubectl openssl docker curl; do
     command -v "$tool" > /dev/null || fail "$tool is not installed"
   done
   docker info > /dev/null 2>&1 || fail "Docker is not running"
@@ -33,7 +35,7 @@ check_prerequisites() {
   source "$ENV_FILE"
   set +a
 
-  for name in GHCR_USERNAME GHCR_TOKEN AUTH_JWT_SECRET; do
+  for name in GHCR_USERNAME GHCR_TOKEN NGROK_AUTHTOKEN AUTH_JWT_SECRET; do
     [ -n "${!name:-}" ] || fail "$name is empty in .env"
   done
 }
@@ -82,7 +84,7 @@ create_secrets() {
     --docker-password="$GHCR_TOKEN" \
     --dry-run=client -o yaml | apply_stdin
 
-  # only what the backend reads: the GHCR token stays out of its environment
+  # only what the backend reads: the GHCR and ngrok tokens stay out of its environment
   local name
   local args=()
   for name in AUTH_JWT_SECRET AUTH_ADMIN_EMAILS MAIL_FROM \
@@ -130,11 +132,36 @@ wait_for_applications() {
   fail "not healthy after $WAIT_TIMEOUT_SECONDS s. Look at: kubectl --context=$PROFILE describe pod <name>"
 }
 
+start_tunnel() {
+  log "Starting the ngrok tunnel"
+  docker rm -f "$NGROK_CONTAINER" > /dev/null 2>&1 || true
+  # the docker driver names the network and the node after the profile;
+  # the ingress controller listens on ports 80 and 443 of the node
+  docker run -d --name "$NGROK_CONTAINER" --restart unless-stopped \
+    --network "$PROFILE" -p 127.0.0.1:4040:4040 \
+    -e NGROK_AUTHTOKEN "$NGROK_IMAGE" \
+    http "https://$PROFILE:443" > /dev/null
+
+  TUNNEL_URL=""
+  for _ in $(seq 1 30); do
+    TUNNEL_URL="$(curl -fsS http://localhost:4040/api/tunnels 2> /dev/null \
+      | sed -nE 's/.*"public_url":"([^"]+)".*/\1/p')" || true
+    [ -n "$TUNNEL_URL" ] && break
+    sleep 2
+  done
+  if [ -z "$TUNNEL_URL" ]; then
+    docker logs "$NGROK_CONTAINER" >&2 || true
+    fail "no tunnel URL after 60 s: see the log above"
+  fi
+}
+
 print_summary() {
   local password
   password="$(k -n argocd get secret argocd-initial-admin-secret \
     -o jsonpath='{.data.password}' | base64 --decode)"
   log "Done"
+  printf 'Site:          %s\n' "$TUNNEL_URL"
+  printf 'Stop tunnel:   docker rm -f %s\n' "$NGROK_CONTAINER"
   printf 'ArgoCD UI:     kubectl --context=%s -n argocd port-forward svc/argocd-server 8081:443\n' "$PROFILE"
   printf '               https://localhost:8081, login admin, password %s\n' "$password"
   printf 'Stop cluster:  minikube stop -p %s\n' "$PROFILE"
@@ -145,4 +172,5 @@ start_cluster
 install_argocd
 create_secrets
 wait_for_applications
+start_tunnel
 print_summary

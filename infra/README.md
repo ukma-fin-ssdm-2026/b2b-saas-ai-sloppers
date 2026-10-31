@@ -35,9 +35,10 @@ cp .env.example .env   # заповнити обов'язкові змінні
 infra/helpers/up.sh
 ```
 
-Скрипт піднімає Minikube (профіль `community`), ArgoCD і секрети, застосовує root Application і чекає, поки backend і frontend стануть `Healthy`. Потрібен запущений Docker, а гілка `deploy` має містити актуальні маніфести (workflow **Build and Deploy**). Запускати повторно безпечно.
+Скрипт піднімає Minikube (профіль `community`), ArgoCD і секрети, застосовує root Application, чекає, поки backend і frontend стануть `Healthy`, запускає тунель ngrok у Docker і виводить його публічний URL. Потрібен запущений Docker, а гілка `deploy` має містити актуальні маніфести (workflow **Build and Deploy**). Запускати повторно безпечно.
 
-Зупинити кластер: `minikube stop -p community`
+- Зупинити тунель: `docker rm -f community-ngrok`
+- Зупинити кластер: `minikube stop -p community`
 
 ### Ручний запуск у Minikube (без ArgoCD)
 
