@@ -29,7 +29,7 @@ Job **Build and Test Backend** у [`.github/workflows/ci.yml`](../../.github/wor
 
 ### Оновити закомічений звіт
 
-`target/` у `.gitignore`, тому знімок звіту зберігаємо в [`docs/testing/coverage/`](coverage/index.html):
+`target/` у `.gitignore`, тому знімок звіту зберігаємо в [`docs/testing/coverage/`](coverage/jacoco/index.html):
 
 ```bash
 ./mvnw test -Dcheckstyle.skip -Dspotbugs.skip

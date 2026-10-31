@@ -39,7 +39,7 @@
 
 ## CI/CD (shift-left)
 
-На кожен push/PR у `main` job **Build and Test Backend** у [`.github/workflows/ci.yml`](.github/workflows/ci.yml):
+На кожен push/PR у `main` job **Build and Test Backend** у [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml):
 
 1. компіляція тестів;
 2. `./mvnw test` — Surefire + звіт JaCoCo + **падає, якщо покриття рядків < 5%**;

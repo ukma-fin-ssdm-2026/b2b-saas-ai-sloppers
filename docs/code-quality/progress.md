@@ -106,12 +106,12 @@ eventService.ingest(new ScrapedEvent(organizationId, sourceId, externalPostId, t
 
 ## 4. Відповідність стандартам якості
 
-**Стандарт кодування:** Google Java Style з двома відхиленнями. Відступ 4 пробіли й рядок до 120 символів, щоб не переформатовувати весь наявний код. Правила лежать у [`config/checkstyle/checkstyle.xml`](../../config/checkstyle/checkstyle.xml).
+**Стандарт кодування:** Google Java Style з двома відхиленнями. Відступ 4 пробіли й рядок до 120 символів, щоб не переформатовувати весь наявний код. Правила лежать у [`config/quality/checkstyle.xml`](../../config/quality/checkstyle.xml).
 
 | Перевірка | Де запускається | Результат |
 | --------- | --------------- | --------- |
 | Checkstyle 10.26 (стиль, іменування, імпорти, Javadoc публічних типів) | фаза `validate`, падає на першому порушенні | на коді Lab 4 було **35** порушень (немає Javadoc, `import java.util.*`, `if` без дужок, `log` замість константи, довгі рядки); зараз **0** |
-| SpotBugs 4.9 + find-sec-bugs 1.14, `effort=Max`, поріг Medium | фаза `verify` | **0** знахідок після двох задокументованих винятків у [`config/spotbugs/exclude.xml`](../../config/spotbugs/exclude.xml) |
+| SpotBugs 4.9 + find-sec-bugs 1.14, `effort=Max`, поріг Medium | фаза `verify` | **0** знахідок після двох задокументованих винятків у [`config/quality/spotbugs-exclude.xml`](../../config/quality/spotbugs-exclude.xml) |
 | JUnit 5 + MockMvc | фаза `test` | 37 модульних тестів доменної логіки і 16 API-тестів |
 
 Обидва аналізатори підключено в `pom.xml`, тому workflow **CI** (`./mvnw verify`) запускає їх на кожному PR без змін у `ci.yml`. Повний розбір знахідок, зокрема низькопріоритетних, має бути в [`static-analysis.md`](static-analysis.md).
