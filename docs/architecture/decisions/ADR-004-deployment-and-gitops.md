@@ -1,6 +1,6 @@
 # ADR-004: Розгортання в Minikube і GitOps
 
-- **Статус:** Under consideration
+- **Статус:** Accepted — маніфести Minikube і ArgoCD підготовано (PR #81)
 - **Дата:** 2026-10-01
 - **Пов’язано:** [ADR-001](ADR-001-architectural-style.md), [ADR-003](ADR-003-postgres-and-scraper.md), NFR-003, NFR-004, NFR-005, NFR-010, R-004
 - **Діаграма:** [deployment.puml](../uml/deployment.puml)

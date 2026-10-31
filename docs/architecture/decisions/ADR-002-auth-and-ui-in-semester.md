@@ -1,6 +1,6 @@
 # ADR-002: AuthZ і UI у семестрі
 
-- **Статус:** future
+- **Статус:** Accepted — власний AuthZ і React-клієнт реалізовані в семестрі
 - **Дата:** 2026-09-30
 - **Учасники рішення:** Architecture (Artem Butyrin)
 
