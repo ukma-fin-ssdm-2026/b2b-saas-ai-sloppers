@@ -4,6 +4,7 @@ import { AuthProvider } from './auth/AuthContext'
 import RequireAuth from './auth/RequireAuth'
 import AppHeader from './components/AppHeader'
 import IntroOverlay from './components/IntroOverlay'
+import AdminEventsPage from './pages/admin/AdminEventsPage'
 import AdminHomePage from './pages/admin/AdminHomePage'
 import AdminLayout from './pages/admin/AdminLayout'
 import AdminOrganizationDetailPage from './pages/admin/AdminOrganizationDetailPage'
@@ -11,6 +12,7 @@ import AdminOrganizationEventsPage from './pages/admin/AdminOrganizationEventsPa
 import AdminOrganizationsPage from './pages/admin/AdminOrganizationsPage'
 import EventDetailPage from './pages/EventDetailPage'
 import EventsPage from './pages/EventsPage'
+import HomePage from './pages/HomePage'
 import LabHomePage from './pages/lab/LabHomePage'
 import LabLayout from './pages/lab/LabLayout'
 import LabPlaygroundPage from './pages/lab/LabPlaygroundPage'
@@ -68,7 +70,7 @@ function App() {
           >
             <AppHeader />
             <Routes>
-              <Route path="/" element={<Navigate to="/organizations" replace />} />
+              <Route path="/" element={<HomePage />} />
               <Route path="/organizations" element={<OrganizationsPage />} />
               <Route
                 path="/organizations/:organizationId"
@@ -101,6 +103,7 @@ function App() {
                   path="organizations/:organizationId/events"
                   element={<AdminOrganizationEventsPage />}
                 />
+                <Route path="events" element={<AdminEventsPage />} />
               </Route>
 
               <Route
@@ -115,7 +118,7 @@ function App() {
                 <Route path="playground" element={<LabPlaygroundPage />} />
               </Route>
 
-              <Route path="*" element={<Navigate to="/organizations" replace />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
         </div>

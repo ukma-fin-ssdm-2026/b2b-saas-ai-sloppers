@@ -66,7 +66,7 @@ describe('OrganizationsPage', () => {
     )
   })
 
-  it('виводить назву, slug і опис кожної організації', async () => {
+  it('виводить назви організацій', async () => {
     listMock.mockResolvedValue(
       page([
         organization(),
@@ -82,10 +82,8 @@ describe('OrganizationsPage', () => {
     renderPage()
 
     expect(await screen.findByText('Дебатний клуб НаУКМА')).toBeInTheDocument()
-    expect(screen.getByText('debate-club')).toBeInTheDocument()
-    expect(screen.getByText('Щотижневі тренування')).toBeInTheDocument()
     expect(screen.getByText('Клуб програмування')).toBeInTheDocument()
-    expect(screen.getAllByRole('listitem')).toHaveLength(2)
+    expect(screen.getByRole('region', { name: 'Image carousel' })).toBeInTheDocument()
   })
 
   it('повідомляє про порожній каталог, коли організацій немає', async () => {
@@ -96,7 +94,9 @@ describe('OrganizationsPage', () => {
     expect(
       await screen.findByText('Поки немає організацій.'),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('region', { name: 'Image carousel' }),
+    ).not.toBeInTheDocument()
   })
 
   it('показує статус відповіді, коли бекенд повертає помилку', async () => {
@@ -118,13 +118,15 @@ describe('OrganizationsPage', () => {
     expect(alert).not.toHaveTextContent('network down')
   })
 
-  it('не показує список і помилку одночасно', async () => {
+  it('не показує карусель і помилку одночасно', async () => {
     listMock.mockRejectedValue(new ApiError(500, 'boom'))
 
     renderPage()
 
     await screen.findByRole('alert')
-    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('region', { name: 'Image carousel' }),
+    ).not.toBeInTheDocument()
     expect(screen.queryByText('Завантаження…')).not.toBeInTheDocument()
   })
 })

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ApiError } from '../../api/client'
 import {
   approveEvent,
   createEvent,
@@ -14,19 +13,20 @@ import {
 import { getOrganization } from '../../api/organizations'
 import type { Event } from '../../types/event'
 import type { Organization } from '../../types/organization'
+import { apiErrorMessage } from '../../utils/apiErrorMessage'
 import {
   formatEventDateTime,
   toDatetimeLocalValue,
 } from '../../utils/datetime'
 
-type QueueTab = 'pending' | 'unverified' | 'all'
+type QueueTab = 'all' | 'pending' | 'unverified'
 
 function AdminOrganizationEventsPage() {
   const { organizationId } = useParams<{ organizationId: string }>()
 
   const [org, setOrg] = useState<Organization | null>(null)
   const [events, setEvents] = useState<Event[]>([])
-  const [tab, setTab] = useState<QueueTab>('pending')
+  const [tab, setTab] = useState<QueueTab>('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -42,6 +42,11 @@ function AdminOrganizationEventsPage() {
   const [eventStartsAt, setEventStartsAt] = useState('')
   const [eventLocation, setEventLocation] = useState('')
   const [eventDescription, setEventDescription] = useState('')
+  const [eventImage, setEventImage] = useState<File | null>(null)
+  const [eventImagePreview, setEventImagePreview] = useState<string | null>(
+    null,
+  )
+  const [creating, setCreating] = useState(false)
 
   const loadEvents = useCallback(async (orgId: string, queue: QueueTab) => {
     if (queue === 'pending') {
@@ -83,11 +88,7 @@ function AdminOrganizationEventsPage() {
         await loadEvents(organizationId!, tab)
       } catch (err) {
         if (!cancelled) {
-          setError(
-            err instanceof ApiError
-              ? `Помилка (${err.status})`
-              : 'Не вдалося завантажити',
-          )
+          setError(apiErrorMessage(err, 'Не вдалося завантажити'))
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -99,6 +100,16 @@ function AdminOrganizationEventsPage() {
       cancelled = true
     }
   }, [organizationId, tab, loadEvents])
+
+  useEffect(() => {
+    if (!eventImage) {
+      setEventImagePreview(null)
+      return
+    }
+    const url = URL.createObjectURL(eventImage)
+    setEventImagePreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [eventImage])
 
   const refresh = async () => {
     if (!organizationId) return
@@ -126,41 +137,55 @@ function AdminOrganizationEventsPage() {
         location: editLocation.trim() || undefined,
         originalUrl: editOriginalUrl.trim() || undefined,
       })
-      setMessage('Подію оновлено (PATCH)')
+      setMessage('Подію оновлено')
       setEditingId(null)
       await refresh()
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? `PATCH не вдався (${err.status})`
-          : 'PATCH не вдався',
-      )
+      setError(apiErrorMessage(err, 'Не вдалося зберегти'))
     }
   }
 
   const onCreateEvent = async (event: FormEvent) => {
     event.preventDefault()
     if (!organizationId) return
+    setCreating(true)
     setError(null)
+    setMessage(null)
     try {
-      await createEvent(organizationId, {
+      const created = await createEvent(organizationId, {
         title: eventTitle.trim(),
         startsAt: new Date(eventStartsAt).toISOString(),
         location: eventLocation.trim() || undefined,
         description: eventDescription.trim() || undefined,
       })
+
+      if (eventImage) {
+        try {
+          await uploadEventImage(created.id, eventImage)
+          setMessage(
+            `Подію «${created.title}» створено з афішею — перевір головну`,
+          )
+        } catch (imgErr) {
+          setMessage(
+            `Подію створено, але афіша не завантажилась: ${apiErrorMessage(imgErr, 'помилка')}`,
+          )
+        }
+      } else {
+        setMessage(
+          `Подію «${created.title}» створено (опубліковано). Додай афішу нижче.`,
+        )
+      }
+
       setEventTitle('')
       setEventLocation('')
       setEventDescription('')
-      setMessage('Подію створено (опубліковано)')
+      setEventImage(null)
       setTab('all')
       await loadEvents(organizationId, 'all')
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? `Створення не вдалося (${err.status})`
-          : 'Створення не вдалося',
-      )
+      setError(apiErrorMessage(err, 'Створення не вдалося'))
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -173,14 +198,16 @@ function AdminOrganizationEventsPage() {
       if (action === 'approve') await approveEvent(eventId)
       if (action === 'reject') await rejectEvent(eventId)
       if (action === 'unpublish') await unpublishEvent(eventId)
-      setMessage(`OK: ${action}`)
+      setMessage(
+        action === 'approve'
+          ? 'Схвалено / верифіковано'
+          : action === 'reject'
+            ? 'Відхилено'
+            : 'Знято з публікації',
+      )
       await refresh()
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? `${action} (${err.status})`
-          : `${action} не вдалося`,
-      )
+      setError(apiErrorMessage(err, 'Дію не виконано'))
     }
   }
 
@@ -189,14 +216,10 @@ function AdminOrganizationEventsPage() {
     setError(null)
     try {
       await uploadEventImage(eventId, file)
-      setMessage('Картинку завантажено')
+      setMessage('Афішу завантажено — вона зʼявиться на головній')
       await refresh()
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? `Image upload (${err.status})`
-          : 'Не вдалося завантажити картинку',
-      )
+      setError(apiErrorMessage(err, 'Не вдалося завантажити афішу'))
     }
   }
 
@@ -204,14 +227,10 @@ function AdminOrganizationEventsPage() {
     setError(null)
     try {
       await deleteEventImage(eventId)
-      setMessage('Картинку видалено')
+      setMessage('Афішу видалено')
       await refresh()
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? `Image delete (${err.status})`
-          : 'Не вдалося видалити картинку',
-      )
+      setError(apiErrorMessage(err, 'Не вдалося видалити афішу'))
     }
   }
 
@@ -237,12 +256,83 @@ function AdminOrganizationEventsPage() {
       </p>
       <h2 className="panel-row__title">Кабінет подій</h2>
       <p className="panel-page__lead">
-        Черга PENDING, неперевірені (verified=false), створення, PATCH, image.
+        Створені вручну події одразу PUBLISHED і показуються гостям. Афіша —
+        окремим файлом (PNG/JPEG/WebP).
       </p>
       {message ? <p className="panel-ok">{message}</p> : null}
       {error ? <p className="panel-error">{error}</p> : null}
 
+      <h3 className="panel-row__title">Нова подія</h3>
+      <form className="panel-form" onSubmit={(e) => void onCreateEvent(e)}>
+        <div className="panel-grid">
+          <div className="panel-field">
+            <label htmlFor="new-title">Назва</label>
+            <input
+              id="new-title"
+              value={eventTitle}
+              onChange={(e) => setEventTitle(e.target.value)}
+              required
+              minLength={3}
+              placeholder="Хакатон Могилянки"
+            />
+          </div>
+          <div className="panel-field">
+            <label htmlFor="new-start">Початок</label>
+            <input
+              id="new-start"
+              type="datetime-local"
+              value={eventStartsAt}
+              onChange={(e) => setEventStartsAt(e.target.value)}
+              required
+            />
+          </div>
+        </div>
+        <div className="panel-field">
+          <label htmlFor="new-loc">Локація</label>
+          <input
+            id="new-loc"
+            value={eventLocation}
+            onChange={(e) => setEventLocation(e.target.value)}
+            placeholder="Корпус 1, ауд. 301"
+          />
+        </div>
+        <div className="panel-field">
+          <label htmlFor="new-desc">Опис</label>
+          <textarea
+            id="new-desc"
+            value={eventDescription}
+            onChange={(e) => setEventDescription(e.target.value)}
+          />
+        </div>
+        <div className="panel-field">
+          <label htmlFor="new-image">Афіша (опційно)</label>
+          <input
+            id="new-image"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => setEventImage(e.target.files?.[0] ?? null)}
+          />
+          {eventImagePreview ? (
+            <img
+              className="panel-thumb panel-thumb--poster"
+              src={eventImagePreview}
+              alt="Попередній перегляд афіші"
+            />
+          ) : null}
+        </div>
+        <button type="submit" className="orgs-btn" disabled={creating}>
+          {creating ? 'Створюємо…' : 'Створити подію'}
+        </button>
+      </form>
+
       <div className="panel-actions" style={{ marginBottom: '1.25rem' }}>
+        <button
+          type="button"
+          className={`orgs-btn${tab === 'all' ? ' panel-tab--active' : ''}`}
+          onClick={() => setTab('all')}
+        >
+          Усі
+        </button>
         <button
           type="button"
           className={`orgs-btn${tab === 'pending' ? ' panel-tab--active' : ''}`}
@@ -255,14 +345,7 @@ function AdminOrganizationEventsPage() {
           className={`orgs-btn${tab === 'unverified' ? ' panel-tab--active' : ''}`}
           onClick={() => setTab('unverified')}
         >
-          verified=false
-        </button>
-        <button
-          type="button"
-          className={`orgs-btn${tab === 'all' ? ' panel-tab--active' : ''}`}
-          onClick={() => setTab('all')}
-        >
-          Усі
+          Неверифіковані
         </button>
       </div>
 
@@ -270,6 +353,20 @@ function AdminOrganizationEventsPage() {
         {events.map((ev) => (
           <li key={ev.id}>
             <div className="panel-row">
+              <div className="panel-row__media">
+                {ev.imageUrl ? (
+                  <img
+                    className="panel-thumb panel-thumb--poster"
+                    src={ev.imageUrl}
+                    alt=""
+                    loading="lazy"
+                  />
+                ) : (
+                  <span className="panel-thumb panel-thumb--poster panel-thumb--empty">
+                    —
+                  </span>
+                )}
+              </div>
               <div className="panel-row__main">
                 <h3 className="panel-row__title">
                   <span className="panel-badge">{ev.status}</span>
@@ -281,15 +378,7 @@ function AdminOrganizationEventsPage() {
                 <p className="panel-row__meta">
                   {formatEventDateTime(ev.startsAt)}
                   {ev.location ? ` · ${ev.location}` : ''}
-                  {ev.scraped ? ' · scraped' : ''}
                 </p>
-                {ev.imageUrl ? (
-                  <p className="panel-row__meta">
-                    <a href={ev.imageUrl} target="_blank" rel="noreferrer">
-                      image
-                    </a>
-                  </p>
-                ) : null}
               </div>
               <div className="panel-row__actions">
                 {ev.status === 'PENDING' ? (
@@ -299,14 +388,14 @@ function AdminOrganizationEventsPage() {
                       className="orgs-btn"
                       onClick={() => void runAction('approve', ev.id)}
                     >
-                      Approve
+                      Схвалити
                     </button>
                     <button
                       type="button"
                       className="orgs-btn"
                       onClick={() => void runAction('reject', ev.id)}
                     >
-                      Reject
+                      Відхилити
                     </button>
                   </>
                 ) : null}
@@ -316,7 +405,7 @@ function AdminOrganizationEventsPage() {
                     className="orgs-btn"
                     onClick={() => void runAction('unpublish', ev.id)}
                   >
-                    Unpublish
+                    Зняти
                   </button>
                 ) : null}
                 {ev.status === 'PUBLISHED' && !ev.verified ? (
@@ -325,7 +414,7 @@ function AdminOrganizationEventsPage() {
                     className="orgs-btn"
                     onClick={() => void runAction('approve', ev.id)}
                   >
-                    Verify
+                    Верифікувати
                   </button>
                 ) : null}
                 <button
@@ -333,17 +422,18 @@ function AdminOrganizationEventsPage() {
                   className="orgs-btn"
                   onClick={() => startEdit(ev)}
                 >
-                  Edit
+                  Редагувати
                 </button>
                 <label className="orgs-btn">
-                  Image+
+                  Афіша
                   <input
                     type="file"
                     accept="image/png,image/jpeg,image/webp"
                     hidden
-                    onChange={(e) =>
+                    onChange={(e) => {
                       void onUploadImage(ev.id, e.target.files?.[0] ?? null)
-                    }
+                      e.target.value = ''
+                    }}
                   />
                 </label>
                 {ev.imageUrl ? (
@@ -352,9 +442,12 @@ function AdminOrganizationEventsPage() {
                     className="orgs-btn"
                     onClick={() => void onDeleteImage(ev.id)}
                   >
-                    Image−
+                    Прибрати афішу
                   </button>
                 ) : null}
+                <Link className="orgs-btn" to={`/events/${ev.id}`}>
+                  На сайті
+                </Link>
               </div>
             </div>
 
@@ -397,7 +490,7 @@ function AdminOrganizationEventsPage() {
                   />
                 </div>
                 <div className="panel-field">
-                  <label>originalUrl</label>
+                  <label>Посилання (originalUrl)</label>
                   <input
                     value={editOriginalUrl}
                     onChange={(e) => setEditOriginalUrl(e.target.value)}
@@ -405,7 +498,7 @@ function AdminOrganizationEventsPage() {
                 </div>
                 <div className="panel-actions">
                   <button type="submit" className="orgs-btn">
-                    Зберегти PATCH
+                    Зберегти
                   </button>
                   <button
                     type="button"
@@ -421,53 +514,8 @@ function AdminOrganizationEventsPage() {
         ))}
       </ul>
       {events.length === 0 ? (
-        <p className="panel-row__meta">Порожньо для цієї черги.</p>
+        <p className="panel-row__meta">Порожньо для цієї вкладки.</p>
       ) : null}
-
-      <h3 className="panel-row__title" style={{ marginTop: '2rem' }}>
-        Створити подію вручну
-      </h3>
-      <form className="panel-form" onSubmit={(e) => void onCreateEvent(e)}>
-        <div className="panel-field">
-          <label htmlFor="new-title">Назва</label>
-          <input
-            id="new-title"
-            value={eventTitle}
-            onChange={(e) => setEventTitle(e.target.value)}
-            required
-            minLength={3}
-          />
-        </div>
-        <div className="panel-field">
-          <label htmlFor="new-start">Початок</label>
-          <input
-            id="new-start"
-            type="datetime-local"
-            value={eventStartsAt}
-            onChange={(e) => setEventStartsAt(e.target.value)}
-            required
-          />
-        </div>
-        <div className="panel-field">
-          <label htmlFor="new-loc">Локація</label>
-          <input
-            id="new-loc"
-            value={eventLocation}
-            onChange={(e) => setEventLocation(e.target.value)}
-          />
-        </div>
-        <div className="panel-field">
-          <label htmlFor="new-desc">Опис</label>
-          <textarea
-            id="new-desc"
-            value={eventDescription}
-            onChange={(e) => setEventDescription(e.target.value)}
-          />
-        </div>
-        <button type="submit" className="orgs-btn">
-          Створити
-        </button>
-      </form>
     </section>
   )
 }

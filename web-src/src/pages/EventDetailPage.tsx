@@ -114,85 +114,91 @@ function EventDetailPage() {
         )}
 
         {!loading && event && (
-          <>
-            {event.imageUrl ? (
-              <img
-                className="event-detail__hero"
-                src={event.imageUrl}
-                alt=""
-              />
-            ) : null}
+          <div
+            className={`event-detail__layout${event.imageUrl ? '' : ' event-detail__layout--no-poster'}`}
+          >
+            <div className="event-detail__main">
+              <h1 className="orgs-page__title event-detail__title">
+                {event.title}
+              </h1>
 
-            <h1 className="orgs-page__title event-detail__title">
-              {event.title}
-            </h1>
-
-            <dl className="event-detail__meta">
-              <div className="event-detail__meta-row">
-                <dt>Коли</dt>
-                <dd>{formatEventDateTime(event.startsAt)}</dd>
-              </div>
-              {event.location ? (
+              <dl className="event-detail__meta">
                 <div className="event-detail__meta-row">
-                  <dt>Де</dt>
-                  <dd>{event.location}</dd>
+                  <dt>Коли</dt>
+                  <dd>{formatEventDateTime(event.startsAt)}</dd>
                 </div>
-              ) : null}
-              <div className="event-detail__meta-row">
-                <dt>Організація</dt>
-                <dd>
-                  <Link to={`/organizations/${event.organizationId}`}>
-                    {organization?.name ?? 'Перейти до профілю'}
-                  </Link>
-                </dd>
-              </div>
-              {event.originalUrl ? (
+                {event.location ? (
+                  <div className="event-detail__meta-row">
+                    <dt>Де</dt>
+                    <dd>{event.location}</dd>
+                  </div>
+                ) : null}
                 <div className="event-detail__meta-row">
-                  <dt>Джерело</dt>
+                  <dt>Організація</dt>
                   <dd>
-                    <a
-                      href={event.originalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Оригінальний анонс
-                    </a>
+                    <Link to={`/organizations/${event.organizationId}`}>
+                      {organization?.name ?? 'Перейти до профілю'}
+                    </Link>
                   </dd>
                 </div>
+                {event.originalUrl ? (
+                  <div className="event-detail__meta-row">
+                    <dt>Джерело</dt>
+                    <dd>
+                      <a
+                        href={event.originalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Оригінальний анонс
+                      </a>
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+
+              {event.description ? (
+                <p className="event-detail__description">{event.description}</p>
               ) : null}
-            </dl>
 
-            {event.description ? (
-              <p className="event-detail__description">{event.description}</p>
-            ) : null}
+              <div className="event-detail__actions">
+                <button
+                  type="button"
+                  className="orgs-btn"
+                  onClick={() => void openGoogleCalendar()}
+                  disabled={calendarBusy}
+                >
+                  {calendarBusy ? 'Відкриваємо…' : 'Додати в Google Calendar'}
+                </button>
+                <a
+                  className="orgs-btn event-detail__ics"
+                  href={eventIcsPath(event.id)}
+                  download={`event-${event.id}.ics`}
+                >
+                  Завантажити .ics
+                </a>
+              </div>
 
-            <div className="event-detail__actions">
-              <button
-                type="button"
-                className="orgs-btn"
-                onClick={() => void openGoogleCalendar()}
-                disabled={calendarBusy}
-              >
-                {calendarBusy ? 'Відкриваємо…' : 'Додати в Google Calendar'}
-              </button>
-              <a
-                className="orgs-btn event-detail__ics"
-                href={eventIcsPath(event.id)}
-                download={`event-${event.id}.ics`}
-              >
-                Завантажити .ics
-              </a>
+              {calendarError && (
+                <p
+                  className="orgs-page__status orgs-page__status--error"
+                  role="alert"
+                >
+                  {calendarError}
+                </p>
+              )}
             </div>
 
-            {calendarError && (
-              <p
-                className="orgs-page__status orgs-page__status--error"
-                role="alert"
-              >
-                {calendarError}
-              </p>
-            )}
-          </>
+            {event.imageUrl ? (
+              <aside className="event-detail__poster" aria-hidden="true">
+                <img
+                  className="event-detail__poster-img"
+                  src={event.imageUrl}
+                  alt=""
+                />
+              </aside>
+            ) : null}
+          </div>
         )}
       </div>
     </main>

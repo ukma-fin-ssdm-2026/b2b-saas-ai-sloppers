@@ -14,6 +14,7 @@ describe('session', () => {
       username: 'bot',
       role: 'admin',
       token: DEMO_TOKEN,
+      kind: 'demo',
     })
   })
 
