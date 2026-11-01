@@ -66,7 +66,7 @@
 ### 4.3 Практики тестування (Lab 6)
 - Модульні тести бекенду — у `src/test/java/`; знімок покриття — у `/docs/testing/coverage/`.
 - Стратегія рівнів і воріт — [`docs/testing/testing-strategy.md`](docs/testing/testing-strategy.md); як ганяти тести — [`docs/testing/README.md`](docs/testing/README.md).
-- На кожен PR job **Build and Test Backend** виконує `./mvnw test` і падає нижче порогу JaCoCo (зараз 5% рядків).
+- На кожен PR job **Build and Test Backend** виконує `./mvnw test` і падає нижче порогу JaCoCo (зараз 50% рядків).
 
 ## 5. Політика якості та огляду коду
 
@@ -83,7 +83,7 @@
 | Checkstyle | стиль Java-коду | `lint.yml` (Lint Backend), локально `./mvnw checkstyle:check` |
 | SpotBugs + find-sec-bugs | дефекти й вразливості Java-коду | `lint.yml` (Lint Backend), локально `./mvnw verify` |
 | JUnit | тести бекенду | `ci.yml` (Build and Test Backend), локально `./mvnw test` |
-| JaCoCo | покриття тестами бекенду, поріг 5% рядків (тимчасовий) | `ci.yml` (Build and Test Backend, Summary + артефакт `test-reports`), локально `./mvnw test` |
+| JaCoCo | покриття тестами бекенду, поріг 50% рядків | `ci.yml` (Build and Test Backend, Summary + артефакт `test-reports`), локально `./mvnw test` |
 | TypeScript (`tsc`) | типи фронтенду | `ci.yml` (Build Frontend), локально `npm run build` |
 | ESLint + eslint-plugin-security | помилки й небезпечні патерни у фронтенді | `lint.yml` (Lint Frontend), локально `npm run lint` |
 | Prettier | форматування фронтенду | `lint.yml` (Lint Frontend), локально `npm run format:check` |
@@ -146,7 +146,7 @@
 - [x] Artem Butyrin (GitHub: @artbutyrin)
 - [x] Daria Hrechko (GitHub: @urkarnad)
 
-## Використання ШІ
+## Нотатка про використання ШІ в цьому документі
 
 Оновлення статуту (структура ролей Lab 2/3 і формулювання практик); зміст звірено з вимогами Lab02-TeamCharter і Lab 3; переглянуто Documentation Lead.
 
