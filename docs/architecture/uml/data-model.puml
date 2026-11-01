@@ -5,28 +5,35 @@ hide circle
 hide methods
 skinparam linetype ortho
 skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor<<план>> #EEEEEE
+  BorderColor<<план>> #999999
+  FontColor<<план>> #666666
+}
 
 ' Позначки: <<PK>> первинний ключ, <<FK>> зовнішній ключ,
-' <<PII>> персональні дані, <<sensitive>> секрети/чутливі дані
+' <<PII>> персональні дані, <<sensitive>> секрети/чутливі дані.
+' Сутності зі стереотипом <<план>> ще не мають міграцій; поля з "(план)" — теж.
+' Реалізовану схему див. infra/migrations/V1–V4.
 
 ' ===== Користувачі та доступ =====
 
-entity "user" as user {
+entity "app_user" as app_user {
   * id : uuid <<PK>>
   --
   * email : varchar <<UNIQUE>> <<PII>>
-  * first_name : varchar <<PII>>
-  * last_name : varchar <<PII>>
   * password_hash : varchar <<sensitive>>
-  * role : enum(USER, GLOBAL_ADMIN)
-  * is_active : boolean
+  * status : enum(PENDING, ACTIVE, BLOCKED)
+  * global_admin : boolean
   verification_code_hash : varchar <<sensitive>>
-  code_expires_at : timestamptz
-  code_attempts : int
+  verification_expires_at : timestamptz
+  verification_attempts : int
+  verification_sent_at : timestamptz
   * created_at : timestamptz
+  * updated_at : timestamptz
 }
 
-entity "ban" as ban {
+entity "ban" as ban <<план>> {
   * id : uuid <<PK>>
   --
   * user_id : uuid <<FK>>
@@ -43,42 +50,50 @@ entity "ban" as ban {
 entity "organization" as organization {
   * id : uuid <<PK>>
   --
-  * name : varchar <<UNIQUE>>
-  description : text
+  * name : varchar
+  * slug : varchar <<UNIQUE>>
+  description : varchar
+  instagram_handle : varchar
+  contact_email : varchar
   logo_url : varchar
-  website_url : varchar
-  instagram_url : varchar
-  whatsapp_url : varchar
   * auto_publish : boolean
-  archived_at : timestamptz
+  archived_at : timestamptz (план)
   * created_at : timestamptz
+  * updated_at : timestamptz
 }
 
-entity "tag" as tag {
+entity "tag" as tag <<план>> {
   * id : uuid <<PK>>
   --
   * name : varchar <<UNIQUE>>
 }
 
-entity "organization_tag" as organization_tag {
+entity "organization_tag" as organization_tag <<план>> {
   * organization_id : uuid <<PK, FK>>
   * tag_id : uuid <<PK, FK>>
 }
 
 entity "organization_head" as organization_head {
+  * organization_id : uuid <<PK, FK>>
+  * user_id : uuid <<PK, FK>>
+  --
+  appointed_by : uuid <<FK>>
+  * appointed_at : timestamptz
+}
+
+entity "role_change" as role_change {
   * id : uuid <<PK>>
   --
-  * user_id : uuid <<FK>>
   * organization_id : uuid <<FK>>
-  * appointed_by : uuid <<FK>>
-  * appointed_at : timestamptz
-  revoked_by : uuid <<FK>>
-  revoked_at : timestamptz
+  * target_user_id : uuid <<FK>>
+  actor_user_id : uuid <<FK>>
+  * action : enum(APPOINTED, REMOVED)
+  * created_at : timestamptz
 }
 
 ' ===== Джерела та події =====
 
-entity "scraper_source" as source {
+entity "scraper_source" as scraper_source <<план>> {
   * id : uuid <<PK>>
   --
   * organization_id : uuid <<FK>>
@@ -95,24 +110,23 @@ entity "event" as event {
   * id : uuid <<PK>>
   --
   * organization_id : uuid <<FK>>
-  source_id : uuid <<FK>>
+  source_id : uuid
   external_post_id : varchar
   original_url : varchar
   * title : varchar
   description : text
   * starts_at : timestamptz
   location : varchar
+  image_url : varchar
   * status : enum(PENDING, PUBLISHED, REJECTED, UNPUBLISHED)
-  * is_verified : boolean
-  created_by : uuid <<FK>>
-  reviewed_by : uuid <<FK>>
+  * verified : boolean
   * created_at : timestamptz
   * updated_at : timestamptz
 }
 
 ' ===== Дошка оголошень =====
 
-entity "advert" as advert {
+entity "advert" as advert <<план>> {
   * id : uuid <<PK>>
   --
   * author_id : uuid <<FK>>
@@ -126,7 +140,7 @@ entity "advert" as advert {
   * created_at : timestamptz
 }
 
-entity "advert_response" as advert_response {
+entity "advert_response" as advert_response <<план>> {
   * id : uuid <<PK>>
   --
   * advert_id : uuid <<FK>>
@@ -139,7 +153,7 @@ entity "advert_response" as advert_response {
 
 ' ===== Модерація контенту =====
 
-entity "complaint" as complaint {
+entity "complaint" as complaint <<план>> {
   * id : uuid <<PK>>
   --
   * reporter_id : uuid <<FK>>
@@ -152,16 +166,16 @@ entity "complaint" as complaint {
   * created_at : timestamptz
 }
 
-entity "banned_word" as banned_word {
+entity "banned_word" as banned_word <<план>> {
   * id : uuid <<PK>>
   --
   * word : varchar <<UNIQUE>>
   * created_by : uuid <<FK>>
 }
 
-' ===== Рейтинги (Could) =====
+' ===== Рейтинги (пріоритет Низький) =====
 
-entity "author_rating" as author_rating {
+entity "author_rating" as author_rating <<план>> {
   * id : uuid <<PK>>
   --
   * rater_id : uuid <<FK>>
@@ -171,7 +185,7 @@ entity "author_rating" as author_rating {
   * created_at : timestamptz
 }
 
-entity "organization_rating" as organization_rating {
+entity "organization_rating" as organization_rating <<план>> {
   * id : uuid <<PK>>
   --
   * user_id : uuid <<FK>>
@@ -182,37 +196,37 @@ entity "organization_rating" as organization_rating {
 
 ' ===== Зв'язки =====
 
-user ||--o{ ban : "отримує"
-user ||--o{ organization_head : "є головою"
+app_user ||--o{ ban : "отримує"
+app_user ||--o{ organization_head : "є головою"
 organization ||--|{ organization_head : "має голів"
+organization ||--o{ role_change : "журнал ролей"
+app_user ||--o{ role_change : "кому / хто"
 organization ||--o{ organization_tag
 tag ||--o{ organization_tag
-organization ||--o{ source
+organization ||--o{ scraper_source
 organization ||--o{ event
-source |o--o{ event : "спаршено з"
-user |o--o{ event : "створює / перевіряє"
-user ||--o{ advert : "автор"
+scraper_source |o..o{ event : "спаршено з (FK — план)"
+app_user ||--o{ advert : "автор"
 advert ||--o{ advert_response
-user ||--o{ advert_response : "відгукується"
-user ||--o{ complaint : "скаржиться"
+app_user ||--o{ advert_response : "відгукується"
+app_user ||--o{ complaint : "скаржиться"
 advert |o--o{ complaint
 advert_response |o--o{ complaint
-user ||--o{ banned_word : "веде"
-user ||--o{ author_rating
+app_user ||--o{ banned_word : "веде"
+app_user ||--o{ author_rating
 advert ||--o{ author_rating
-user ||--o{ organization_rating
+app_user ||--o{ organization_rating
 organization ||--o{ organization_rating
 
 note bottom of event
   UNIQUE(source_id, external_post_id) — FR-025, NFR-005
   starts_at зберігається в UTC — NFR-011
-  created_by = null → подію створив скрейпер
+  source_id заповнений → подію створив скрейпер
 end note
 
 note bottom of organization_head
-  Активні голови: revoked_at IS NULL.
-  Рядки не видаляються — таблиця є журналом змін ролей (FR-013).
-  UNIQUE(user_id, organization_id) WHERE revoked_at IS NULL
+  Лише активні голови: зняття ролі видаляє рядок.
+  Історія змін — у role_change (FR-013).
 end note
 
 note bottom of complaint

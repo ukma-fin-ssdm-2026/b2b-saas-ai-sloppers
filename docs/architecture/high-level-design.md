@@ -32,7 +32,7 @@
 | Scraper Worker | cron-збір постів, розпізнавання, дедуп | семестр (у межах сервісу) |
 | Calendar Export | Google deep link, `.ics` | семестр |
 | PostgreSQL | єдине сховище сервісу | семестр |
-| Instagram / WhatsApp | джерела анонсів | зовнішнє |
+| Instagram | джерело анонсів (єдине в семестрі, FR-067) | зовнішнє |
 | Google Calendar | відкриття події в календарі користувача | зовнішнє |
 | account-server | AuthZ / профілі SmartUkma | future |
 | ui-constructor | рендер UI SmartUkma | future |
@@ -47,7 +47,7 @@
 | React Client | Bulletin Board | `IBoard` REST/JSON | оголошення, відгуки; контакт лише за правилами NFR-009 | JWT |
 | React Client | Calendar Export | `ICalendar` REST/JSON | deep link / файл `.ics` | за потреби JWT |
 | Modules (Auth, Orgs, Events, Board, Scraper) | PostgreSQL | SQL (JDBC/JPA) | сутності домену | credentials сервісу |
-| Scraper Worker | Instagram / WhatsApp | HTTP scrape | сирі пости / метадані | токени джерел (secrets) |
+| Scraper Worker | Instagram | HTTP scrape | сирі пости / метадані | токени джерел (secrets) |
 | Calendar Export | Google Calendar | deep link / `.ics` (RFC 5545) | назва, час (Europe/Kyiv), локація | — |
 | Scraper Worker | Events Module | внутрішній виклик / запис у БД | чернетки подій «На модерації» / автопублікація | внутрішній |
 | account-server → Auth (майбутнє) | — | REST (план) | валідація сесії / ролі | платформний токен |

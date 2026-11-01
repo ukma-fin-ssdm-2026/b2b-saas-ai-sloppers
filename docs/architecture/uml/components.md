@@ -41,7 +41,7 @@ rectangle "Семестр (клієнт–сервер)" {
 }
 
 cloud "Зовнішні (семестр)" {
-  component "Instagram /\nWhatsApp" as Social <<external>>
+  component "Instagram" as Social <<external>>
   component "Google Calendar" as GCal <<external>>
 }
 

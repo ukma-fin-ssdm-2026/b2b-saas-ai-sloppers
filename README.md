@@ -5,10 +5,16 @@
 [![Lint](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/lint.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/lint.yml)
 
 **Платформа для студентських організацій**: єдиний каталог організацій і подій,
-автоматичний збір анонсів із соцмереж організацій з подальшою модерацією координатором,
+автоматичний збір анонсів з Instagram організацій з подальшою модерацією головою організації,
 експорт подій у календар та дошка пропозицій для пошуку команди чи компанії.
 
 Детальний опис ідеї, ролей користувачів і тд: [Project-Description.md](Project-Description.md).
+
+## Демо
+
+- Відеодемонстрація (midterm): посилання в [Labs/midterm-presentation.txt](Labs/midterm-presentation.txt)
+- Документація API (GitHub Pages): https://ukma-fin-ssdm-2026.github.io/b2b-saas-ai-sloppers/
+- Розгортання в Minikube з публічним доступом через ngrok: [infra/README.md](infra/README.md)
 
 ## Команда
 
@@ -20,6 +26,12 @@
 | [@urkarnad](https://github.com/urkarnad)     | Issue Tracker Lead |
 
 Відповідальності, правила комунікації та використання ШІ описані в [TeamCharter.md](TeamCharter.md).
+
+## Командна організація (Lab 1)
+
+- [TeamCharter.md](TeamCharter.md) — ролі, процес, політика якості, розділ «Використання ШІ»
+- [docs/issue-workflow.md](docs/issue-workflow.md) — робочий процес задач і мітки
+- [.github/workflows/](.github/workflows/) — CI: `ci.yml` (збірка й тести), `lint.yml` (статичний аналіз), `api-docs.yml` / `deploy-api-docs.yml` (OpenAPI), `build-and-deploy.yml` (образи й GitOps-деплой)
 
 ## Артефакти вимог (Lab 2)
 
@@ -38,6 +50,14 @@
 - [docs/architecture/uml/](docs/architecture/uml/) — UML (PlantUML)
 - [docs/architecture/decisions/](docs/architecture/decisions/) — ADR
 
+## API (Lab 4)
+
+- [docs/api/api-design.md](docs/api/api-design.md) — проєктування API
+- [docs/api/openapi-generated.yaml](docs/api/openapi-generated.yaml) — специфікація OpenAPI, згенерована з коду
+- [docs/api/quality-attributes.md](docs/api/quality-attributes.md) — атрибути якості API (зв'язок із NFR)
+- [docs/api/validation-checks.md](docs/api/validation-checks.md) — результати перевірки ендпоінтів
+- [docs/api/index.html](docs/api/index.html) — Swagger UI, опублікований на [GitHub Pages](https://ukma-fin-ssdm-2026.github.io/b2b-saas-ai-sloppers/)
+
 ## Тестування (Lab 6)
 
 - [docs/testing/testing-strategy.md](docs/testing/testing-strategy.md) — стратегія рівнів, покриття, CI
@@ -45,7 +65,7 @@
 - [docs/testing/debugging-log.md](docs/testing/debugging-log.md) — журнал налагодження (челендж «зламай і відлагодь»)
 - [docs/testing/coverage/jacoco/](docs/testing/coverage/jacoco/index.html) — знімок покриття
 
-Локально: `./mvnw test` (поріг рядків — у `pom.xml`, зараз 5%).
+Локально: `./mvnw test` (поріг рядків — у `pom.xml`, зараз 50%).
 
 ## Якість коду (Lab 5)
 
@@ -61,13 +81,25 @@
 
 ## Основні можливості
 
-- Каталог організацій з тегами, повнотекстовим пошуком і пагінацією
-- Профіль організації
-- Автоматичний парсинг подій із соцмереж (Scraper Worker) з дедуплікацією
-- Модерація спаршених подій координатором
+Детальний стан за компонентами: [docs/code-quality/progress.md](docs/code-quality/progress.md).
+
+**Реалізовано (бекенд):**
+
+- Реєстрація з поштою @ukma.edu.ua і кодом підтвердження, логін (JWT)
+- Ролі Гість / User / Голова організації / Global Admin; призначення й зняття голів, журнал змін ролей
+- Каталог організацій з пошуком і пагінацією, профіль, логотипи (Supabase Storage)
+- Події: створення, редагування, модерація (`PENDING` → `PUBLISHED` / `REJECTED` / `UNPUBLISHED`), фільтри за організацією й датами, постери
 - Експорт подій у Google Calendar та `.ics`
-- Дошка пропозицій з відгуками, підтвердженням і авто-закриттям
-- Реєстрація, логін і рольова модель доступу (Global Admin / Coordinator / User)
+- Дедуплікація подій (`DedupKey`) — основа для Scraper Worker
+
+**Реалізовано (фронтенд):** каталог організацій ([web-src/](web-src/)).
+
+**Заплановано на другу половину семестру:**
+
+- Scraper Worker для Instagram (пакет `scraper/` — поки заготовка)
+- Автопублікація спаршених подій
+- Дошка пропозицій з відгуками, підтвердженням і авто-закриттям (пакет `board/` — поки заготовка)
+- UI для входу, кабінету голови й адміністрування (у розробці в гілці `feature/org-event-frontend`)
 
 ## Стек
 
@@ -77,19 +109,27 @@
 | База даних  | PostgreSQL                    |
 | Frontend    | React, TypeScript, Vite (`web-src/`) |
 | CI          | GitHub Actions                |
-| Розгортання | Docker, Minikube (Kubernetes) |
+| Розгортання | Docker, Minikube (Kubernetes), ArgoCD, GHCR |
 
 ## Структура репозиторію
 
 ```
 .
 ├── .github/workflows/     # CI-конвеєр (GitHub Actions)
+├── Labs/                  # посилання на Loom-відео (LabNN/video_<Прізвище>.txt) і midterm-демо
+├── config/quality/        # конфіги Checkstyle і SpotBugs
 ├── docs/
 │   ├── issue-workflow.md
 │   ├── requirements/      # Lab 2: US, FR, NFR, RTM
-│   ├── architecture/      # Lab 3: HLD, UML, ADR
-│   └── testing/           # Lab 6: стратегія, покриття, журнал налагодження
+│   ├── architecture/      # Lab 3: HLD, UML, ADR, data model, STRIDE
+│   ├── api/               # Lab 4: API design, OpenAPI, атрибути якості
+│   ├── code-quality/      # Lab 5: статичний аналіз, code review, прогрес
+│   ├── testing/           # Lab 6: стратегія, покриття, журнал налагодження
+│   ├── validation/        # Lab 7: план тестування, журнал peer review
+│   └── db/                # нотатки щодо Supabase
 ├── infra/
+│   ├── helpers/           # up.sh / down.sh: підняти й видалити Minikube-кластер
+│   ├── kube/              # маніфести Kubernetes і ArgoCD
 │   └── migrations/        # SQL-міграції схеми БД (Flyway)
 ├── src/                   # backend (Spring Boot)
 │   └── main/docker/       # Dockerfile образу backend
@@ -141,7 +181,17 @@ Swagger UI: http://localhost:8080/swagger-ui.html
 
 **Скинути базу:** `docker compose down -v`.
 
-Розгортання в Minikube буде додано окремо.
+### Розгортання в Minikube
+
+Повне оточення (frontend, backend, PostgreSQL через CloudNativePG) розгортається в Minikube, зміни доставляє ArgoCD з гілки `deploy`. Публічний доступ — тунель ngrok.
+
+```bash
+cp .env.example .env   # заповнити GHCR_*, NGROK_AUTHTOKEN, AUTH_JWT_SECRET
+infra/helpers/up.sh    # виводить публічний URL сайту і доступ до ArgoCD
+infra/helpers/down.sh  # видалити кластер
+```
+
+Вимоги, змінні й процес викочування: [infra/README.md](infra/README.md). Архітектура: [ADR-004](docs/architecture/decisions/ADR-004-deployment-and-gitops.md), [ADR-005](docs/architecture/decisions/ADR-005-database-migrations.md).
 
 ### Віддалена база й картинки (Supabase)
 
@@ -212,3 +262,7 @@ curl -X PUT -F "file=@poster.jpg" http://localhost:8080/api/v1/events/<id>/image
 - [docs/testing/debugging-log.md](docs/testing/debugging-log.md): журнал налагодження (Lab 6)
 - [docs/validation/test-plan.md](docs/validation/test-plan.md): план тестування (Lab 7)
 - [docs/validation/review-log.md](docs/validation/review-log.md): журнал взаємного огляду (Lab 7)
+
+## Використання ШІ
+
+Оформлено за допомогою Claude
