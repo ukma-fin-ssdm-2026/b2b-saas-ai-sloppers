@@ -2,15 +2,20 @@
 
 Стратегія рівнів, воріт і подальших тестів: [testing-strategy.md](testing-strategy.md).
 
-Інструменти: **JUnit 5**, **Mockito**, **AssertJ** (усі з `spring-boot-starter-test`) і **JaCoCo** для покриття.
-Тести лежать у стандартній для Maven теці [`src/test/java/`](../../src/test/java/ua/edu/ukma/community/),
-структура пакетів дзеркалить `src/main/java`.
+Інструменти бекенду: **JUnit 5**, **Mockito**, **AssertJ** і **JaCoCo**.  
+Тести: [`src/test/java/`](../../src/test/java/ua/edu/ukma/community/).
+
+Інструменти фронту: **Vitest**, **Testing Library**, coverage **v8** (поріг рядків **5%**, як у `jacoco-check`).  
+Тести поруч із кодом у [`web-src/src/**/*.test.ts(x)`](../../web-src/src/); фікстури — `web-src/src/test/support/testFixtures.ts`.
 
 ## Запуск
 
 ```bash
 ./mvnw test                           # усі тести + звіт JaCoCo
 open target/site/jacoco/index.html    # переглянути звіт локально
+
+cd web-src && npm test                # модульні тести фронту
+cd web-src && npm run test:coverage   # + HTML coverage
 ```
 
 `./mvnw test` падає, якщо покриття рядків нижче порогу `jacoco-check` у [`pom.xml`](../../pom.xml). Зараз це

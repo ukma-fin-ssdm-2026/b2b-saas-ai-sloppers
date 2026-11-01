@@ -1,19 +1,13 @@
 import type {
   ListOrganizationsParams,
   OffsetPageOrganization,
+  Organization,
+  OrganizationCreateRequest,
+  OrganizationUpdateRequest,
 } from '../types/organization'
+import { apiFetch } from './client'
 
-const API_BASE = '/api/v1'
-
-export class ApiError extends Error {
-  status: number
-
-  constructor(status: number, message: string) {
-    super(message)
-    this.name = 'ApiError'
-    this.status = status
-  }
-}
+export { ApiError } from './client'
 
 export async function listOrganizations(
   params: ListOrganizationsParams = {},
@@ -31,17 +25,60 @@ export async function listOrganizations(
   }
 
   const qs = query.toString()
-  const url = `${API_BASE}/organizations${qs ? `?${qs}` : ''}`
+  return apiFetch<OffsetPageOrganization>(
+    `/organizations${qs ? `?${qs}` : ''}`,
+  )
+}
 
-  const response = await fetch(url)
+export async function getOrganization(
+  organizationId: string,
+): Promise<Organization> {
+  return apiFetch<Organization>(`/organizations/${organizationId}`)
+}
 
-  if (!response.ok) {
-    const body = await response.text()
-    throw new ApiError(
-      response.status,
-      body || `Request failed with status ${response.status}`,
-    )
-  }
+export async function createOrganization(
+  body: OrganizationCreateRequest,
+): Promise<Organization> {
+  return apiFetch<Organization>('/organizations', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  })
+}
 
-  return (await response.json()) as OffsetPageOrganization
+export async function updateOrganization(
+  organizationId: string,
+  body: OrganizationUpdateRequest,
+): Promise<Organization> {
+  return apiFetch<Organization>(`/organizations/${organizationId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+}
+
+export async function deleteOrganization(
+  organizationId: string,
+): Promise<void> {
+  await apiFetch<void>(`/organizations/${organizationId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function uploadOrganizationLogo(
+  organizationId: string,
+  file: File,
+): Promise<Organization> {
+  const form = new FormData()
+  form.append('file', file)
+  return apiFetch<Organization>(`/organizations/${organizationId}/logo`, {
+    method: 'PUT',
+    body: form,
+  })
+}
+
+export async function deleteOrganizationLogo(
+  organizationId: string,
+): Promise<void> {
+  await apiFetch<void>(`/organizations/${organizationId}/logo`, {
+    method: 'DELETE',
+  })
 }

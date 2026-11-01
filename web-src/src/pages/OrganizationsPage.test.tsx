@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import OrganizationsPage from './OrganizationsPage'
 import { ApiError } from '../api/organizations'
@@ -19,6 +20,7 @@ function organization(overrides: Partial<Organization> = {}): Organization {
     id: '3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60',
     name: 'Дебатний клуб НаУКМА',
     slug: 'debate-club',
+    autoPublish: false,
     description: 'Щотижневі тренування',
     createdAt: '2026-03-01T10:00:00+02:00',
     updatedAt: '2026-03-01T10:00:00+02:00',
@@ -33,6 +35,14 @@ function page(data: Organization[]) {
   }
 }
 
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <OrganizationsPage />
+    </MemoryRouter>,
+  )
+}
+
 afterEach(() => {
   vi.resetAllMocks()
 })
@@ -41,7 +51,7 @@ describe('OrganizationsPage', () => {
   it('показує індикатор завантаження до відповіді бекенду', () => {
     listMock.mockReturnValue(new Promise(() => {}))
 
-    render(<OrganizationsPage />)
+    renderPage()
 
     expect(screen.getByText('Завантаження…')).toBeInTheDocument()
   })
@@ -49,7 +59,7 @@ describe('OrganizationsPage', () => {
   it('запитує першу сторінку з двадцяти організацій', async () => {
     listMock.mockResolvedValue(page([]))
 
-    render(<OrganizationsPage />)
+    renderPage()
 
     await waitFor(() =>
       expect(listMock).toHaveBeenCalledWith({ limit: 20, offset: 0 }),
@@ -69,7 +79,7 @@ describe('OrganizationsPage', () => {
       ]),
     )
 
-    render(<OrganizationsPage />)
+    renderPage()
 
     expect(await screen.findByText('Дебатний клуб НаУКМА')).toBeInTheDocument()
     expect(screen.getByText('debate-club')).toBeInTheDocument()
@@ -81,7 +91,7 @@ describe('OrganizationsPage', () => {
   it('повідомляє про порожній каталог, коли організацій немає', async () => {
     listMock.mockResolvedValue(page([]))
 
-    render(<OrganizationsPage />)
+    renderPage()
 
     expect(
       await screen.findByText('Поки немає організацій.'),
@@ -92,26 +102,26 @@ describe('OrganizationsPage', () => {
   it('показує статус відповіді, коли бекенд повертає помилку', async () => {
     listMock.mockRejectedValue(new ApiError(503, 'service unavailable'))
 
-    render(<OrganizationsPage />)
+    renderPage()
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Failed to load (503)')
+    expect(alert).toHaveTextContent('Не вдалося завантажити (503)')
   })
 
   it('показує загальне повідомлення, коли помилка не від API', async () => {
     listMock.mockRejectedValue(new TypeError('network down'))
 
-    render(<OrganizationsPage />)
+    renderPage()
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Failed to load organizations')
+    expect(alert).toHaveTextContent('Не вдалося завантажити організації')
     expect(alert).not.toHaveTextContent('network down')
   })
 
   it('не показує список і помилку одночасно', async () => {
     listMock.mockRejectedValue(new ApiError(500, 'boom'))
 
-    render(<OrganizationsPage />)
+    renderPage()
 
     await screen.findByRole('alert')
     expect(screen.queryByRole('list')).not.toBeInTheDocument()

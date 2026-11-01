@@ -7,6 +7,7 @@
   background: #000;
   color: #fff;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .intro-overlay__text {

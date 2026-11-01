@@ -1,6 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react'
 import { gsap } from 'gsap'
 import './TextType.css'
+
+export type TextTypeHandle = {
+  skip: () => void
+}
 
 type TextTypeProps = {
   text: string
@@ -13,26 +24,40 @@ type TextTypeProps = {
   onTypingComplete?: () => void
 }
 
-function TextType({
-  text,
-  typingSpeed = 110,
-  initialDelay = 0,
-  showCursor = true,
-  cursorCharacter = '_',
-  cursorBlinkDuration = 0.5,
-  variableSpeed,
-  onTypingComplete,
-}: TextTypeProps) {
+const TextType = forwardRef<TextTypeHandle, TextTypeProps>(function TextType(
+  {
+    text,
+    typingSpeed = 110,
+    initialDelay = 0,
+    showCursor = true,
+    cursorCharacter = '_',
+    cursorBlinkDuration = 0.5,
+    variableSpeed,
+    onTypingComplete,
+  },
+  ref,
+) {
   const [displayedText, setDisplayedText] = useState('')
   const [charIndex, setCharIndex] = useState(0)
   const cursorRef = useRef<HTMLSpanElement | null>(null)
   const completedRef = useRef(false)
+  const onTypingCompleteRef = useRef(onTypingComplete)
+  onTypingCompleteRef.current = onTypingComplete
 
   const delayForNextChar = useCallback(() => {
     if (!variableSpeed) return typingSpeed
     const { min, max } = variableSpeed
     return Math.random() * (max - min) + min
   }, [variableSpeed, typingSpeed])
+
+  useImperativeHandle(ref, () => ({
+    skip: () => {
+      if (completedRef.current) return
+      completedRef.current = true
+      setDisplayedText(text)
+      setCharIndex(text.length)
+    },
+  }))
 
   useEffect(() => {
     if (!showCursor || !cursorRef.current) return
@@ -55,10 +80,12 @@ function TextType({
     if (charIndex >= text.length) {
       if (!completedRef.current) {
         completedRef.current = true
-        onTypingComplete?.()
+        onTypingCompleteRef.current?.()
       }
       return
     }
+
+    if (completedRef.current) return
 
     const timeout = setTimeout(
       () => {
@@ -69,7 +96,7 @@ function TextType({
     )
 
     return () => clearTimeout(timeout)
-  }, [charIndex, text, initialDelay, delayForNextChar, onTypingComplete])
+  }, [charIndex, text, initialDelay, delayForNextChar])
 
   return (
     <div className="text-type">
@@ -81,6 +108,6 @@ function TextType({
       ) : null}
     </div>
   )
-}
+})
 
 export default TextType
