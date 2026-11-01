@@ -18,7 +18,7 @@
 5. **Вхід: Ingress** (NGINX addon Minikube): назовні веде лише на frontend, TLS. nginx у frontend проксує `/api` на backend усередині кластера (Service типу ClusterIP), тож backend ззовні недоступний.
 6. **CI/CD за GitOps:**
    - GitHub Actions на push у `main` збирає образи `frontend` і `backend` і пушить їх у GHCR.
-   - Тієї ж миті Actions бере вихідні маніфести з `k8s/` у `main`, підставляє digest нових образів і комітить результат у згенеровану гілку **`deploy`**. У `main` ці коміти не потрапляють.
+   - Тієї ж миті Actions бере вихідні маніфести з `infra/kube/` у `main`, підставляє digest нових образів і комітить результат у згенеровану гілку **`deploy`**. У `main` ці коміти не потрапляють.
    - ArgoCD стежить за гілкою `deploy` (`targetRevision: deploy`) і сам застосовує зміни в кластер. Кластер ходить назовні сам, тому Actions не потрібен доступ до Minikube.
    - Відкат — revert коміту в `deploy`.
 7. **Міграції БД** — окреме рішення, див. [ADR-005](ADR-005-database-migrations.md).
@@ -49,7 +49,7 @@
 - `deploy` — згенерована гілка, руками її редагувати не можна. Боту потрібен дозвіл на пуш у неї (без branch protection або з винятком).
 - ArgoCD і оператор споживають ресурси Minikube.
 - Секрети не зберігаються в git (NFR-010): створюються в кластері вручну або через SealedSecrets.
-- Тестовий `mock-ci.yml` прибрано. Зараз CI складається з `ci.yml` (збірка й тести), `api-docs.yml` (актуальність OpenAPI) і `lint.yml` (статичний аналіз); workflow збирання й публікації образів додається окремо.
+- Тестовий `mock-ci.yml` прибрано. Зараз CI складається з `ci.yml` (збірка й тести), `api-docs.yml` (актуальність OpenAPI) і `lint.yml` (статичний аналіз); збирання образів і оновлення гілки `deploy` виконує [`build-and-deploy.yml`](../../../.github/workflows/build-and-deploy.yml).
 
 ## Додатки
 

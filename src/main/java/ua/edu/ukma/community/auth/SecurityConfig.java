@@ -51,7 +51,7 @@ public class SecurityConfig {
                                 V1 + "/events/{eventId}/calendar/google").permitAll()
                         // документація й службові
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**",
-                                "/v3/api-docs.yaml", "/actuator/health", "/error").permitAll()
+                                "/v3/api-docs.yaml", "/actuator/health", "/actuator/health/**", "/error").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth
                         .jwt(Customizer.withDefaults())
