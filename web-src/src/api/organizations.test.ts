@@ -7,10 +7,11 @@ const emptyPage: OffsetPageOrganization = {
   pagination: { offset: 0, limit: 20, total: 0, hasMore: false },
 }
 
-function mockFetch(response: Partial<Response>) {
+function mockFetch(response: Partial<Response> & { headers?: Headers } = {}) {
   const fetchMock = vi.fn().mockResolvedValue({
     ok: true,
     status: 200,
+    headers: new Headers({ 'Content-Type': 'application/json' }),
     json: async () => emptyPage,
     text: async () => '',
     ...response,
@@ -25,29 +26,29 @@ afterEach(() => {
 
 describe('listOrganizations', () => {
   it('запитує каталог без параметрів, коли фільтрів немає', async () => {
-    const fetchMock = mockFetch({})
+    const fetchMock = mockFetch()
 
     await listOrganizations()
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/organizations')
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/organizations')
   })
 
   it('додає limit, offset і пошуковий запит у рядок запиту', async () => {
-    const fetchMock = mockFetch({})
+    const fetchMock = mockFetch()
 
     await listOrganizations({ limit: 20, offset: 40, q: 'клуб' })
 
-    expect(fetchMock).toHaveBeenCalledWith(
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
       '/api/v1/organizations?offset=40&limit=20&q=%D0%BA%D0%BB%D1%83%D0%B1',
     )
   })
 
   it('не додає порожній пошуковий запит', async () => {
-    const fetchMock = mockFetch({})
+    const fetchMock = mockFetch()
 
     await listOrganizations({ q: '' })
 
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/organizations')
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/v1/organizations')
   })
 
   it('кидає ApiError зі статусом, коли бекенд відповідає помилкою', async () => {
@@ -79,6 +80,7 @@ describe('listOrganizations', () => {
           id: '3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60',
           name: 'Дебатний клуб НаУКМА',
           slug: 'debate-club',
+          autoPublish: false,
           createdAt: '2026-03-01T10:00:00+02:00',
           updatedAt: '2026-03-01T10:00:00+02:00',
         },

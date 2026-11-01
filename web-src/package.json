@@ -13,10 +13,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "audit": "npm audit --omit=dev",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "audit": "npm audit --omit=dev"
   },
   "dependencies": {
     "gsap": "^3.15.0",

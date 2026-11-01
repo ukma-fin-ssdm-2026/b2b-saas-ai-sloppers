@@ -22,5 +22,14 @@ export default tseslint.config(
       ecmaVersion: 2022,
       globals: globals.browser,
     },
+    rules: {
+      // Data-fetch pages legitimately reset state when route/filter inputs change.
+      'react-hooks/set-state-in-effect': 'off',
+      // AuthContext exports Provider + hook from one module (common pattern).
+      'react-refresh/only-export-components': [
+        'error',
+        { allowConstantExport: true, allowExportNames: ['useAuth'] },
+      ],
+    },
   },
 )
