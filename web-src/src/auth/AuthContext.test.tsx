@@ -1,9 +1,10 @@
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { DEMO_PASSWORD, DEMO_USER } from './credentials'
 import { AuthProvider, useAuth } from './AuthContext'
 import { registerMock, verifyMock } from './mockAuthApi'
+import { clearSession } from './session'
 
 function Probe() {
   const { isAuthenticated, login, logout, session } = useAuth()
@@ -14,7 +15,7 @@ function Probe() {
       <button
         type="button"
         onClick={() => {
-          login(DEMO_USER, DEMO_PASSWORD)
+          void login(DEMO_USER, DEMO_PASSWORD)
         }}
       >
         demo-login
@@ -22,7 +23,7 @@ function Probe() {
       <button
         type="button"
         onClick={() => {
-          login('nobody@ukma.edu.ua', 'x')
+          void login('nobody@ukma.edu.ua', 'x')
         }}
       >
         bad-login
@@ -37,6 +38,9 @@ function Probe() {
 describe('AuthContext', () => {
   afterEach(() => {
     cleanup()
+    clearSession()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('demo-логін створює admin-сесію; logout очищає', async () => {
@@ -49,14 +53,21 @@ describe('AuthContext', () => {
 
     expect(screen.getByTestId('auth')).toHaveTextContent('no')
     await user.click(screen.getByRole('button', { name: 'demo-login' }))
-    expect(screen.getByTestId('auth')).toHaveTextContent('yes')
+    await waitFor(() =>
+      expect(screen.getByTestId('auth')).toHaveTextContent('yes'),
+    )
     expect(screen.getByTestId('user')).toHaveTextContent(DEMO_USER)
 
     await user.click(screen.getByRole('button', { name: 'logout' }))
     expect(screen.getByTestId('auth')).toHaveTextContent('no')
   })
 
-  it('логін зареєстрованого користувача після verify', async () => {
+  it('логін зареєстрованого користувача після verify (mock fallback)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockRejectedValue(new TypeError('network down')),
+    )
+
     const reg = registerMock('ctx@ukma.edu.ua', 'secret12')
     expect(reg.ok).toBe(true)
     if (!reg.ok) return
@@ -71,7 +82,7 @@ describe('AuthContext', () => {
           <button
             type="button"
             onClick={() => {
-              login('ctx@ukma.edu.ua', 'secret12')
+              void login('ctx@ukma.edu.ua', 'secret12')
             }}
           >
             user-login
@@ -87,7 +98,9 @@ describe('AuthContext', () => {
       </AuthProvider>,
     )
     await user.click(screen.getByRole('button', { name: 'user-login' }))
-    expect(screen.getByTestId('auth')).toHaveTextContent('yes')
+    await waitFor(() =>
+      expect(screen.getByTestId('auth')).toHaveTextContent('yes'),
+    )
     expect(screen.getByTestId('role')).toHaveTextContent('user')
   })
 })

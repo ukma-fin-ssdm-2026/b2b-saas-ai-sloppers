@@ -1,10 +1,15 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
+import { confirmLogout } from '../../auth/confirmLogout'
 import '../OrganizationsPage.css'
 import '../panel.css'
 
 function LabLayout() {
   const { session, logout } = useAuth()
+
+  const onLogout = () => {
+    if (confirmLogout()) logout()
+  }
 
   return (
     <main className="panel-page">
@@ -22,7 +27,7 @@ function LabLayout() {
           </NavLink>
           <NavLink to="/lab/playground">Playground</NavLink>
           <NavLink to="/admin">Адмін (live API)</NavLink>
-          <button type="button" className="orgs-btn" onClick={logout}>
+          <button type="button" className="orgs-btn" onClick={onLogout}>
             Вийти
           </button>
         </nav>

@@ -8,6 +8,7 @@ import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.organization.Organization;
 import ua.edu.ukma.community.organization.OrganizationDeleted;
 import ua.edu.ukma.community.organization.OrganizationService;
+import ua.edu.ukma.community.subscription.SubscriptionService;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -26,11 +27,14 @@ public class EventService {
 
     private final EventRepository events;
     private final OrganizationService organizations;
+    private final SubscriptionService subscriptions;
     private final Clock clock;
 
-    public EventService(EventRepository events, OrganizationService organizations, Clock clock) {
+    public EventService(EventRepository events, OrganizationService organizations,
+                        SubscriptionService subscriptions, Clock clock) {
         this.events = events;
         this.organizations = organizations;
+        this.subscriptions = subscriptions;
         this.clock = clock;
     }
 
@@ -74,9 +78,11 @@ public class EventService {
     public synchronized Event create(UUID organizationId, EventCreateRequest request) {
         organizations.get(organizationId);
         OffsetDateTime now = OffsetDateTime.now(clock);
-        return events.save(new Event(UUID.randomUUID(), organizationId, request.title().trim(),
+        Event created = events.save(new Event(UUID.randomUUID(), organizationId, request.title().trim(),
                 request.description(), request.startsAt(), request.location(), request.originalUrl(),
                 null, null, null, EventStatus.PUBLISHED, true, now, now));
+        subscriptions.notifyNewEvent(created);
+        return created;
     }
 
     public synchronized Event update(UUID id, EventUpdateRequest request) {
@@ -89,7 +95,12 @@ public class EventService {
     }
 
     public synchronized Event approve(UUID id) {
-        return change(id, event -> event.approve(OffsetDateTime.now(clock)));
+        Event before = get(id);
+        Event after = change(id, event -> event.approve(OffsetDateTime.now(clock)));
+        if (before.status() != EventStatus.PUBLISHED && after.isPublished()) {
+            subscriptions.notifyNewEvent(after);
+        }
+        return after;
     }
 
     public synchronized Event reject(UUID id) {
@@ -108,9 +119,13 @@ public class EventService {
         Organization organization = organizations.get(scraped.organizationId());
         EventStatus status = organization.autoPublish() ? EventStatus.PUBLISHED : EventStatus.PENDING;
         OffsetDateTime now = OffsetDateTime.now(clock);
-        return Optional.of(events.save(new Event(UUID.randomUUID(), organization.id(), scraped.title(),
+        Event saved = events.save(new Event(UUID.randomUUID(), organization.id(), scraped.title(),
                 null, scraped.startsAt(), null, scraped.originalUrl(), null, scraped.sourceId(),
-                scraped.externalPostId(), status, false, now, now)));
+                scraped.externalPostId(), status, false, now, now));
+        if (saved.isPublished()) {
+            subscriptions.notifyNewEvent(saved);
+        }
+        return Optional.of(saved);
     }
 
     @EventListener

@@ -24,6 +24,8 @@ export interface ListOrganizationsParams {
 export interface OrganizationCreateRequest {
   name: string
   slug: string
+  /** First head: registered + verified @ukma.edu.ua user (required by API). */
+  headEmail: string
   description?: string
   instagramHandle?: string
   contactEmail?: string

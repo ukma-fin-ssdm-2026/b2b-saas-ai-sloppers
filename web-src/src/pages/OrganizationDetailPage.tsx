@@ -2,6 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ApiError, listEvents } from '../api/events'
 import { getOrganization } from '../api/organizations'
+import {
+  getOrganizationSubscription,
+  subscribeToOrganization,
+  unsubscribeFromOrganization,
+} from '../api/subscriptions'
+import { useAuth } from '../auth/AuthContext'
 import type { Event } from '../types/event'
 import type { Organization } from '../types/organization'
 import { formatEventDateTime } from '../utils/datetime'
@@ -17,11 +23,18 @@ function instagramUrl(handle: string): string {
 
 function OrganizationDetailPage() {
   const { organizationId } = useParams<{ organizationId: string }>()
+  const { isAuthenticated, isDemo } = useAuth()
+  const canSubscribe = isAuthenticated && !isDemo
 
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [orgLoading, setOrgLoading] = useState(true)
   const [orgError, setOrgError] = useState<string | null>(null)
   const [orgReload, setOrgReload] = useState(0)
+
+  const [subscribed, setSubscribed] = useState(false)
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false)
+  const [subscriptionBusy, setSubscriptionBusy] = useState(false)
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null)
 
   const [events, setEvents] = useState<Event[]>([])
   const [eventsHasMore, setEventsHasMore] = useState(false)
@@ -68,6 +81,42 @@ function OrganizationDetailPage() {
       cancelled = true
     }
   }, [organizationId, orgReload])
+
+  useEffect(() => {
+    if (!organizationId || !canSubscribe || orgError || orgLoading) {
+      setSubscribed(false)
+      setSubscriptionLoading(false)
+      setSubscriptionError(null)
+      return
+    }
+
+    let cancelled = false
+
+    async function loadSubscription() {
+      setSubscriptionLoading(true)
+      setSubscriptionError(null)
+      try {
+        const status = await getOrganizationSubscription(organizationId!)
+        if (!cancelled) setSubscribed(status.subscribed)
+      } catch (err) {
+        if (cancelled) return
+        if (err instanceof ApiError) {
+          setSubscriptionError(
+            `Не вдалося перевірити підписку (${err.status})`,
+          )
+        } else {
+          setSubscriptionError('Не вдалося перевірити підписку')
+        }
+      } finally {
+        if (!cancelled) setSubscriptionLoading(false)
+      }
+    }
+
+    void loadSubscription()
+    return () => {
+      cancelled = true
+    }
+  }, [organizationId, canSubscribe, orgError, orgLoading])
 
   useEffect(() => {
     if (!organizationId || orgError || orgLoading) {
@@ -161,6 +210,40 @@ function OrganizationDetailPage() {
     organizationId,
   ])
 
+  const toggleSubscription = useCallback(async () => {
+    if (!organizationId || !canSubscribe || subscriptionBusy) return
+
+    setSubscriptionBusy(true)
+    setSubscriptionError(null)
+    const next = !subscribed
+    try {
+      if (next) {
+        await subscribeToOrganization(organizationId)
+      } else {
+        await unsubscribeFromOrganization(organizationId)
+      }
+      setSubscribed(next)
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setSubscriptionError(
+          next
+            ? `Не вдалося підписатися (${err.status})`
+            : `Не вдалося відписатися (${err.status})`,
+        )
+      } else {
+        setSubscriptionError(
+          next ? 'Не вдалося підписатися' : 'Не вдалося відписатися',
+        )
+      }
+    } finally {
+      setSubscriptionBusy(false)
+    }
+  }, [canSubscribe, organizationId, subscribed, subscriptionBusy])
+
+  const loginFrom = organizationId
+    ? `/login?from=${encodeURIComponent(`/organizations/${organizationId}`)}`
+    : '/login'
+
   return (
     <main className="orgs-page org-detail">
       <div className="orgs-page__inner">
@@ -209,7 +292,49 @@ function OrganizationDetailPage() {
                 </h1>
                 <p className="org-detail__slug">{organization.slug}</p>
               </div>
+              <div className="org-detail__actions">
+                {canSubscribe ? (
+                  <button
+                    type="button"
+                    className={
+                      subscribed
+                        ? 'orgs-btn org-detail__subscribe org-detail__subscribe--active'
+                        : 'orgs-btn org-detail__subscribe'
+                    }
+                    onClick={() => void toggleSubscription()}
+                    disabled={subscriptionLoading || subscriptionBusy}
+                    aria-pressed={subscribed}
+                  >
+                    {subscriptionBusy
+                      ? subscribed
+                        ? 'Відписуємо…'
+                        : 'Підписуємо…'
+                      : subscribed
+                        ? 'Відписатися'
+                        : 'Підписатися'}
+                  </button>
+                ) : isDemo ? (
+                  <Link to={loginFrom} className="orgs-btn org-detail__subscribe">
+                    Увійти для підписки
+                  </Link>
+                ) : (
+                  <Link to={loginFrom} className="orgs-btn org-detail__subscribe">
+                    Увійти, щоб підписатися
+                  </Link>
+                )}
+              </div>
             </header>
+
+            {subscriptionError ? (
+              <p className="orgs-page__status orgs-page__status--error" role="alert">
+                {subscriptionError}
+              </p>
+            ) : null}
+            {canSubscribe && subscribed && !subscriptionError ? (
+              <p className="org-detail__subscribe-hint">
+                Сповіщення про нові події надходитимуть на вашу пошту реєстрації.
+              </p>
+            ) : null}
 
             {organization.description ? (
               <p className="org-detail__description">{organization.description}</p>

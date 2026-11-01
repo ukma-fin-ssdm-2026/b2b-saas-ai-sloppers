@@ -51,3 +51,16 @@
 .events-page .orgs-page__meta {
   margin-bottom: 1rem;
 }
+
+.events-page .org-event-card {
+  grid-template-columns: 7.5rem 1fr;
+}
+
+.events-page .org-event-card__image,
+.events-page .org-event-card__image-fallback {
+  width: 7.5rem;
+}
+
+.events-page .org-event-card__image-fallback {
+  height: calc(7.5rem * 5 / 4);
+}

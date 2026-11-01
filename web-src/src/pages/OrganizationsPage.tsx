@@ -1,13 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ApiError, listOrganizations } from '../api/organizations'
+import CircularCarousel, {
+  type CircularCarouselItem,
+} from '../components/CircularCarousel'
 import type { Organization } from '../types/organization'
 import './OrganizationsPage.css'
 
 const PAGE_SIZE = 20
 const SEARCH_DEBOUNCE_MS = 300
 
+function logoPlaceholder(name: string): string {
+  const letter = (name.charAt(0) || '?').toUpperCase()
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="900" viewBox="0 0 900 900">
+  <rect width="900" height="900" fill="#161616"/>
+  <rect x="48" y="48" width="804" height="804" fill="none" stroke="#2f2f2f" stroke-width="2"/>
+  <text x="450" y="510" text-anchor="middle" fill="#cfcfcf"
+    font-family="Georgia, Times New Roman, serif" font-size="280">${letter}</text>
+</svg>`.trim()
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+function toCarouselItem(org: Organization): CircularCarouselItem {
+  return {
+    src: org.logoUrl || logoPlaceholder(org.name),
+    alt: `Логотип ${org.name}`,
+    title: org.name,
+  }
+}
+
 function OrganizationsPage() {
+  const navigate = useNavigate()
   const [searchInput, setSearchInput] = useState('')
   const [query, setQuery] = useState('')
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -91,11 +115,10 @@ function OrganizationsPage() {
       setTotal(page.pagination.total)
     } catch (err) {
       if (requestId !== requestIdRef.current) return
-
       const message =
         err instanceof ApiError
-          ? `Не вдалося довантажити (${err.status})`
-          : 'Не вдалося довантажити організації'
+          ? `Не вдалося завантажити (${err.status})`
+          : 'Не вдалося завантажити організації'
       setError(message)
     } finally {
       if (requestId === requestIdRef.current) {
@@ -108,34 +131,39 @@ function OrganizationsPage() {
     setReloadToken((token) => token + 1)
   }, [])
 
+  const carouselItems = useMemo(
+    () => organizations.map(toCarouselItem),
+    [organizations],
+  )
+
   const showEmpty =
     !loading && !error && organizations.length === 0 && !loadingMore
-  const showList = organizations.length > 0
+  const showCarousel = organizations.length > 0
 
   return (
     <main className="orgs-page">
       <div className="orgs-page__inner">
-        <p className="orgs-page__eyebrow">Могилянка</p>
-        <h1 className="orgs-page__title">Організації</h1>
-
-        <div className="orgs-page__toolbar">
-          <label className="orgs-search">
-            <span className="orgs-search__label">Пошук</span>
-            <input
-              className="orgs-search__input"
-              type="search"
-              value={searchInput}
-              onChange={(event) => setSearchInput(event.target.value)}
-              placeholder="Назва або slug…"
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </label>
-          {!loading && !error && total > 0 ? (
-            <p className="orgs-page__meta" aria-live="polite">
-              Знайдено: {total}
-            </p>
-          ) : null}
+        <div className="orgs-page__heading">
+          <h1 className="orgs-page__title">Організації</h1>
+          <div className="orgs-page__toolbar">
+            <label className="orgs-search">
+              <span className="orgs-search__label">Пошук</span>
+              <input
+                className="orgs-search__input"
+                type="search"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Назва або slug…"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            {!loading && !error && total > 0 ? (
+              <p className="orgs-page__meta" aria-live="polite">
+                Знайдено: {total}
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {loading && <p className="orgs-page__status">Завантаження…</p>}
@@ -157,46 +185,41 @@ function OrganizationsPage() {
           </p>
         )}
 
-        {showList && (
+        {showCarousel && (
           <>
-            <ul className="orgs-list">
-              {organizations.map((org) => (
-                <li key={org.id}>
-                  <Link
-                    to={`/organizations/${org.id}`}
-                    className="orgs-card"
-                  >
-                    <span className="orgs-card__bracket" aria-hidden="true">
-                      (
-                    </span>
-                    <div className="orgs-card__media" aria-hidden={!org.logoUrl}>
-                      {org.logoUrl ? (
-                        <img
-                          className="orgs-card__logo"
-                          src={org.logoUrl}
-                          alt=""
-                          loading="lazy"
-                        />
-                      ) : (
-                        <span className="orgs-card__logo-fallback">
-                          {org.name.charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="orgs-card__body">
-                      <h2 className="orgs-card__name">{org.name}</h2>
-                      <p className="orgs-card__slug">{org.slug}</p>
-                      {org.description ? (
-                        <p className="orgs-card__desc">{org.description}</p>
-                      ) : null}
-                    </div>
-                    <span className="orgs-card__bracket" aria-hidden="true">
-                      )
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="orgs-page__carousel">
+              <CircularCarousel
+                items={carouselItems}
+                preset="cylinder"
+                intro="rise"
+                cardWidth={220}
+                aspectRatio={1}
+                speed={14}
+                captions={false}
+                gap={25}
+                tilt={-5}
+                curve={1}
+                perspective={2500}
+                autoplay="drift"
+                interval={3}
+                direction="left"
+                momentum={0.6}
+                snap
+                pauseOnHover
+                focusOnClick
+                draggable
+                parallax={0.3}
+                stretch={0.5}
+                fadeColor="#0a0a0a"
+                depthFade={0.55}
+                innerShade={0.6}
+                cornerRadius={12}
+                onItemClick={(_item, index) => {
+                  const org = organizations.at(index)
+                  if (org) navigate(`/organizations/${org.id}`)
+                }}
+              />
+            </div>
 
             {error && (
               <div className="orgs-page__status-block" role="alert">

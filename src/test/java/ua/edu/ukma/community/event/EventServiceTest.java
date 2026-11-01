@@ -14,6 +14,7 @@ import ua.edu.ukma.community.common.error.ErrorCode;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.organization.OrganizationDeleted;
 import ua.edu.ukma.community.organization.OrganizationService;
+import ua.edu.ukma.community.subscription.SubscriptionService;
 
 import java.util.List;
 import java.util.Optional;
@@ -43,12 +44,14 @@ class EventServiceTest {
     private EventRepository repository;
     @Mock
     private OrganizationService organizations;
+    @Mock
+    private SubscriptionService subscriptions;
 
     private EventService service;
 
     @BeforeEach
     void setUp() {
-        service = new EventService(repository, organizations, FIXED_CLOCK);
+        service = new EventService(repository, organizations, subscriptions, FIXED_CLOCK);
     }
 
     private static ApiException notFound(ErrorCode code) {

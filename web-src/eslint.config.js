@@ -32,4 +32,12 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Third-party CircularCarousel syncs refs during render for the rAF loop.
+    files: ['**/CircularCarousel.tsx'],
+    rules: {
+      'react-hooks/refs': 'off',
+      'security/detect-object-injection': 'off',
+    },
+  },
 )
