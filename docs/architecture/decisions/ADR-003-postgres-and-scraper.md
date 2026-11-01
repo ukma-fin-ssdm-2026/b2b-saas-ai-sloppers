@@ -1,6 +1,6 @@
 # ADR-003: PostgreSQL і Scraper Worker
 
-- **Статус:** future
+- **Статус:** Accepted — PostgreSQL реалізовано; Scraper Worker заплановано
 - **Дата:** 2026-09-30
 - **Учасники рішення:** Architecture (Artem Butyrin)
 - **Пов’язано:** [ADR-001](ADR-001-architectural-style.md), NFR-001…007, NFR-013

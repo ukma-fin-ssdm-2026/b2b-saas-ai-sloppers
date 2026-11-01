@@ -145,7 +145,7 @@ class OrganizationServiceTest {
             when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             Organization created = service.create(new OrganizationCreateRequest(
-                    "  FIDo  ", "fido", "IT-спільнота", "fido_naukma", "fido@ukma.edu.ua"));
+                    "  FIDo  ", "fido", "IT-спільнота", "fido_naukma", "fido@ukma.edu.ua", "head@ukma.edu.ua"));
 
             assertThat(created.id()).isNotNull();
             assertThat(created.name()).isEqualTo("FIDo");
@@ -160,7 +160,7 @@ class OrganizationServiceTest {
             when(repository.existsBySlug("debate-club", null)).thenReturn(true);
 
             assertThatThrownBy(() -> service.create(new OrganizationCreateRequest(
-                    "Ще один дебатний клуб", "debate-club", null, null, null)))
+                    "Ще один дебатний клуб", "debate-club", null, null, null, "head@ukma.edu.ua")))
                     .isInstanceOfSatisfying(ApiException.class, ex -> {
                         assertThat(ex.code()).isEqualTo(ErrorCode.SLUG_ALREADY_EXISTS);
                         assertThat(ex.details()).singleElement()

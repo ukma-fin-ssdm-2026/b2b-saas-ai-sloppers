@@ -36,11 +36,11 @@ public class CalendarController {
     private final CalendarExportService calendar;
 
     public CalendarController(EventService events, OrganizationService organizations,
-<span class="nc" id="L39">                              CalendarExportService calendar) {</span>
-<span class="nc" id="L40">        this.events = events;</span>
-<span class="nc" id="L41">        this.organizations = organizations;</span>
-<span class="nc" id="L42">        this.calendar = calendar;</span>
-<span class="nc" id="L43">    }</span>
+<span class="fc" id="L39">                              CalendarExportService calendar) {</span>
+<span class="fc" id="L40">        this.events = events;</span>
+<span class="fc" id="L41">        this.organizations = organizations;</span>
+<span class="fc" id="L42">        this.calendar = calendar;</span>
+<span class="fc" id="L43">    }</span>
 
     @GetMapping(&quot;/calendar.ics&quot;)
     @Operation(operationId = &quot;downloadEventIcs&quot;, summary = &quot;Файл .ics для події&quot;,

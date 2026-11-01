@@ -24,6 +24,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import ua.edu.ukma.community.auth.CurrentUser;
+import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.config.OpenApiConfig;
@@ -39,9 +41,16 @@ public class OrganizationController {
     private static final String ORG_ID_EXAMPLE = "3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60";
 
     private final OrganizationService organizations;
+    private final OrganizationCreationService creation;
+    private final CurrentUser currentUser;
+    private final OrgRolePolicy policy;
 
-    public OrganizationController(OrganizationService organizations) {
+    public OrganizationController(OrganizationService organizations, OrganizationCreationService creation,
+                                  CurrentUser currentUser, OrgRolePolicy policy) {
         this.organizations = organizations;
+        this.creation = creation;
+        this.currentUser = currentUser;
+        this.policy = policy;
     }
 
     @GetMapping
@@ -83,7 +92,8 @@ public class OrganizationController {
     @ResponseStatus(HttpStatus.CREATED)
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = "createOrganization", summary = "Створити організацію",
-            description = "Лише суперадмін. Slug має бути унікальним.")
+            description = "Лише Global Admin. Slug має бути унікальним. Перший голова (headEmail) "
+                    + "призначається одразу: організація без голови не створюється.")
     @ApiResponse(responseCode = "201", description = "Організацію створено",
             headers = @Header(name = "Location", description = "URL нової організації",
                     schema = @Schema(type = "string", format = "uri")))
@@ -92,7 +102,7 @@ public class OrganizationController {
     @ApiResponse(responseCode = "403", ref = OpenApiConfig.FORBIDDEN)
     @ApiResponse(responseCode = "409", ref = OpenApiConfig.CONFLICT)
     public ResponseEntity<Organization> createOrganization(@Valid @RequestBody OrganizationCreateRequest request) {
-        Organization created = organizations.create(request);
+        Organization created = creation.create(currentUser.require(), request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(created.id()).toUri();
         return ResponseEntity.created(location).body(created);
@@ -112,6 +122,7 @@ public class OrganizationController {
             @Parameter(description = "Ідентифікатор організації (UUID)", example = ORG_ID_EXAMPLE)
             @PathVariable("organizationId") UUID organizationId,
             @Valid @RequestBody OrganizationUpdateRequest request) {
+        policy.requireHeadOrAdmin(currentUser.require(), organizationId);
         return organizations.update(organizationId, request);
     }
 
@@ -119,7 +130,7 @@ public class OrganizationController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = "deleteOrganization", summary = "Видалити організацію",
-            description = "Лише суперадмін. Разом з організацією видаляються її події.")
+            description = "Лише Global Admin. Разом з організацією видаляються її події, голови й файли.")
     @ApiResponse(responseCode = "204", description = "Організацію видалено")
     @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
     @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
@@ -128,6 +139,7 @@ public class OrganizationController {
     public void deleteOrganization(
             @Parameter(description = "Ідентифікатор організації (UUID)", example = ORG_ID_EXAMPLE)
             @PathVariable("organizationId") UUID organizationId) {
+        policy.requireGlobalAdmin(currentUser.require());
         organizations.delete(organizationId);
     }
 }

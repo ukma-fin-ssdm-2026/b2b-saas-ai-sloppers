@@ -69,9 +69,7 @@ public record Event(
 
     public Event withDetails(String newTitle, String newDescription, OffsetDateTime newStartsAt,
                              String newLocation, String newOriginalUrl, OffsetDateTime now) {
-        if (status == EventStatus.REJECTED) {
-            throw transitionNotAllowed("редагувати");
-        }
+        requireNotRejected("редагувати");
         return new Event(id, organizationId,
                 newTitle != null ? newTitle.trim() : title,
                 newDescription != null ? newDescription : description,
@@ -90,11 +88,20 @@ public record Event(
      * Нова картинка (або {@code null}, щоб прибрати). Відхилену подію не змінюємо, як і в {@link #withDetails}.
      */
     public Event withImage(String newImageUrl, OffsetDateTime now) {
-        if (status == EventStatus.REJECTED) {
-            throw transitionNotAllowed("змінити картинку");
-        }
+        requireNotRejected("змінити картинку");
         return new Event(id, organizationId, title, description, startsAt, location, originalUrl,
                 newImageUrl, sourceId, externalPostId, status, verified, createdAt, now);
+    }
+
+    /**
+     * Відхилена подія — кінцевий стан, її не можна змінювати (409 INVALID_STATE_TRANSITION).
+     *
+     * @param action що саме намагаються зробити, для повідомлення про помилку
+     */
+    public void requireNotRejected(String action) {
+        if (status == EventStatus.REJECTED) {
+            throw transitionNotAllowed(action);
+        }
     }
 
     private ApiException transitionNotAllowed(String action) {

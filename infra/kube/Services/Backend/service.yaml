@@ -1,0 +1,19 @@
+# ClusterIP only: the backend is reachable through the frontend nginx (/api), not from outside (ADR-004 p.5).
+# The name is used in web-src/docker/nginx.conf (proxy_pass http://backend:8080).
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    app.kubernetes.io/name: backend
+    app.kubernetes.io/part-of: community
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LoginService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.auth</a> &gt; <span class="el_source">LoginService.java</span></div><h1>LoginService.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.auth;
+
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import ua.edu.ukma.community.common.error.ApiException;
+import ua.edu.ukma.community.common.error.ErrorCode;
+
+
+@Service
+public class LoginService {
+
+    private final UserRepository users;
+    private final PasswordEncoder passwords;
+    private final TokenService tokens;
+    private final String dummyHash;
+
+<span class="fc" id="L17">    public LoginService(UserRepository users, PasswordEncoder passwords, TokenService tokens) {</span>
+<span class="fc" id="L18">        this.users = users;</span>
+<span class="fc" id="L19">        this.passwords = passwords;</span>
+<span class="fc" id="L20">        this.tokens = tokens;</span>
+<span class="fc" id="L21">        this.dummyHash = passwords.encode(&quot;not-a-real-password&quot;);</span>
+<span class="fc" id="L22">    }</span>
+
+    public TokenResponse login(String rawEmail, String password) {
+<span class="fc" id="L25">        User user = users.findByEmail(Emails.normalize(rawEmail)).orElse(null);</span>
+<span class="fc bfc" id="L26" title="All 2 branches covered.">        if (user == null) {</span>
+<span class="fc" id="L27">            passwords.matches(password, dummyHash);</span>
+<span class="fc" id="L28">            throw invalidCredentials();</span>
+        }
+<span class="fc bfc" id="L30" title="All 2 branches covered.">        if (!passwords.matches(password, user.passwordHash())) {</span>
+<span class="fc" id="L31">            throw invalidCredentials();</span>
+        }
+<span class="fc bfc" id="L33" title="All 2 branches covered.">        if (user.status() == UserStatus.PENDING) {</span>
+<span class="fc" id="L34">            throw new ApiException(ErrorCode.ACCOUNT_NOT_VERIFIED,</span>
+                    &quot;Пошту не підтверджено: введіть код з листа або запросіть новий&quot;);
+        }
+<span class="fc bfc" id="L37" title="All 2 branches covered.">        if (user.status() == UserStatus.BLOCKED) {</span>
+<span class="fc" id="L38">            throw new ApiException(ErrorCode.ACCOUNT_BLOCKED, &quot;Акаунт заблоковано&quot;);</span>
+        }
+<span class="fc" id="L40">        return tokens.issue(user);</span>
+    }
+
+    private static ApiException invalidCredentials() {
+<span class="fc" id="L44">        return new ApiException(ErrorCode.INVALID_CREDENTIALS, &quot;Неправильна пошта або пароль&quot;);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -8,13 +8,13 @@ import java.time.ZoneId;
 
 
 @Configuration
-<span class="nc" id="L11">public class ClockConfig {</span>
+<span class="fc" id="L11">public class ClockConfig {</span>
 
 <span class="fc" id="L13">    public static final ZoneId KYIV = ZoneId.of(&quot;Europe/Kyiv&quot;);</span>
 
     @Bean
     Clock clock() {
-<span class="nc" id="L17">        return Clock.system(KYIV);</span>
+<span class="fc" id="L17">        return Clock.system(KYIV);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

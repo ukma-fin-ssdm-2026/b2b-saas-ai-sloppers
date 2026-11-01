@@ -32,7 +32,7 @@ public record OffsetPage&lt;T&gt;(
     }
 
     public &lt;R&gt; OffsetPage&lt;R&gt; map(Function&lt;? super T, ? extends R&gt; mapper) {
-<span class="nc" id="L35">        return new OffsetPage&lt;&gt;(data.stream().&lt;R&gt;map(mapper).toList(), pagination);</span>
+<span class="fc" id="L35">        return new OffsetPage&lt;&gt;(data.stream().&lt;R&gt;map(mapper).toList(), pagination);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

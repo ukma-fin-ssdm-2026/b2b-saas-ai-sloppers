@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import ua.edu.ukma.community.auth.CurrentUser;
+import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.config.OpenApiConfig;
 
@@ -29,9 +31,16 @@ import java.util.UUID;
 public class EventImageController {
 
     private final EventImageService images;
+    private final EventService events;
+    private final CurrentUser currentUser;
+    private final OrgRolePolicy policy;
 
-    public EventImageController(EventImageService images) {
+    public EventImageController(EventImageService images, EventService events, CurrentUser currentUser,
+                                OrgRolePolicy policy) {
         this.images = images;
+        this.events = events;
+        this.currentUser = currentUser;
+        this.policy = policy;
     }
 
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -52,6 +61,7 @@ public class EventImageController {
             @Parameter(description = "Ідентифікатор події (UUID)", example = EventController.EVENT_ID_EXAMPLE)
             @PathVariable("eventId") UUID eventId,
             @Parameter(description = "Файл картинки") @RequestPart("file") MultipartFile file) {
+        requireHeadOfEvent(eventId);
         return EventResponse.from(images.upload(eventId, file));
     }
 
@@ -69,6 +79,11 @@ public class EventImageController {
     public void deleteEventImage(
             @Parameter(description = "Ідентифікатор події (UUID)", example = EventController.EVENT_ID_EXAMPLE)
             @PathVariable("eventId") UUID eventId) {
+        requireHeadOfEvent(eventId);
         images.delete(eventId);
+    }
+
+    private void requireHeadOfEvent(UUID eventId) {
+        policy.requireHead(currentUser.require(), events.get(eventId).organizationId());
     }
 }

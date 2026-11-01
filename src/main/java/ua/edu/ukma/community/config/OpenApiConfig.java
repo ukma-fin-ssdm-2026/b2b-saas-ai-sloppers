@@ -35,6 +35,8 @@ public class OpenApiConfig {
     public static final String PAYLOAD_TOO_LARGE = "#/components/responses/PayloadTooLarge";
     public static final String UNSUPPORTED_MEDIA_TYPE = "#/components/responses/UnsupportedMediaType";
     public static final String STORAGE_UNAVAILABLE = "#/components/responses/StorageUnavailable";
+    public static final String MAIL_UNAVAILABLE = "#/components/responses/MailUnavailable";
+    public static final String TOO_MANY_REQUESTS = "#/components/responses/TooManyRequests";
 
     @Bean
     OpenAPI communityOpenApi() {
@@ -48,13 +50,16 @@ public class OpenApiConfig {
                                 Відповіді — заглушки з пам'яті процесу.""")
                         .contact(new Contact().name("Команда Student Community")))
                 .tags(List.of(
-                        new Tag().name("Organizations").description("Каталог студентських організацій")))
+                        new Tag().name("Auth")
+                                .description("Реєстрація з поштою @ukma.edu.ua, вхід, поточний користувач"),
+                        new Tag().name("Organizations").description("Каталог студентських організацій"),
+                        new Tag().name("Heads").description("Голови організацій і журнал змін ролей")))
                 .components(new Components()
                         .addSecuritySchemes(BEARER, new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")
-                                .description("JWT власного AuthZ-сервісу (заплановано; у заглушках не перевіряється)")));
+                                .description("JWT з POST /api/v1/auth/login, діє 60 хв")));
     }
 
     @Bean
@@ -91,6 +96,12 @@ public class OpenApiConfig {
                     example("UNSUPPORTED_MEDIA_TYPE", "Підтримуються лише картинки JPEG, PNG і WebP",
                             List.of(Map.of("field", "file", "message", "Невідомий формат файлу",
                                     "providedValue", "logo.svg")))));
+            components.addResponses("MailUnavailable", errorResponse(
+                    "Не вдалося надіслати лист з кодом (MAIL_UNAVAILABLE)",
+                    example("MAIL_UNAVAILABLE", "Не вдалося надіслати лист з кодом", List.of())));
+            components.addResponses("TooManyRequests", errorResponse(
+                    "Забагато запитів, спробуйте пізніше (TOO_MANY_REQUESTS)",
+                    example("TOO_MANY_REQUESTS", "Новий код можна запросити через 42 с", List.of())));
             components.addResponses("StorageUnavailable", errorResponse(
                     "Файлове сховище недоступне або не налаштоване (STORAGE_UNAVAILABLE)",
                     example("STORAGE_UNAVAILABLE", "Не вдалося зберегти файл у сховищі", List.of())));

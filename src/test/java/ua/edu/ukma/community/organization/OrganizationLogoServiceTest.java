@@ -85,6 +85,14 @@ class OrganizationLogoServiceTest {
     }
 
     @Test
+    @DisplayName("після видалення організації прибирається вся її папка у сховищі")
+    void organizationDeletionCleansFolder() {
+        logos.onOrganizationDeleted(new OrganizationDeleted(ORG_ID));
+
+        verify(images).deleteFolderQuietly("organizations/" + ORG_ID);
+    }
+
+    @Test
     @DisplayName("неіснуюча організація → 404 ще до завантаження файлу")
     void unknownOrganization() {
         assertThatThrownBy(() -> logos.upload(java.util.UUID.randomUUID(), file))

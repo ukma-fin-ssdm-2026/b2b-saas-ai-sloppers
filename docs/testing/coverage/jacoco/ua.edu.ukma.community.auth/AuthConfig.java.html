@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthConfig.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.auth</a> &gt; <span class="el_source">AuthConfig.java</span></div><h1>AuthConfig.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.auth;
+
+import com.nimbusds.jose.jwk.source.ImmutableSecret;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.SecureRandom;
+
+
+@Configuration
+@EnableConfigurationProperties(AuthProperties.class)
+<span class="fc" id="L29">public class AuthConfig {</span>
+
+    static final String ISSUER = &quot;student-community&quot;;
+
+<span class="fc" id="L33">    private static final Logger LOG = LoggerFactory.getLogger(AuthConfig.class);</span>
+    private static final int MIN_SECRET_BYTES = 32;
+    private static final String HMAC = &quot;HmacSHA256&quot;;
+<span class="fc" id="L36">    private static final SecureRandom RANDOM = new SecureRandom();</span>
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+<span class="fc" id="L40">        return new BCryptPasswordEncoder();</span>
+    }
+
+    @Bean
+    SecretKey jwtKey(AuthProperties properties) {
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">        if (properties.jwtSecret().isBlank()) {</span>
+<span class="fc" id="L46">            LOG.warn(&quot;AUTH_JWT_SECRET is not set: using a random key, tokens will be invalid after restart&quot;);</span>
+<span class="fc" id="L47">            byte[] random = new byte[MIN_SECRET_BYTES];</span>
+<span class="fc" id="L48">            RANDOM.nextBytes(random);</span>
+<span class="fc" id="L49">            return new SecretKeySpec(random, HMAC);</span>
+        }
+<span class="nc" id="L51">        byte[] secret = properties.jwtSecret().getBytes(StandardCharsets.UTF_8);</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">        if (secret.length &lt; MIN_SECRET_BYTES) {</span>
+<span class="nc" id="L53">            throw new IllegalStateException(&quot;AUTH_JWT_SECRET must be at least &quot; + MIN_SECRET_BYTES + &quot; bytes long&quot;);</span>
+        }
+<span class="nc" id="L55">        return new SecretKeySpec(secret, HMAC);</span>
+    }
+
+    @Bean
+    JwtEncoder jwtEncoder(SecretKey jwtKey) {
+<span class="fc" id="L60">        return new NimbusJwtEncoder(new ImmutableSecret&lt;&gt;(jwtKey));</span>
+    }
+
+    @Bean
+    JwtDecoder jwtDecoder(SecretKey jwtKey) {
+<span class="fc" id="L65">        NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtKey).macAlgorithm(MacAlgorithm.HS256).build();</span>
+<span class="fc" id="L66">        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(ISSUER));</span>
+<span class="fc" id="L67">        return decoder;</span>
+    }
+
+
+    @Bean
+    CodeSender codeSender(ObjectProvider&lt;JavaMailSender&gt; mailSender, AuthProperties properties,
+                          @Value(&quot;${spring.mail.host:}&quot;) String mailHost,
+                          @Value(&quot;${spring.mail.username:}&quot;) String mailUsername) {
+<span class="nc" id="L75">        JavaMailSender mail = mailSender.getIfAvailable();</span>
+
+<span class="nc bnc" id="L77" title="All 4 branches missed.">        if (mail == null || mailHost.isBlank()) {</span>
+<span class="nc" id="L78">            LOG.warn(&quot;SMTP is not configured (spring.mail.host): verification codes will be written to the log&quot;);</span>
+<span class="nc" id="L79">            return new LogCodeSender();</span>
+        }
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        String from = properties.mailFrom().isBlank() ? mailUsername : properties.mailFrom();</span>
+<span class="nc" id="L82">        return new MailCodeSender(mail, from, properties.codeTtl());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrganizationLogoController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.organization</a> &gt; <span class="el_source">OrganizationLogoController.java</span></div><h1>OrganizationLogoController.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.organization;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import ua.edu.ukma.community.auth.CurrentUser;
+import ua.edu.ukma.community.auth.OrgRolePolicy;
+import ua.edu.ukma.community.common.ApiPaths;
+import ua.edu.ukma.community.config.OpenApiConfig;
+
+import java.util.UUID;
+
+/**
+ * Логотип організації: файл у Supabase Storage, посилання в {@link Organization#logoUrl()}.
+ */
+@RestController
+@RequestMapping(ApiPaths.V1 + &quot;/organizations/{organizationId}/logo&quot;)
+@Tag(name = &quot;Organizations&quot;)
+public class OrganizationLogoController {
+
+    private static final String ORG_ID_EXAMPLE = &quot;3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60&quot;;
+
+    private final OrganizationLogoService logos;
+    private final CurrentUser currentUser;
+    private final OrgRolePolicy policy;
+
+<span class="fc" id="L39">    public OrganizationLogoController(OrganizationLogoService logos, CurrentUser currentUser, OrgRolePolicy policy) {</span>
+<span class="fc" id="L40">        this.logos = logos;</span>
+<span class="fc" id="L41">        this.currentUser = currentUser;</span>
+<span class="fc" id="L42">        this.policy = policy;</span>
+<span class="fc" id="L43">    }</span>
+
+    @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @SecurityRequirement(name = OpenApiConfig.BEARER)
+    @Operation(operationId = &quot;uploadOrganizationLogo&quot;, summary = &quot;Завантажити або замінити логотип&quot;,
+            description = &quot;Global Admin або голова цієї організації. JPEG, PNG або WebP до 5 МБ, поле форми `file`. &quot;
+                    + &quot;Формат визначається за вмістом файлу. Попередній логотип видаляється зі сховища.&quot;)
+    @ApiResponse(responseCode = &quot;200&quot;, description = &quot;Організацію з новим logoUrl повернуто&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = &quot;401&quot;, ref = OpenApiConfig.UNAUTHORIZED)
+    @ApiResponse(responseCode = &quot;403&quot;, ref = OpenApiConfig.FORBIDDEN)
+    @ApiResponse(responseCode = &quot;404&quot;, ref = OpenApiConfig.NOT_FOUND)
+    @ApiResponse(responseCode = &quot;413&quot;, ref = OpenApiConfig.PAYLOAD_TOO_LARGE)
+    @ApiResponse(responseCode = &quot;415&quot;, ref = OpenApiConfig.UNSUPPORTED_MEDIA_TYPE)
+    @ApiResponse(responseCode = &quot;503&quot;, ref = OpenApiConfig.STORAGE_UNAVAILABLE)
+    public Organization uploadOrganizationLogo(
+            @Parameter(description = &quot;Ідентифікатор організації (UUID)&quot;, example = ORG_ID_EXAMPLE)
+            @PathVariable(&quot;organizationId&quot;) UUID organizationId,
+            @Parameter(description = &quot;Файл картинки&quot;) @RequestPart(&quot;file&quot;) MultipartFile file) {
+<span class="nc" id="L62">        policy.requireHeadOrAdmin(currentUser.require(), organizationId);</span>
+<span class="nc" id="L63">        return logos.upload(organizationId, file);</span>
+    }
+
+    @DeleteMapping
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @SecurityRequirement(name = OpenApiConfig.BEARER)
+    @Operation(operationId = &quot;deleteOrganizationLogo&quot;, summary = &quot;Прибрати логотип&quot;,
+            description = &quot;Global Admin або голова цієї організації. Якщо логотипу немає, нічого не змінюється.&quot;)
+    @ApiResponse(responseCode = &quot;204&quot;, description = &quot;Логотипу більше немає&quot;)
+    @ApiResponse(responseCode = &quot;400&quot;, ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = &quot;401&quot;, ref = OpenApiConfig.UNAUTHORIZED)
+    @ApiResponse(responseCode = &quot;403&quot;, ref = OpenApiConfig.FORBIDDEN)
+    @ApiResponse(responseCode = &quot;404&quot;, ref = OpenApiConfig.NOT_FOUND)
+    public void deleteOrganizationLogo(
+            @Parameter(description = &quot;Ідентифікатор організації (UUID)&quot;, example = ORG_ID_EXAMPLE)
+            @PathVariable(&quot;organizationId&quot;) UUID organizationId) {
+<span class="nc" id="L79">        policy.requireHeadOrAdmin(currentUser.require(), organizationId);</span>
+<span class="nc" id="L80">        logos.delete(organizationId);</span>
+<span class="nc" id="L81">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

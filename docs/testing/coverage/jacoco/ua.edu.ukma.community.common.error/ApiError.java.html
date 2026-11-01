@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 @Schema(description = &quot;Тіло помилки: код для програми, повідомлення для людини, деталі по полях&quot;)
-<span class="nc" id="L9">public record ApiError(</span>
+<span class="fc" id="L9">public record ApiError(</span>
         @Schema(description = &quot;Машиночитаний код помилки&quot;, example = &quot;VALIDATION_ERROR&quot;,
                 requiredMode = Schema.RequiredMode.REQUIRED)
         ErrorCode code,

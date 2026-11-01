@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthRequests.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.auth</a> &gt; <span class="el_source">AuthRequests.java</span></div><h1>AuthRequests.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.auth;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+
+public final class AuthRequests {
+
+    private AuthRequests() {
+    }
+
+    @Schema(name = &quot;RegisterRequest&quot;, description = &quot;Реєстрація з університетською поштою&quot;)
+<span class="fc" id="L16">    public record Register(</span>
+            @Schema(example = &quot;student@ukma.edu.ua&quot;)
+            @NotBlank(message = &quot;Пошта обов'язкова&quot;)
+            @Email(message = &quot;Некоректна адреса пошти&quot;)
+            @Size(max = 320, message = &quot;Пошта: не довше 320 символів&quot;)
+            String email,
+
+            @Schema(example = &quot;correct-horse-battery&quot;, minLength = 8, maxLength = 72)
+            @NotBlank(message = &quot;Пароль обов'язковий&quot;)
+            @Size(min = 8, max = 72, message = &quot;Пароль: від 8 до 72 символів&quot;)
+            String password
+    ) {
+        @Override
+        public String toString() {
+<span class="nc" id="L30">            return &quot;Register[email=&quot; + email + &quot;]&quot;;</span>
+        }
+    }
+
+    @Schema(name = &quot;VerifyRequest&quot;, description = &quot;Підтвердження пошти кодом з листа&quot;)
+<span class="fc" id="L35">    public record Verify(</span>
+            @Schema(example = &quot;student@ukma.edu.ua&quot;)
+            @NotBlank(message = &quot;Пошта обов'язкова&quot;)
+            String email,
+
+            @Schema(example = &quot;042517&quot;)
+            @NotBlank(message = &quot;Код обов'язковий&quot;)
+            @Pattern(regexp = &quot;\\s*\\d{6}\\s*&quot;, message = &quot;Код: 6 цифр&quot;)
+            String code
+    ) {
+    }
+
+    @Schema(name = &quot;ResendCodeRequest&quot;, description = &quot;Запит нового коду підтвердження&quot;)
+<span class="nc" id="L48">    public record ResendCode(</span>
+            @Schema(example = &quot;student@ukma.edu.ua&quot;)
+            @NotBlank(message = &quot;Пошта обов'язкова&quot;)
+            String email
+    ) {
+    }
+
+    @Schema(name = &quot;LoginRequest&quot;, description = &quot;Вхід за поштою й паролем&quot;)
+<span class="fc" id="L56">    public record Login(</span>
+            @Schema(example = &quot;student@ukma.edu.ua&quot;)
+            @NotBlank(message = &quot;Пошта обов'язкова&quot;)
+            String email,
+
+            @Schema(example = &quot;correct-horse-battery&quot;)
+            @NotBlank(message = &quot;Пароль обов'язковий&quot;)
+            String password
+    ) {
+        @Override
+        public String toString() {
+<span class="nc" id="L67">            return &quot;Login[email=&quot; + email + &quot;]&quot;;</span>
+        }
+    }
+
+    @Schema(name = &quot;AppointHeadRequest&quot;, description = &quot;Призначити голову організації&quot;)
+<span class="fc" id="L72">    public record AppointHead(</span>
+            @Schema(description = &quot;Пошта зареєстрованого користувача з підтвердженою поштою&quot;,
+                    example = &quot;head@ukma.edu.ua&quot;)
+            @NotBlank(message = &quot;Пошта обов'язкова&quot;)
+            String email,
+
+            @Schema(description = &quot;Якщо задано — цього голову буде знято в тій самій операції (лише Global Admin)&quot;)
+            java.util.UUID replacesUserId
+    ) {
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

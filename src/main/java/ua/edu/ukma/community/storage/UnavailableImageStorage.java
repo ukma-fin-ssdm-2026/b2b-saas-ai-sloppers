@@ -15,4 +15,8 @@ public class UnavailableImageStorage implements ImageStorage {
     @Override
     public void deleteQuietly(String publicUrl) {
     }
+
+    @Override
+    public void deleteFolderQuietly(String folder) {
+    }
 }

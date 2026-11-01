@@ -9,28 +9,44 @@ import java.util.Locale;
 <span class="fc" id="L9">    VALIDATION_ERROR(HttpStatus.BAD_REQUEST),</span>
 <span class="fc" id="L10">    INVALID_PARAMETER(HttpStatus.BAD_REQUEST),</span>
 <span class="fc" id="L11">    MALFORMED_REQUEST(HttpStatus.BAD_REQUEST),</span>
-<span class="fc" id="L12">    UNAUTHORIZED(HttpStatus.UNAUTHORIZED),</span>
-<span class="fc" id="L13">    FORBIDDEN(HttpStatus.FORBIDDEN),</span>
-<span class="fc" id="L14">    ORGANIZATION_NOT_FOUND(HttpStatus.NOT_FOUND),</span>
-<span class="fc" id="L15">    EVENT_NOT_FOUND(HttpStatus.NOT_FOUND),</span>
-<span class="fc" id="L16">    ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND),</span>
-<span class="fc" id="L17">    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED),</span>
-<span class="fc" id="L18">    SLUG_ALREADY_EXISTS(HttpStatus.CONFLICT),</span>
-<span class="fc" id="L19">    INVALID_STATE_TRANSITION(HttpStatus.CONFLICT),</span>
-<span class="fc" id="L20">    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);</span>
+<span class="fc" id="L12">    INVALID_VERIFICATION_CODE(HttpStatus.BAD_REQUEST),</span>
+<span class="fc" id="L13">    VERIFICATION_CODE_EXPIRED(HttpStatus.BAD_REQUEST),</span>
+<span class="fc" id="L14">    UNAUTHORIZED(HttpStatus.UNAUTHORIZED),</span>
+<span class="fc" id="L15">    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED),</span>
+<span class="fc" id="L16">    FORBIDDEN(HttpStatus.FORBIDDEN),</span>
+<span class="fc" id="L17">    ACCOUNT_NOT_VERIFIED(HttpStatus.FORBIDDEN),</span>
+<span class="fc" id="L18">    ACCOUNT_BLOCKED(HttpStatus.FORBIDDEN),</span>
+<span class="fc" id="L19">    ORGANIZATION_NOT_FOUND(HttpStatus.NOT_FOUND),</span>
+<span class="fc" id="L20">    EVENT_NOT_FOUND(HttpStatus.NOT_FOUND),</span>
+<span class="fc" id="L21">    USER_NOT_FOUND(HttpStatus.NOT_FOUND),</span>
+<span class="fc" id="L22">    HEAD_NOT_FOUND(HttpStatus.NOT_FOUND),</span>
+<span class="fc" id="L23">    ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND),</span>
+<span class="fc" id="L24">    METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED),</span>
+<span class="fc" id="L25">    SLUG_ALREADY_EXISTS(HttpStatus.CONFLICT),</span>
+<span class="fc" id="L26">    INVALID_STATE_TRANSITION(HttpStatus.CONFLICT),</span>
+<span class="fc" id="L27">    EMAIL_ALREADY_REGISTERED(HttpStatus.CONFLICT),</span>
+<span class="fc" id="L28">    ACCOUNT_ALREADY_VERIFIED(HttpStatus.CONFLICT),</span>
+<span class="fc" id="L29">    ALREADY_HEAD(HttpStatus.CONFLICT),</span>
+<span class="fc" id="L30">    LAST_HEAD(HttpStatus.CONFLICT),</span>
+<span class="fc" id="L31">    TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS),</span>
+<span class="fc" id="L32">    PAYLOAD_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE),</span>
+<span class="fc" id="L33">    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE),</span>
+<span class="fc" id="L34">    STORAGE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE),</span>
+<span class="fc" id="L35">    MAIL_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE),</span>
+<span class="fc" id="L36">    INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR);</span>
 
     private final HttpStatus status;
 
-<span class="fc" id="L24">    ErrorCode(HttpStatus status) {</span>
-<span class="fc" id="L25">        this.status = status;</span>
-<span class="fc" id="L26">    }</span>
+<span class="fc" id="L40">    ErrorCode(HttpStatus status) {</span>
+<span class="fc" id="L41">        this.status = status;</span>
+<span class="fc" id="L42">    }</span>
 
     public HttpStatus status() {
-<span class="nc" id="L29">        return status;</span>
+<span class="fc" id="L45">        return status;</span>
     }
 
     public String anchor() {
-<span class="nc" id="L33">        return name().toLowerCase(Locale.ROOT).replace('_', '-');</span>
+<span class="fc" id="L49">        return name().toLowerCase(Locale.ROOT).replace('_', '-');</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

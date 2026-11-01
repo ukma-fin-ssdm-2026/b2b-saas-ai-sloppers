@@ -5,11 +5,11 @@
 | Файл | Призначення | Статус |
 |------|-------------|--------|
 | [high-level-design.md](high-level-design.md) | HLD: стиль, компоненти, інтерфейси | стиль + компоненти |
-| [uml/](uml/) | PlantUML-діаграми | components.puml, deployment.puml, sequence.puml готово |
-| [decisions/](decisions/) | ADR | ADR-001…004 готові |
-| traceability-matrix.md | Вимоги ↔ компоненти | команда |
-| data-model.md | Модель даних | команда |
-| [threat-model.md](threat-model.md) | STRIDE | готово |
+| [traceability-matrix.md](traceability-matrix.md) | Вимоги ↔ компоненти, сценарії атрибутів якості | готово |
+| [data-model.md](data-model.md) | Модель даних, чутливі поля позначено | готово |
+| [threat-model.md](threat-model.md) | Моделювання загроз за STRIDE, 7 ризиків | готово |
+| [uml/](uml/) | PlantUML-діаграми: компоненти, послідовність, розгортання, модель даних | готово |
+| [decisions/](decisions/) | ADR-001…ADR-005 | готово |
 
 ## Використання ШІ
 

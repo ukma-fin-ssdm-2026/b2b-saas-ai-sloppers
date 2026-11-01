@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SupabaseImageStorage.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.storage</a> &gt; <span class="el_source">SupabaseImageStorage.java</span></div><h1>SupabaseImageStorage.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.storage;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import ua.edu.ukma.community.common.LogSafe;
+import ua.edu.ukma.community.common.error.ApiException;
+import ua.edu.ukma.community.common.error.ErrorCode;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Картинки в Supabase Storage через його REST API.
+ * Бакет має бути публічним, щоб фронтенд міг показувати картинки за прямим посиланням.
+ * Секретний ключ ({@code sb_secret_...}) передається лише в заголовку {@code apikey}:
+ * це не JWT, тому в {@code Authorization: Bearer} його класти не можна.
+ */
+public class SupabaseImageStorage implements ImageStorage {
+
+<span class="fc" id="L26">    private static final Logger LOG = LoggerFactory.getLogger(SupabaseImageStorage.class);</span>
+    // імена файлів унікальні, тож кешувати можна довго
+    private static final String CACHE_CONTROL = &quot;max-age=31536000&quot;;
+    /** Скільки записів просимо за один запит списку і скільки видаляємо за один запит видалення. */
+    static final int PAGE_SIZE = 1000;
+    /** Захист від нескінченної рекурсії: у нас максимум organizations/{id}/events/{id}/файл. */
+    private static final int MAX_DEPTH = 5;
+<span class="fc" id="L33">    private static final ParameterizedTypeReference&lt;List&lt;Map&lt;String, Object&gt;&gt;&gt; LIST_TYPE =</span>
+<span class="fc" id="L34">            new ParameterizedTypeReference&lt;&gt;() {</span>
+            };
+
+    private final RestClient client;
+    private final String bucket;
+    private final String publicPrefix;
+
+    /**
+     * @param builder    білдер з налаштованими таймаутами (див. {@link StorageConfig}); у тестах — з моком сервера
+     * @param projectUrl {@code https://&lt;project-ref&gt;.supabase.co}
+     */
+<span class="fc" id="L45">    public SupabaseImageStorage(RestClient.Builder builder, String projectUrl, String secretKey, String bucket) {</span>
+<span class="pc bpc" id="L46" title="1 of 2 branches missed.">        String base = projectUrl.endsWith(&quot;/&quot;) ? projectUrl.substring(0, projectUrl.length() - 1) : projectUrl;</span>
+<span class="fc" id="L47">        this.client = builder</span>
+<span class="fc" id="L48">                .baseUrl(base + &quot;/storage/v1&quot;)</span>
+<span class="fc" id="L49">                .defaultHeader(&quot;apikey&quot;, secretKey)</span>
+<span class="fc" id="L50">                .build();</span>
+<span class="fc" id="L51">        this.bucket = bucket;</span>
+<span class="fc" id="L52">        this.publicPrefix = base + &quot;/storage/v1/object/public/&quot; + bucket + &quot;/&quot;;</span>
+<span class="fc" id="L53">    }</span>
+
+    @Override
+    public String upload(String key, byte[] data, String contentType) {
+        try {
+<span class="fc" id="L58">            client.post()</span>
+<span class="fc" id="L59">                    .uri(objectPath(key))</span>
+<span class="fc" id="L60">                    .header(&quot;Content-Type&quot;, contentType)</span>
+<span class="fc" id="L61">                    .header(&quot;cache-control&quot;, CACHE_CONTROL)</span>
+<span class="fc" id="L62">                    .body(data)</span>
+<span class="fc" id="L63">                    .retrieve()</span>
+<span class="fc" id="L64">                    .toBodilessEntity();</span>
+<span class="fc" id="L65">        } catch (RestClientException e) {</span>
+<span class="fc" id="L66">            LOG.error(&quot;Supabase Storage upload failed for {}/{}: {}&quot;, bucket, LogSafe.of(key),</span>
+<span class="fc" id="L67">                    LogSafe.of(e.getMessage()));</span>
+<span class="fc" id="L68">            throw new ApiException(ErrorCode.STORAGE_UNAVAILABLE, &quot;Не вдалося зберегти файл у сховищі&quot;);</span>
+<span class="fc" id="L69">        }</span>
+<span class="fc" id="L70">        return publicPrefix + key;</span>
+    }
+
+    @Override
+    public void deleteQuietly(String publicUrl) {
+<span class="fc bfc" id="L75" title="All 4 branches covered.">        if (publicUrl == null || !publicUrl.startsWith(publicPrefix)) {</span>
+<span class="fc" id="L76">            return;</span>
+        }
+<span class="fc" id="L78">        String key = publicUrl.substring(publicPrefix.length());</span>
+        try {
+<span class="fc" id="L80">            client.delete()</span>
+<span class="fc" id="L81">                    .uri(objectPath(key))</span>
+<span class="fc" id="L82">                    .retrieve()</span>
+<span class="fc" id="L83">                    .toBodilessEntity();</span>
+<span class="nc" id="L84">        } catch (RestClientException e) {</span>
+<span class="nc" id="L85">            LOG.warn(&quot;Supabase Storage delete failed for {}/{}: {}&quot;, bucket, LogSafe.of(key),</span>
+<span class="nc" id="L86">                    LogSafe.of(e.getMessage()));</span>
+<span class="fc" id="L87">        }</span>
+<span class="fc" id="L88">    }</span>
+
+    @Override
+    public void deleteFolderQuietly(String folder) {
+        try {
+<span class="fc" id="L93">            List&lt;String&gt; keys = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L94">            collectKeys(folder, 0, keys);</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">            for (int from = 0; from &lt; keys.size(); from += PAGE_SIZE) {</span>
+<span class="fc" id="L96">                List&lt;String&gt; batch = keys.subList(from, Math.min(from + PAGE_SIZE, keys.size()));</span>
+<span class="fc" id="L97">                client.method(HttpMethod.DELETE)</span>
+<span class="fc" id="L98">                        .uri(&quot;/object/&quot; + bucket)</span>
+<span class="fc" id="L99">                        .contentType(MediaType.APPLICATION_JSON)</span>
+<span class="fc" id="L100">                        .body(Map.of(&quot;prefixes&quot;, batch))</span>
+<span class="fc" id="L101">                        .retrieve()</span>
+<span class="fc" id="L102">                        .toBodilessEntity();</span>
+            }
+<span class="fc" id="L104">            LOG.info(&quot;Deleted {} file(s) under {}/{}&quot;, keys.size(), bucket, LogSafe.of(folder));</span>
+<span class="fc" id="L105">        } catch (RestClientException e) {</span>
+<span class="fc" id="L106">            LOG.warn(&quot;Supabase Storage folder cleanup failed for {}/{}: {}&quot;, bucket, LogSafe.of(folder),</span>
+<span class="fc" id="L107">                    LogSafe.of(e.getMessage()));</span>
+<span class="fc" id="L108">        }</span>
+<span class="fc" id="L109">    }</span>
+
+    /**
+     * Збирає повні ключі всіх файлів у папці й підпапках. Supabase повертає вміст лише одного рівня:
+     * файли мають {@code id}, а підпапки — {@code id = null}.
+     */
+    private void collectKeys(String folder, int depth, List&lt;String&gt; keys) {
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">        if (depth &gt; MAX_DEPTH) {</span>
+<span class="nc" id="L117">            return;</span>
+        }
+<span class="fc" id="L119">        int offset = 0;</span>
+        while (true) {
+<span class="fc" id="L121">            List&lt;Map&lt;String, Object&gt;&gt; page = client.post()</span>
+<span class="fc" id="L122">                    .uri(&quot;/object/list/&quot; + bucket)</span>
+<span class="fc" id="L123">                    .contentType(MediaType.APPLICATION_JSON)</span>
+<span class="fc" id="L124">                    .body(Map.of(&quot;prefix&quot;, folder, &quot;limit&quot;, PAGE_SIZE, &quot;offset&quot;, offset))</span>
+<span class="fc" id="L125">                    .retrieve()</span>
+<span class="fc" id="L126">                    .body(LIST_TYPE);</span>
+<span class="pc bpc" id="L127" title="1 of 4 branches missed.">            if (page == null || page.isEmpty()) {</span>
+<span class="fc" id="L128">                return;</span>
+            }
+<span class="fc bfc" id="L130" title="All 2 branches covered.">            for (Map&lt;String, Object&gt; item : page) {</span>
+<span class="fc" id="L131">                String path = folder + &quot;/&quot; + item.get(&quot;name&quot;);</span>
+<span class="fc bfc" id="L132" title="All 2 branches covered.">                if (item.get(&quot;id&quot;) == null) {</span>
+<span class="fc" id="L133">                    collectKeys(path, depth + 1, keys);</span>
+                } else {
+<span class="fc" id="L135">                    keys.add(path);</span>
+                }
+<span class="fc" id="L137">            }</span>
+<span class="pc bpc" id="L138" title="1 of 2 branches missed.">            if (page.size() &lt; PAGE_SIZE) {</span>
+<span class="fc" id="L139">                return;</span>
+            }
+<span class="nc" id="L141">            offset += PAGE_SIZE;</span>
+<span class="nc" id="L142">        }</span>
+    }
+
+    // ключ збираємо рядком, а не через {змінні} шаблону: інакше RestClient закодує &quot;/&quot; у ключі як %2F
+    private String objectPath(String key) {
+<span class="fc" id="L147">        return &quot;/object/&quot; + bucket + &quot;/&quot; + key;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OrgRolePolicy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.auth</a> &gt; <span class="el_source">OrgRolePolicy.java</span></div><h1>OrgRolePolicy.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.auth;
+
+import org.springframework.stereotype.Component;
+import ua.edu.ukma.community.common.error.ApiException;
+import ua.edu.ukma.community.common.error.ErrorCode;
+
+import java.util.UUID;
+
+
+@Component
+public class OrgRolePolicy {
+
+    private final HeadRepository heads;
+
+<span class="fc" id="L15">    public OrgRolePolicy(HeadRepository heads) {</span>
+<span class="fc" id="L16">        this.heads = heads;</span>
+<span class="fc" id="L17">    }</span>
+
+    public boolean isHead(User user, UUID organizationId) {
+<span class="fc" id="L20">        return heads.isHead(organizationId, user.id());</span>
+    }
+
+    public void requireGlobalAdmin(User user) {
+<span class="fc bfc" id="L24" title="All 2 branches covered.">        if (!user.globalAdmin()) {</span>
+<span class="fc" id="L25">            throw new ApiException(ErrorCode.FORBIDDEN, &quot;Дія доступна лише Global Admin&quot;);</span>
+        }
+<span class="fc" id="L27">    }</span>
+
+    public void requireHead(User user, UUID organizationId) {
+<span class="fc bfc" id="L30" title="All 2 branches covered.">        if (!isHead(user, organizationId)) {</span>
+<span class="fc" id="L31">            throw new ApiException(ErrorCode.FORBIDDEN, &quot;Дія доступна лише голові цієї організації&quot;);</span>
+        }
+<span class="fc" id="L33">    }</span>
+
+    public void requireHeadOrAdmin(User user, UUID organizationId) {
+<span class="fc bfc" id="L36" title="All 4 branches covered.">        if (!user.globalAdmin() &amp;&amp; !isHead(user, organizationId)) {</span>
+<span class="fc" id="L37">            throw new ApiException(ErrorCode.FORBIDDEN, &quot;Дія доступна голові цієї організації або Global Admin&quot;);</span>
+        }
+<span class="fc" id="L39">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

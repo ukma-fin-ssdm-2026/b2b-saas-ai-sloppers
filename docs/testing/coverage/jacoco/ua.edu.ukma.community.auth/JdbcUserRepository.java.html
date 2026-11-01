@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JdbcUserRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">ai-slop-student-community</a> &gt; <a href="index.source.html" class="el_package">ua.edu.ukma.community.auth</a> &gt; <span class="el_source">JdbcUserRepository.java</span></div><h1>JdbcUserRepository.java</h1><pre class="source lang-java linenums">package ua.edu.ukma.community.auth;
+
+import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.stereotype.Repository;
+
+import java.time.Clock;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.Optional;
+import java.util.UUID;
+
+
+@Repository
+@Profile(&quot;!inmemory&quot;)
+public class JdbcUserRepository implements UserRepository {
+
+    private static final String COLUMNS = &quot;&quot;&quot;
+            id, email, password_hash, status, global_admin, verification_code_hash, verification_expires_at, \
+            verification_attempts, verification_sent_at, created_at, updated_at&quot;&quot;&quot;;
+    private static final String UPSERT = &quot;INSERT INTO app_user (&quot; + COLUMNS + &quot;) &quot;;
+
+    private final JdbcClient jdbc;
+    private final RowMapper&lt;User&gt; mapper;
+
+<span class="nc" id="L27">    public JdbcUserRepository(JdbcClient jdbc, Clock clock) {</span>
+<span class="nc" id="L28">        this.jdbc = jdbc;</span>
+<span class="nc" id="L29">        ZoneId zone = clock.getZone();</span>
+<span class="nc" id="L30">        this.mapper = (rs, rowNum) -&gt; {</span>
+<span class="nc" id="L31">            String codeHash = rs.getString(&quot;verification_code_hash&quot;);</span>
+<span class="nc bnc" id="L32" title="All 2 branches missed.">            VerificationCode code = codeHash == null ? null : new VerificationCode(codeHash,</span>
+<span class="nc" id="L33">                    inZone(rs.getObject(&quot;verification_expires_at&quot;, OffsetDateTime.class), zone),</span>
+<span class="nc" id="L34">                    rs.getInt(&quot;verification_attempts&quot;),</span>
+<span class="nc" id="L35">                    inZone(rs.getObject(&quot;verification_sent_at&quot;, OffsetDateTime.class), zone));</span>
+<span class="nc" id="L36">            return new User(</span>
+<span class="nc" id="L37">                    rs.getObject(&quot;id&quot;, UUID.class),</span>
+<span class="nc" id="L38">                    rs.getString(&quot;email&quot;),</span>
+<span class="nc" id="L39">                    rs.getString(&quot;password_hash&quot;),</span>
+<span class="nc" id="L40">                    UserStatus.valueOf(rs.getString(&quot;status&quot;)),</span>
+<span class="nc" id="L41">                    rs.getBoolean(&quot;global_admin&quot;),</span>
+                    code,
+<span class="nc" id="L43">                    inZone(rs.getObject(&quot;created_at&quot;, OffsetDateTime.class), zone),</span>
+<span class="nc" id="L44">                    inZone(rs.getObject(&quot;updated_at&quot;, OffsetDateTime.class), zone));</span>
+        };
+<span class="nc" id="L46">    }</span>
+
+    @Override
+    public Optional&lt;User&gt; findById(UUID id) {
+<span class="nc" id="L50">        return jdbc.sql(&quot;SELECT &quot; + COLUMNS + &quot; FROM app_user WHERE id = ?&quot;)</span>
+<span class="nc" id="L51">                .param(id)</span>
+<span class="nc" id="L52">                .query(mapper)</span>
+<span class="nc" id="L53">                .optional();</span>
+    }
+
+    @Override
+    public Optional&lt;User&gt; findByEmail(String email) {
+<span class="nc" id="L58">        return jdbc.sql(&quot;SELECT &quot; + COLUMNS + &quot; FROM app_user WHERE email = ?&quot;)</span>
+<span class="nc" id="L59">                .param(email)</span>
+<span class="nc" id="L60">                .query(mapper)</span>
+<span class="nc" id="L61">                .optional();</span>
+    }
+
+    @Override
+    public User save(User u) {
+<span class="nc" id="L66">        VerificationCode code = u.verification();</span>
+<span class="nc" id="L67">        jdbc.sql(UPSERT + &quot;&quot;&quot;</span>
+                        VALUES (:id, :email, :passwordHash, :status, :globalAdmin, :codeHash, :codeExpiresAt,
+                                :codeAttempts, :codeSentAt, :createdAt, :updatedAt)
+                        ON CONFLICT (id) DO UPDATE SET
+                            email = EXCLUDED.email,
+                            password_hash = EXCLUDED.password_hash,
+                            status = EXCLUDED.status,
+                            global_admin = EXCLUDED.global_admin,
+                            verification_code_hash = EXCLUDED.verification_code_hash,
+                            verification_expires_at = EXCLUDED.verification_expires_at,
+                            verification_attempts = EXCLUDED.verification_attempts,
+                            verification_sent_at = EXCLUDED.verification_sent_at,
+                            updated_at = EXCLUDED.updated_at&quot;&quot;&quot;)
+<span class="nc" id="L80">                .param(&quot;id&quot;, u.id())</span>
+<span class="nc" id="L81">                .param(&quot;email&quot;, u.email())</span>
+<span class="nc" id="L82">                .param(&quot;passwordHash&quot;, u.passwordHash())</span>
+<span class="nc" id="L83">                .param(&quot;status&quot;, u.status().name())</span>
+<span class="nc" id="L84">                .param(&quot;globalAdmin&quot;, u.globalAdmin())</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">                .param(&quot;codeHash&quot;, code == null ? null : code.codeHash())</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">                .param(&quot;codeExpiresAt&quot;, code == null ? null : code.expiresAt())</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">                .param(&quot;codeAttempts&quot;, code == null ? null : code.attemptsLeft())</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">                .param(&quot;codeSentAt&quot;, code == null ? null : code.sentAt())</span>
+<span class="nc" id="L89">                .param(&quot;createdAt&quot;, u.createdAt())</span>
+<span class="nc" id="L90">                .param(&quot;updatedAt&quot;, u.updatedAt())</span>
+<span class="nc" id="L91">                .update();</span>
+<span class="nc" id="L92">        return u;</span>
+    }
+
+    private static OffsetDateTime inZone(OffsetDateTime value, ZoneId zone) {
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        return value == null ? null : value.atZoneSameInstant(zone).toOffsetDateTime();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

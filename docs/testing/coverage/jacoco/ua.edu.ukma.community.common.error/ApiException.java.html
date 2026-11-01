@@ -19,8 +19,8 @@ public class ApiException extends RuntimeException {
 <span class="fc" id="L19">    }</span>
 
     public static ApiException validation(String field, String message, Object providedValue) {
-<span class="nc" id="L22">        return new ApiException(ErrorCode.VALIDATION_ERROR, &quot;Запит містить невалідні поля&quot;,</span>
-<span class="nc" id="L23">                List.of(new FieldViolation(field, message, providedValue)));</span>
+<span class="fc" id="L22">        return new ApiException(ErrorCode.VALIDATION_ERROR, &quot;Запит містить невалідні поля&quot;,</span>
+<span class="fc" id="L23">                List.of(new FieldViolation(field, message, providedValue)));</span>
     }
 
     public static ApiException invalidParameter(String param, String message, Object providedValue) {

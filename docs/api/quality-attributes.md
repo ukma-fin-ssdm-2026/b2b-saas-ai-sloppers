@@ -2,7 +2,7 @@
 
 Кожна ціль нижче має три частини: **число**, **спосіб його виміряти** і **умову, за якої ціль вважається невиконаною**.
 
-Джерела: [api-design.md](api-design.md), [non-functional-requirements.md](../requirements/non-functional-requirements.md), [traceability-matrix.md](../architecture/traceability-matrix.md).
+Джерела: [api-design.md](api-design.md), [requirements.md](../requirements/requirements.md), [traceability-matrix.md](../architecture/traceability-matrix.md).
 
 Межа вимірювання цього семестру: відповіді — заглушки в пам'яті процесу (`OrganizationService`), без PostgreSQL. Числа лишаються цільовими, прогін повторюємо після під'єднання бази.
 

@@ -20,6 +20,7 @@ public class JdbcOrganizationRepository implements OrganizationRepository {
     private static final String COLUMNS = """
             id, name, slug, description, instagram_handle, contact_email, logo_url, auto_publish, \
             created_at, updated_at""";
+    private static final String UPSERT = "INSERT INTO organization (" + COLUMNS + ") ";
 
     private final JdbcClient jdbc;
     private final RowMapper<Organization> mapper;
@@ -78,8 +79,7 @@ public class JdbcOrganizationRepository implements OrganizationRepository {
 
     @Override
     public Organization save(Organization o) {
-        jdbc.sql("""
-                        INSERT INTO organization (%s)
+        jdbc.sql(UPSERT + """
                         VALUES (:id, :name, :slug, :description, :instagramHandle, :contactEmail,
                                 :logoUrl, :autoPublish, :createdAt, :updatedAt)
                         ON CONFLICT (id) DO UPDATE SET
@@ -90,7 +90,7 @@ public class JdbcOrganizationRepository implements OrganizationRepository {
                             contact_email = EXCLUDED.contact_email,
                             logo_url = EXCLUDED.logo_url,
                             auto_publish = EXCLUDED.auto_publish,
-                            updated_at = EXCLUDED.updated_at""".formatted(COLUMNS))
+                            updated_at = EXCLUDED.updated_at""")
                 .param("id", o.id())
                 .param("name", o.name())
                 .param("slug", o.slug())

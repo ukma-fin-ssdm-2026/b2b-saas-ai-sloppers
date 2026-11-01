@@ -1,6 +1,6 @@
 # Матриця простежуваності: вимоги ↔ компоненти
 
-Джерела: [requirements.md](../requirements/requirements.md) (FR-001…FR-068), [non-functional-requirements.md](../requirements/non-functional-requirements.md) (NFR-001…NFR-013), [high-level-design.md](high-level-design.md), [ADR-001](decisions/ADR-001-architectural-style.md).
+Джерела: [requirements.md](../requirements/requirements.md) (FR-001…FR-068), [requirements.md](../requirements/requirements.md) (NFR-001…NFR-013), [high-level-design.md](high-level-design.md), [ADR-001](decisions/ADR-001-architectural-style.md).
 
 ## Компоненти
 
@@ -91,7 +91,7 @@
 2. **NFR-004 (відмовостійкість БД) не перевіряється на рівні компонентів.** У діаграмі компонентів PostgreSQL — один блок, а вимога говорить про репліку й відновлення ≤ 30 с. Це рівень розгортання, тож діаграма розгортання (issue #35) має показати два поди БД, інакше вимога лишиться без візуального підтвердження.
 3. **React Web Client не має жодної власної вимоги.** Усі 68 FR сформульовані як «Система повинна…» і описують бекенд. Клієнт при цьому в обсязі семестру. Якщо не додати бодай кількох вимог до UI, компонент лишиться в архітектурі без замовлення.
 4. **ui-constructor (F-02) не покритий жодною вимогою.** На відміну від account-server, який спирається на FR-066, для нього такої вимоги немає. Або додати рядок у розділ Won't, або прибрати з діаграми як припущення.
-5. **Успадковано з Лабораторної 2:** FR-021 суперечить FR-067 (Instagram або WhatsApp проти «лише Instagram»), а FR-016 має пріоритет Must без жодної історії. Це впливає на архітектуру: у компоненті C-07 тип джерела спроєктовано як enum з двома значеннями, і якщо WhatsApp таки поза обсягом, друге значення зайве. Issues [#22](../../issues/22), [#23](../../issues/23).
+5. **Успадковано з Лабораторної 2:** FR-021 суперечить FR-067 (Instagram або WhatsApp проти «лише Instagram»), а FR-016 має пріоритет Must без жодної історії. Це впливає на архітектуру: у компоненті C-07 тип джерела спроєктовано як enum з двома значеннями, і якщо WhatsApp таки поза обсягом, друге значення зайве. Issues [#22](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/issues/22), [#23](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/issues/23).
 
 ---
 

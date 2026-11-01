@@ -17,10 +17,10 @@ import java.time.temporal.TemporalAccessor;
 @Service
 public class CalendarExportService {
 
-<span class="nc" id="L20">    static final Duration DEFAULT_DURATION = Duration.ofHours(2);</span>
+<span class="fc" id="L20">    static final Duration DEFAULT_DURATION = Duration.ofHours(2);</span>
 
-<span class="nc" id="L22">    private static final DateTimeFormatter UTC_STAMP =</span>
-<span class="nc" id="L23">            DateTimeFormatter.ofPattern(&quot;yyyyMMdd'T'HHmmss'Z'&quot;).withZone(ZoneOffset.UTC);</span>
+<span class="fc" id="L22">    private static final DateTimeFormatter UTC_STAMP =</span>
+<span class="fc" id="L23">            DateTimeFormatter.ofPattern(&quot;yyyyMMdd'T'HHmmss'Z'&quot;).withZone(ZoneOffset.UTC);</span>
     private static final String GOOGLE_TEMPLATE_URL = &quot;https://calendar.google.com/calendar/render&quot;;
     private static final String UID_DOMAIN = &quot;community.ukma.edu.ua&quot;;
     private static final String CRLF = &quot;\r\n&quot;;
@@ -28,9 +28,9 @@ public class CalendarExportService {
 
     private final Clock clock;
 
-<span class="nc" id="L31">    public CalendarExportService(Clock clock) {</span>
-<span class="nc" id="L32">        this.clock = clock;</span>
-<span class="nc" id="L33">    }</span>
+<span class="fc" id="L31">    public CalendarExportService(Clock clock) {</span>
+<span class="fc" id="L32">        this.clock = clock;</span>
+<span class="fc" id="L33">    }</span>
 
     public String toIcs(Event event, String organizationName) {
 <span class="nc" id="L36">        StringBuilder ics = new StringBuilder();</span>

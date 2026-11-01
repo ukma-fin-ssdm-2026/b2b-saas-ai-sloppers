@@ -5,8 +5,6 @@ import org.springframework.web.multipart.MultipartFile;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.storage.ImageService;
 
-import java.time.Clock;
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 
@@ -15,17 +13,15 @@ public class EventImageService {
 
     private final EventService events;
     private final ImageService images;
-    private final Clock clock;
 
-    public EventImageService(EventService events, ImageService images, Clock clock) {
+    public EventImageService(EventService events, ImageService images) {
         this.events = events;
         this.images = images;
-        this.clock = clock;
     }
 
     public Event upload(UUID eventId, MultipartFile file) {
         Event current = events.get(eventId);
-        current.withImage(null, OffsetDateTime.now(clock));
+        current.requireNotRejected("змінити картинку");
         String url = images.store(folder(current), "image", file);
         Event updated;
         try {

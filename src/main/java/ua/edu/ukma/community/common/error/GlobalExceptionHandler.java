@@ -134,13 +134,21 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ErrorResponse> build(ErrorCode code, String message, List<FieldViolation> details) {
+        return ResponseEntity.status(code.status()).body(body(code, message, details));
+    }
+
+    /**
+     * Тіло помилки в єдиному форматі API. Публічне, бо його також пишуть обробники Spring Security (401/403),
+     * які спрацьовують ще до контролерів.
+     */
+    public static ErrorResponse body(ErrorCode code, String message, List<FieldViolation> details) {
         // Якщо в команді є фільтр кореляційного ідентифікатора, він кладе requestId у MDC
         String requestId = MDC.get("requestId");
         if (requestId == null) {
             requestId = "req_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
         }
-        ApiError body = new ApiError(code, message, details, requestId, DOCS_BASE_URL + "#" + code.anchor());
-        return ResponseEntity.status(code.status()).body(new ErrorResponse(body));
+        ApiError error = new ApiError(code, message, details, requestId, DOCS_BASE_URL + "#" + code.anchor());
+        return new ErrorResponse(error);
     }
 
     private static String parameterName(MethodParameter p) {

@@ -11,6 +11,8 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
+import ua.edu.ukma.community.auth.CurrentUser;
+import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.config.OpenApiConfig;
@@ -27,10 +29,14 @@ public class EventController {
     static final String EVENT_ID_EXAMPLE = &quot;e1000000-0000-4000-8000-000000000001&quot;;
 
     private final EventService events;
+    private final CurrentUser currentUser;
+    private final OrgRolePolicy policy;
 
-<span class="nc" id="L31">    public EventController(EventService events) {</span>
-<span class="nc" id="L32">        this.events = events;</span>
-<span class="nc" id="L33">    }</span>
+<span class="fc" id="L35">    public EventController(EventService events, CurrentUser currentUser, OrgRolePolicy policy) {</span>
+<span class="fc" id="L36">        this.events = events;</span>
+<span class="fc" id="L37">        this.currentUser = currentUser;</span>
+<span class="fc" id="L38">        this.policy = policy;</span>
+<span class="fc" id="L39">    }</span>
 
     @GetMapping
     @Operation(operationId = &quot;listEvents&quot;, summary = &quot;Дайджест подій&quot;,
@@ -61,7 +67,7 @@ public class EventController {
                     schema = @Schema(defaultValue = &quot;0&quot;, minimum = &quot;0&quot;))
             @RequestParam(name = &quot;offset&quot;, defaultValue = &quot;0&quot;)
             @Min(value = 0, message = &quot;offset має бути ≥ 0&quot;) int offset) {
-<span class="nc" id="L64">        return events.digest(organizationId, from, to, limit, offset).map(EventResponse::from);</span>
+<span class="fc" id="L70">        return events.digest(organizationId, from, to, limit, offset).map(EventResponse::from);</span>
     }
 
     @GetMapping(&quot;/{eventId}&quot;)
@@ -73,7 +79,7 @@ public class EventController {
     public EventResponse getEvent(
             @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
             @PathVariable(&quot;eventId&quot;) UUID eventId) {
-<span class="nc" id="L76">        return EventResponse.from(events.getPublished(eventId));</span>
+<span class="nc" id="L82">        return EventResponse.from(events.getPublished(eventId));</span>
     }
 
     @PatchMapping(&quot;/{eventId}&quot;)
@@ -91,7 +97,8 @@ public class EventController {
             @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
             @PathVariable(&quot;eventId&quot;) UUID eventId,
             @Valid @RequestBody EventUpdateRequest request) {
-<span class="nc" id="L94">        return EventResponse.from(events.update(eventId, request));</span>
+<span class="nc" id="L100">        requireHeadOfEvent(eventId);</span>
+<span class="nc" id="L101">        return EventResponse.from(events.update(eventId, request));</span>
     }
 
     @PostMapping(&quot;/{eventId}/approve&quot;)
@@ -108,7 +115,8 @@ public class EventController {
     public EventResponse approveEvent(
             @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
             @PathVariable(&quot;eventId&quot;) UUID eventId) {
-<span class="nc" id="L111">        return EventResponse.from(events.approve(eventId));</span>
+<span class="nc" id="L118">        requireHeadOfEvent(eventId);</span>
+<span class="nc" id="L119">        return EventResponse.from(events.approve(eventId));</span>
     }
 
     @PostMapping(&quot;/{eventId}/reject&quot;)
@@ -124,7 +132,8 @@ public class EventController {
     public EventResponse rejectEvent(
             @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
             @PathVariable(&quot;eventId&quot;) UUID eventId) {
-<span class="nc" id="L127">        return EventResponse.from(events.reject(eventId));</span>
+<span class="nc" id="L135">        requireHeadOfEvent(eventId);</span>
+<span class="nc" id="L136">        return EventResponse.from(events.reject(eventId));</span>
     }
 
     @PostMapping(&quot;/{eventId}/unpublish&quot;)
@@ -140,7 +149,13 @@ public class EventController {
     public EventResponse unpublishEvent(
             @Parameter(description = &quot;Ідентифікатор події (UUID)&quot;, example = EVENT_ID_EXAMPLE)
             @PathVariable(&quot;eventId&quot;) UUID eventId) {
-<span class="nc" id="L143">        return EventResponse.from(events.unpublish(eventId));</span>
+<span class="nc" id="L152">        requireHeadOfEvent(eventId);</span>
+<span class="nc" id="L153">        return EventResponse.from(events.unpublish(eventId));</span>
     }
+
+    /** Подію змінює лише голова організації-власника (FR-006); Global Admin — лише якщо він теж голова. */
+    private void requireHeadOfEvent(UUID eventId) {
+<span class="nc" id="L158">        policy.requireHead(currentUser.require(), events.get(eventId).organizationId());</span>
+<span class="nc" id="L159">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

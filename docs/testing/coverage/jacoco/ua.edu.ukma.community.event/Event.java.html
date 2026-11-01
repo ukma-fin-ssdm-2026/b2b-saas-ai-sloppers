@@ -16,6 +16,7 @@ public record Event(
         OffsetDateTime startsAt,
         String location,
         String originalUrl,
+        String imageUrl,
         UUID sourceId,
         String externalPostId,
         EventStatus status,
@@ -24,70 +25,88 @@ public record Event(
         OffsetDateTime updatedAt
 ) {
 
-<span class="fc" id="L27">    public Event {</span>
-<span class="fc" id="L28">        Objects.requireNonNull(id, &quot;id&quot;);</span>
-<span class="fc" id="L29">        Objects.requireNonNull(organizationId, &quot;organizationId&quot;);</span>
-<span class="fc" id="L30">        Objects.requireNonNull(title, &quot;title&quot;);</span>
-<span class="fc" id="L31">        Objects.requireNonNull(startsAt, &quot;startsAt&quot;);</span>
-<span class="fc" id="L32">        Objects.requireNonNull(status, &quot;status&quot;);</span>
-<span class="fc" id="L33">        Objects.requireNonNull(createdAt, &quot;createdAt&quot;);</span>
-<span class="fc" id="L34">        Objects.requireNonNull(updatedAt, &quot;updatedAt&quot;);</span>
-<span class="fc" id="L35">    }</span>
+<span class="fc" id="L28">    public Event {</span>
+<span class="fc" id="L29">        Objects.requireNonNull(id, &quot;id&quot;);</span>
+<span class="fc" id="L30">        Objects.requireNonNull(organizationId, &quot;organizationId&quot;);</span>
+<span class="fc" id="L31">        Objects.requireNonNull(title, &quot;title&quot;);</span>
+<span class="fc" id="L32">        Objects.requireNonNull(startsAt, &quot;startsAt&quot;);</span>
+<span class="fc" id="L33">        Objects.requireNonNull(status, &quot;status&quot;);</span>
+<span class="fc" id="L34">        Objects.requireNonNull(createdAt, &quot;createdAt&quot;);</span>
+<span class="fc" id="L35">        Objects.requireNonNull(updatedAt, &quot;updatedAt&quot;);</span>
+<span class="fc" id="L36">    }</span>
 
     public boolean isPublished() {
-<span class="fc bfc" id="L38" title="All 2 branches covered.">        return status == EventStatus.PUBLISHED;</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        return status == EventStatus.PUBLISHED;</span>
     }
 
     public boolean isScraped() {
-<span class="fc bfc" id="L42" title="All 2 branches covered.">        return sourceId != null;</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">        return sourceId != null;</span>
     }
 
     public Event approve(OffsetDateTime now) {
-<span class="fc bfc" id="L46" title="All 8 branches covered.">        boolean allowed = status == EventStatus.PENDING</span>
+<span class="fc bfc" id="L47" title="All 8 branches covered.">        boolean allowed = status == EventStatus.PENDING</span>
                 || status == EventStatus.UNPUBLISHED
                 || status == EventStatus.PUBLISHED &amp;&amp; !verified;
-<span class="fc bfc" id="L49" title="All 2 branches covered.">        if (!allowed) {</span>
-<span class="fc" id="L50">            throw transitionNotAllowed(&quot;схвалити&quot;);</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">        if (!allowed) {</span>
+<span class="fc" id="L51">            throw transitionNotAllowed(&quot;схвалити&quot;);</span>
         }
-<span class="fc" id="L52">        return withStatus(EventStatus.PUBLISHED, true, now);</span>
+<span class="fc" id="L53">        return withStatus(EventStatus.PUBLISHED, true, now);</span>
     }
 
     public Event reject(OffsetDateTime now) {
-<span class="pc bpc" id="L56" title="1 of 2 branches missed.">        if (status != EventStatus.PENDING) {</span>
-<span class="fc" id="L57">            throw transitionNotAllowed(&quot;відхилити&quot;);</span>
+<span class="pc bpc" id="L57" title="1 of 2 branches missed.">        if (status != EventStatus.PENDING) {</span>
+<span class="fc" id="L58">            throw transitionNotAllowed(&quot;відхилити&quot;);</span>
         }
-<span class="nc" id="L59">        return withStatus(EventStatus.REJECTED, true, now);</span>
+<span class="nc" id="L60">        return withStatus(EventStatus.REJECTED, true, now);</span>
     }
 
     public Event unpublish(OffsetDateTime now) {
-<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        if (status != EventStatus.PUBLISHED) {</span>
-<span class="nc" id="L64">            throw transitionNotAllowed(&quot;зняти з публікації&quot;);</span>
+<span class="pc bpc" id="L64" title="1 of 2 branches missed.">        if (status != EventStatus.PUBLISHED) {</span>
+<span class="nc" id="L65">            throw transitionNotAllowed(&quot;зняти з публікації&quot;);</span>
         }
-<span class="fc" id="L66">        return withStatus(EventStatus.UNPUBLISHED, verified, now);</span>
+<span class="fc" id="L67">        return withStatus(EventStatus.UNPUBLISHED, verified, now);</span>
     }
 
     public Event withDetails(String newTitle, String newDescription, OffsetDateTime newStartsAt,
                              String newLocation, String newOriginalUrl, OffsetDateTime now) {
-<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (status == EventStatus.REJECTED) {</span>
-<span class="fc" id="L72">            throw transitionNotAllowed(&quot;редагувати&quot;);</span>
-        }
-<span class="fc" id="L74">        return new Event(id, organizationId,</span>
-<span class="pc bpc" id="L75" title="1 of 2 branches missed.">                newTitle != null ? newTitle.trim() : title,</span>
-<span class="pc bpc" id="L76" title="1 of 2 branches missed.">                newDescription != null ? newDescription : description,</span>
-<span class="pc bpc" id="L77" title="1 of 2 branches missed.">                newStartsAt != null ? newStartsAt : startsAt,</span>
-<span class="pc bpc" id="L78" title="1 of 2 branches missed.">                newLocation != null ? newLocation : location,</span>
-<span class="pc bpc" id="L79" title="1 of 2 branches missed.">                newOriginalUrl != null ? newOriginalUrl : originalUrl,</span>
-                sourceId, externalPostId, status, verified, createdAt, now);
+<span class="fc" id="L72">        requireNotRejected(&quot;редагувати&quot;);</span>
+<span class="fc" id="L73">        return new Event(id, organizationId,</span>
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">                newTitle != null ? newTitle.trim() : title,</span>
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">                newDescription != null ? newDescription : description,</span>
+<span class="pc bpc" id="L76" title="1 of 2 branches missed.">                newStartsAt != null ? newStartsAt : startsAt,</span>
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">                newLocation != null ? newLocation : location,</span>
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">                newOriginalUrl != null ? newOriginalUrl : originalUrl,</span>
+                imageUrl, sourceId, externalPostId, status, verified, createdAt, now);
     }
 
     private Event withStatus(EventStatus newStatus, boolean newVerified, OffsetDateTime now) {
-<span class="fc" id="L84">        return new Event(id, organizationId, title, description, startsAt, location, originalUrl,</span>
-                sourceId, externalPostId, newStatus, newVerified, createdAt, now);
+<span class="fc" id="L83">        return new Event(id, organizationId, title, description, startsAt, location, originalUrl,</span>
+                imageUrl, sourceId, externalPostId, newStatus, newVerified, createdAt, now);
     }
 
+    /**
+     * Нова картинка (або {@code null}, щоб прибрати). Відхилену подію не змінюємо, як і в {@link #withDetails}.
+     */
+    public Event withImage(String newImageUrl, OffsetDateTime now) {
+<span class="fc" id="L91">        requireNotRejected(&quot;змінити картинку&quot;);</span>
+<span class="fc" id="L92">        return new Event(id, organizationId, title, description, startsAt, location, originalUrl,</span>
+                newImageUrl, sourceId, externalPostId, status, verified, createdAt, now);
+    }
+
+    /**
+     * Відхилена подія — кінцевий стан, її не можна змінювати (409 INVALID_STATE_TRANSITION).
+     *
+     * @param action що саме намагаються зробити, для повідомлення про помилку
+     */
+    public void requireNotRejected(String action) {
+<span class="fc bfc" id="L102" title="All 2 branches covered.">        if (status == EventStatus.REJECTED) {</span>
+<span class="fc" id="L103">            throw transitionNotAllowed(action);</span>
+        }
+<span class="fc" id="L105">    }</span>
+
     private ApiException transitionNotAllowed(String action) {
-<span class="fc" id="L89">        return new ApiException(ErrorCode.INVALID_STATE_TRANSITION,</span>
-<span class="pc bpc" id="L90" title="1 of 2 branches missed.">                &quot;Подію у статусі &quot; + status + (verified ? &quot;&quot; : &quot; (неперевірена)&quot;) + &quot; не можна &quot; + action);</span>
+<span class="fc" id="L108">        return new ApiException(ErrorCode.INVALID_STATE_TRANSITION,</span>
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">                &quot;Подію у статусі &quot; + status + (verified ? &quot;&quot; : &quot; (неперевірена)&quot;) + &quot; не можна &quot; + action);</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.13.202504020838</span></div></body></html>

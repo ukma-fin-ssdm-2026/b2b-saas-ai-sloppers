@@ -41,6 +41,10 @@ public class ImageService {
         storage.deleteQuietly(publicUrl);
     }
 
+    public void deleteFolderQuietly(String folder) {
+        storage.deleteFolderQuietly(folder);
+    }
+
     private static byte[] readValidated(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw ApiException.validation("file", "Файл порожній", null);
