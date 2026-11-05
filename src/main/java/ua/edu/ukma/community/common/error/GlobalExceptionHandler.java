@@ -38,6 +38,8 @@ public class GlobalExceptionHandler {
 
     private static final String DOCS_BASE_URL = "https://ukma-fin-ssdm-2026.github.io/b2b-saas-ai-sloppers/api/errors";
 
+    private static final int REQUEST_ID_HEX_LENGTH = 16;
+
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ErrorResponse> handleApi(ApiException ex) {
         return build(ex.code(), ex.getMessage(), ex.details());
@@ -102,7 +104,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     ResponseEntity<ErrorResponse> handleMethod(HttpRequestMethodNotSupportedException ex) {
-        return build(ErrorCode.METHOD_NOT_ALLOWED, "Метод " + ex.getMethod() + " не підтримується для цього ресурсу", List.of());
+        return build(ErrorCode.METHOD_NOT_ALLOWED,
+                "Метод " + ex.getMethod() + " не підтримується для цього ресурсу", List.of());
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -145,7 +148,9 @@ public class GlobalExceptionHandler {
         // Якщо в команді є фільтр кореляційного ідентифікатора, він кладе requestId у MDC
         String requestId = MDC.get("requestId");
         if (requestId == null) {
-            requestId = "req_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+            requestId = "req_" + UUID.randomUUID().toString()
+                    .replace("-", "")
+                    .substring(0, REQUEST_ID_HEX_LENGTH);
         }
         ApiError error = new ApiError(code, message, details, requestId, DOCS_BASE_URL + "#" + code.anchor());
         return new ErrorResponse(error);
@@ -153,9 +158,13 @@ public class GlobalExceptionHandler {
 
     private static String parameterName(MethodParameter p) {
         RequestParam rp = p.getParameterAnnotation(RequestParam.class);
-        if (rp != null && !rp.name().isBlank()) return rp.name();
+        if (rp != null && !rp.name().isBlank()) {
+            return rp.name();
+        }
         PathVariable pv = p.getParameterAnnotation(PathVariable.class);
-        if (pv != null && !pv.name().isBlank()) return pv.name();
+        if (pv != null && !pv.name().isBlank()) {
+            return pv.name();
+        }
         return p.getParameterName();
     }
 }
