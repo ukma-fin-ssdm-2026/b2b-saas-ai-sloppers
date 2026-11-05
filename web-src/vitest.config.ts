@@ -8,7 +8,8 @@ export default defineConfig({
     css: false,
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      // lcov for SonarQube Cloud; projectRoot '..' makes paths relative to the repo root (web-src/src/...)
+      reporter: ['text', 'html', ['lcov', { projectRoot: '..' }]],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/main.tsx', 'src/**/*.d.ts'],
     },
