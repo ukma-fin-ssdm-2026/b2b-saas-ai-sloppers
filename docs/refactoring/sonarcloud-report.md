@@ -1,0 +1,140 @@
+# Звіт SonarQube Cloud: рефакторинг (Лаб 8)
+
+| | «До»                                                      | «Після» |
+|---|-----------------------------------------------------------|---|
+| Коміт `main` | `d3273cd` (docs: add midterm presentation Loom link, #91) | `12f58fb` (squash-мерж PR [#93](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/pull/93)) |
+| Дата аналізу | 2026-10-30                                                | 2026-11-05 |
+| Гілка зі станом «до» | `pre-refactor`                                            | — |
+| Версія | 1.0.0                                                     | 1.0.1 |
+
+Аналіз: SonarQube Cloud, проєкт `ukma-fin-ssdm-2026_b2b-saas-ai-sloppers`, Quality Gate `ukma-fin-ssdm-2026`.
+
+## 1. Усі метрики
+
+| Метрика | До (`d3273cd`) | Після (`12f58fb`) | Цільова? |
+|---|---|---|---|
+| Code Smells (Maintainability issues) | 0 | 0 | так |
+| Maintainability Rating | A | A | ні |
+| Technical Debt | 0 хв | 0 хв | так |
+| Duplicated Lines | 0.5% (5.5k рядків) | 0.5% (5.5k рядків) | так |
+| Reliability Rating | A (0 issues) | A (0 issues) | ні |
+| **Security Rating** (обов'язкова) | A (0 issues) | A (0 issues) | фіксується завжди |
+| Security issues (відкриті) | 0 (1 закрита як False positive) | 0 (та сама, з обґрунтуванням) | — |
+
+Вкладка Overall Code, 4.4k рядків коду, Quality Gate **Passed** до і після. Скриншоти: «до» — `img/before-overview.png`, `img/before-csrf-issue.png`; «після» — `img/after-overview.png`, `img/csrf-issue-false-positive.png`.
+
+## 2. Обрані три метрики
+
+| Метрика | До | Після | Δ | Чому саме вона |
+|---|---|---|---|---|
+| Code Smells | 0 | 0 | 0 | Головний показник супроводжуваності: перевіряємо, що рефакторинг не вніс нових запахів |
+| Technical Debt | 0 хв | 0 хв | 0 | Мета лаби — не збільшити борг; за панеллю він уже нульовий |
+| Duplicated Lines | 0.5% | 0.5% | 0 | Єдиний із п'яти показників, де на панелі є куди покращувати |
+
+**Чому «після» не відрізняється від «до».** Ще до Лаб 8 панель SonarQube Cloud показала на `main` **0 проблем супроводжуваності й надійності** (рейтинги A, борг 0 хв), тож за панеллю покращувати можна було лише дублювання. Тому запахи для рефакторингу взято з інших джерел, як дозволяє завдання: Cognitive Complexity, вкладка Duplications і зауваження Checkstyle з [Лаб 5](../code-quality/static-analysis.md). Серед них є 129 зауважень, зокрема 9 змістовних `MagicNumber` у `src/main`, п'ять із яких у `CalendarExportService`. Для чистого рефакторингу незмінні метрики панелі — очікуваний результат: він не додав ні запахів, ні боргу, ні issues, а Quality Gate лишився Passed.
+
+## 3. Security Rating
+
+| Показник | До | Після |
+|---|---|---|
+| Security Rating | A | A |
+| Відкриті security issues | 0 | 0 |
+| `java:S4502` (CSRF), Security / **High** | False positive | False positive, з обґрунтуванням |
+| Security Hotspots Reviewed (застарілий показник) | 100% | 100% |
+
+**Рішення щодо знахідки (код не змінювався):**
+
+| |                                                                                                                                                                                                         |
+|---|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Знахідка | Issue `java:S4502` (тег `former-hotspot`), impact Security / High: CSRF-захист Spring Security вимкнено, `SecurityConfig.java:39`                                                                       |
+| Статус до | False positive |
+| Аналіз | Чи використовує застосунок облікові дані, які браузер надсилає автоматично (cookie, сесія, HTTP Basic)? Перевірено бекенд і фронтенд, деталі нижче                                                      |
+| Висновок | Ні: лише JWT у заголовку `Authorization`, `STATELESS`, cookie немає. CSRF-атака неможлива                                                                                                               |
+| Рішення | Статус **False positive** підтверджено: правило вимагає захисту від CSRF, але в нашій архітектурі атаки немає. Код не змінюємо, бо ввімкнення CSRF зламало б публічні `/auth/*` і нічого не захистило б |
+| Статус після | False positive з обґрунтуванням                                                                                                                                                                         |
+| Хто | Дарʼя Гречко, аналітик коду, 2026-11-05                                                                                                                                                                    |
+| Коли переглянути | JWT переїде в cookie; з'явиться `httpBasic`/`formLogin`; токен почнуть приймати з query/form                                                                                                            |
+
+**Коментар до значення.** Security Rating рахується з відкритих security issues, а таких на `main` 0, тому рейтинг A. Єдина знахідка безпеки — `java:S4502` у `SecurityConfig.java:39` (вимкнений CSRF-захист Spring Security). SonarQube Cloud відмовився від окремого поняття Security Hotspot, тож ця колишня «точка для ручної перевірки» тепер звичайний issue з impact Security і severity **High**. Відкритий High security issue опустив би рейтинг до D. На `main` рейтинг A лише тому, що issue має статус False positive. Цей статус у проєкті вже стояв. У Лаб 8 ми перевірили знахідку вручну (бекенд і фронтенд), підтвердили статус і зафіксували обґрунтування.
+
+**Чому Security Rating не змінився.** Він був A і лишився A: рефакторинг не додав security issues. Метою безпекової частини Лаб 8 було не підняти рейтинг, а переконатися, що A спирається на перевірене й задокументоване рішення щодо єдиної знахідки безпеки.
+
+
+**Зв'язок із попередніми лабами.**
+
+- **Лаб 5 ([static-analysis.md](../code-quality/static-analysis.md)).** find-sec-bugs у Лаб 5 цей виклик не позначив, хоча має правило `SPRING_CSRF_PROTECTION_DISABLED`. Ймовірна причина — DSL через лямбди (`csrf(AbstractHttpConfigurer::disable)`), який правило не розпізнає. Тобто SonarQube Cloud закрив прогалину аналізатора з Лаб 5. Це ще один аргумент тримати обидва інструменти, а не один. З двох SECURITY-знахідок Лаб 5 `SPRING_ENDPOINT` закрито через `SecurityConfig`, а `CRLF_INJECTION_LOGS` — через `LogSafe`. SonarQube вразливостей у цих місцях не показує.
+- **Повторний прогін find-sec-bugs (`./mvnw -Popenapi verify`, гілка PR #93).** Після винятків — 8 знахідок; рефакторинг Лаб 8 нових не додав (у `calendar` — 0). Дві (`SE_BAD_FIELD`, `NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE`) — ті самі, що прийнято в Лаб 5. Шість — у модулі `subscription`, якого в Лаб 5 ще не було: `RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE` (зайва перевірка на `null` результату `COUNT(*)`) і п'ять `CRLF_INJECTION_LOGS`. Останні — хибні спрацювання: усі значення в цих логах уже проходять через `LogSafe.of`, але `spotbugs-exclude.xml` перелічує класи поіменно, і нові туди не додано. Це підтверджує висновок Лаб 5, що виняток на рівні класів старіє разом із кодом; план — замінити його на `@SuppressFBWarnings` над конкретними викликами (окреме завдання, поза Лаб 8).
+- **Лаб 3 ([threat-model.md](../architecture/threat-model.md)).** Окремого ризику CSRF у реєстрі немає, і це узгоджується з розділом 3.1: за обраної схеми автентифікації сценарію атаки немає. Обґрунтування стосується двох наявних ризиків. **T-01** (Spoofing, викрадений JWT) — контрзахід «токен ≤ 60 хв + HTTPS» лишається основним, CSRF тут ні до чого. **T-02** (Elevation of privilege) — головним захистом лишається `anyRequest().authenticated()` останнім правилом у ланцюжку, вимкнення CSRF його не послаблює. Пропонуємо додати до моделі загроз рядок «CSRF — не застосовно, див. sonarcloud-report.md §3.1» у колонку *Spoofing* для TB1/TB2, щоб рішення не загубилося.
+
+### 3.1. Обґрунтування вимкненого CSRF (`java:S4502`, False positive)
+
+**Навіщо CSRF вимкнено.** У Spring Security CSRF-захист увімкнений за замовчуванням. Кожен POST/PUT/PATCH/DELETE без CSRF-токена отримує `403 Forbidden`. `oauth2ResourceServer()` сам пропускає запити із заголовком `Authorization: Bearer`, але публічні ендпоінти входу й реєстрації (`/auth/register`, `/verify`, `/resend-code`, `/login`) токена ще не мають. З увімкненим CSRF вони блокувалися б, і користувач не зміг би навіть увійти. Щоб CSRF працював, потрібні сховище токена (cookie або сесія, а сесій у сервісі свідомо немає), ендпоінт для його видачі та заголовок `X-XSRF-TOKEN` у кожному запиті фронтенду, Postman-колекцій і тестів. Ця інфраструктура захищала б від атаки, яка в нашій архітектурі неможлива.
+
+**Коли CSRF узагалі можливий.** CSRF-атака працює, якщо браузер жертви **сам** додає облікові дані до запиту, який ініціювала чужа сторінка: cookie (зокрема `JSESSIONID`), HTTP Basic, закешований браузером, або клієнтський TLS-сертифікат. Якщо застосунок не покладається на жоден із них, підробленому запиту нема чим автентифікуватися.
+
+**Чому в нашому сервісі це так:**
+
+1. **Автентифікація лише через заголовок `Authorization: Bearer <JWT>`.** API під'єднано як OAuth2 Resource Server (`oauth2ResourceServer().jwt()`). `DefaultBearerTokenResolver` читає токен тільки із заголовка: читання з query-параметра та з form-тіла за замовчуванням вимкнені, і ми їх не вмикаємо. Браузер сам цей заголовок не додає.
+2. **Сесій і cookie немає.** Стоїть `SessionCreationPolicy.STATELESS`, і пошук по `src/main` (`cookie`, `Set-Cookie`, `session`) не знаходить жодного місця, де сервіс видає cookie. `/auth/login` повертає токен у JSON-тілі (`TokenResponse`).
+3. **Інші "амбієнтні" механізми вимкнені явно:** `httpBasic`, `formLogin`, `logout` (рядки 40–42).
+4. **Публічні POST-ендпоінти не дають атакувальнику нічого нового.** Вони не використовують облікових даних жертви, і їх можна викликати напряму. «Login CSRF» неможливий, бо токен приходить у тілі відповіді й чужа сторінка не може змусити наш фронтенд його зберегти. Ендпоінти приймають `application/json`, тож крос-доменний запит браузер спершу відправляє як preflight. CORS не налаштовано, і preflight з чужого origin не проходить.
+5. **Фронтенд (`web-src/`) працює саме так.** JWT зберігається в `sessionStorage` (`web-src/src/auth/session.ts`) і в кожен запит додається вручну заголовком `Authorization: Bearer` (`web-src/src/api/client.ts`). `fetch` викликається без `credentials: 'include'`. Фронт і бекенд доступні з одного origin через nginx-проксі `/api/`.
+
+Це відповідає рекомендації документації Spring Security: CSRF-захист потрібен для запитів, які може надіслати браузер. Сервісам, які використовують лише небраузерні облікові дані (bearer-токени), він не потрібен.
+
+**Розглянута альтернатива:** лишити CSRF увімкненим і виключити лише `/auth/**` (`csrf.ignoringRequestMatchers(...)`). Це дає захист «про запас», якщо колись з'явиться автентифікація через cookie. Сьогодні вона нічого не змінює і ускладнює конфігурацію, а SonarQube позначає таке виключення тим самим правилом `S4502`, тож issue однаково довелося б закривати. Тому залишаємо `disable()`.
+
+**Коли рішення треба переглянути:**
+
+- JWT переїжджає в cookie (наприклад, `HttpOnly` проти XSS). Тоді треба ввімкнути `csrf()` з `CookieCsrfTokenRepository` та/або `SameSite=Strict`.
+- Хтось вмикає `allowUriQueryParameter` / `allowFormEncodedBodyParameter` у `BearerTokenResolver` або повертає `httpBasic` / `formLogin`.
+
+Зберігання токена в `sessionStorage` пов'язане з ризиком XSS, а не CSRF. Його покривають **T-04** (екранування вмісту зі скрейпера; React екранує текст у JSX, `dangerouslySetInnerHTML` не використовується) і **T-01** (короткий час життя токена).
+
+Скриншот: `img/csrf-issue-false-positive.png` — issue `java:S4502` зі статусом False positive і нашим коментарем.
+
+## 4. Рефакторинги
+
+| # | Запах | Де | Техніка | Що лишається незмінним | Що змінюється в структурі | Тест-доказ | Автор |
+|---|---|---|---|---|---|---|---|
+| 1 | Magic Number: межі UTF-8 `0x80`, `0x800`, `0x10000` (Checkstyle `MagicNumber`, Лаб 5) | `CalendarExportService.utf8Length` | Replace Magic Number with Constant | Кількість байтів для кожної кодової точки, отже й місця переносу рядків ICS (RFC 5545, ≤ 75 октетів) та весь вихід `.ics` і Google-посилання | Межі отримали імена `FIRST_TWO_BYTE_CODE_POINT`, `FIRST_THREE_BYTE_CODE_POINT`; третя межа — стандартна `Character.MIN_SUPPLEMENTARY_CODE_POINT` з JDK; додано Javadoc | `CalendarExportServiceTest` (характеризаційний, 15 випадків, зокрема кодові точки рівно на межах U+007F/U+0080, U+07FF/U+0800, U+FFFF/U+10000) | Дарʼя Гречко |
+
+**Ефект рефакторингу 1.** Зауважень Checkstyle `MagicNumber` у `CalendarExportService` стало 2 замість 5. Лишилися `3` і `4` у `return`: це не межі, а сама відповідь функції (кількість байтів), і константа `THREE_BYTES = 3` читалася б гірше за число. На панелі SonarQube метрики від цієї зміни не рухаються: профіль Sonar way не перевіряє магічні числа, а борг уже 0 хв. Зате модуль `calendar` уперше покритий тестами. Новий тест сам додає зауваження `MagicNumber` у тестових джерелах (дати, кількості символів у випадках переносу). Як і в Лаб 5 (розд. 3), вважаємо це шумом правила для тестів: літерали тут і є тестовими даними.
+
+## 5. Використання ШІ
+
+**Рефакторинг 1 (`CalendarExportService.utf8Length`) виконано з Claude (Anthropic).**
+
+## 6. Регресійне тестування
+
+CI, прогін [#82](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/runs/42066694475/job/127382616607) на PR #93 (останній коміт гілки, після рефакторингу):
+
+| Тестів | Падінь | Помилок | Пропущено | Покриття рядків (JaCoCo) |
+|---|---|---|---|---|
+| 130 (було 115, +15 `CalendarExportServiceTest`) | 0 | 0 | 0 | 63.4% |
+
+![Результат CI](img/regression-ci.png)
+
+Збоїв не було. SonarQube Cloud для PR #93: Quality Gate passed, 0 нових issues. Покриття 0.0% на панелі SonarQube означає лише те, що звіт JaCoCo не передається в SonarQube Cloud (coverage analysis не налаштовано), а не відсутність тестів.
+
+## 7. Скриншоти
+
+| До | Після                              |
+|---|------------------------------------|
+| ![до](img/before-overview.png) | ![після](img/after-overview.png)   |
+| ![CSRF issue до](img/before-csrf-issue.png) | ![CSRF issue після](img/csrf-issue-false-positive.png) |
+
+## 8. Реліз
+
+Версія `1.0.0` → `1.0.1` (patch, чистий рефакторинг): `pom.xml`, `CHANGELOG.md`, тег `v1.0.1`.
+
+## Бонуси
+
+**Характеризаційні тести перед рефакторингом.** До Лаб 8 модуль `calendar` (`CalendarExportService`) не мав жодного тесту. Ми спершу додали `CalendarExportServiceTest`, який фіксує поточний вихід ICS і Google-посилання, перенос рядків за октетами UTF-8 та екранування. Лише після цього змінили код.
+
+| | Коміт | Тести |
+|---|---|---|
+| Тести (раніше) | `36d62fd` test: characterization tests for CalendarExportService | 15/15 зелені на старому коді |
+| Рефакторинг (пізніше) | `2037500` refactor: [REFACTOR] replace UTF-8 magic numbers with constants | ті самі 15/15 зелені (CI #82) |
+
+PR [#93](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/pull/93/commits) влито через Squash and merge (`12f58fb`), бо репо дозволяє лише цей спосіб. Оригінальний порядок комітів збережено в історії PR. Прогін CI: [#82](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/runs/42066694475/job/127382616607). Пояснено у відео: [Labs/Lab08/video_Hrechko.txt](../../Labs/Lab08/video_Hrechko.txt).
