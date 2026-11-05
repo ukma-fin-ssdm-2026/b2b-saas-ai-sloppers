@@ -1030,6 +1030,82 @@ paths:
       summary: Журнал змін ролей
       tags:
       - Heads
+  /api/v1/organizations/{organizationId}/subscription:
+    delete:
+      operationId: unsubscribeFromOrganization
+      parameters:
+      - description: Ідентифікатор організації
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Підписку знято (або її не було)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Відписатися від організації
+      tags:
+      - Subscriptions
+    get:
+      operationId: getOrganizationSubscription
+      parameters:
+      - description: Ідентифікатор організації
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SubscriptionStatusResponse"
+          description: Стан підписки
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Чи підписаний поточний користувач на організацію
+      tags:
+      - Subscriptions
+    post:
+      description: "Листи надходять на email акаунту, коли організація публікує но\
+        ву подію."
+      operationId: subscribeToOrganization
+      parameters:
+      - description: Ідентифікатор організації
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Підписку створено або вона вже існувала
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Підписатися на нові події організації
+      tags:
+      - Subscriptions
 components:
   responses:
     BadRequest:
@@ -1717,6 +1793,16 @@ components:
       - organizationId
       - targetEmail
       - targetUserId
+    SubscriptionStatusResponse:
+      type: object
+      description: Стан підписки поточного користувача на організацію
+      properties:
+        subscribed:
+          type: boolean
+          description: Чи підписаний користувач
+          example: true
+      required:
+      - subscribed
     TokenResponse:
       type: object
       description: "JWT для заголовка Authorization: Bearer <accessToken>"
