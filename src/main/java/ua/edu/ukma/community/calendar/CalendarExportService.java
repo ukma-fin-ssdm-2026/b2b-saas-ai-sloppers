@@ -26,6 +26,9 @@ public class CalendarExportService {
     private static final String CRLF = "\r\n";
     private static final int MAX_LINE_OCTETS = 75;
 
+    private static final int FIRST_TWO_BYTE_CODE_POINT = 0x80;
+    private static final int FIRST_THREE_BYTE_CODE_POINT = 0x800;
+
     private final Clock clock;
 
     public CalendarExportService(Clock clock) {
@@ -122,12 +125,12 @@ public class CalendarExportService {
     }
 
     private static int utf8Length(int codePoint) {
-        if (codePoint < 0x80) {
+        if (codePoint < FIRST_TWO_BYTE_CODE_POINT) {
             return 1;
         }
-        if (codePoint < 0x800) {
+        if (codePoint < FIRST_THREE_BYTE_CODE_POINT) {
             return 2;
         }
-        return codePoint < 0x10000 ? 3 : 4;
+        return codePoint < Character.MIN_SUPPLEMENTARY_CODE_POINT ? 3 : 4;
     }
 }
