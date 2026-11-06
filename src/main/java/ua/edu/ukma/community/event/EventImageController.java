@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import ua.edu.ukma.community.auth.CurrentUser;
 import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.common.ApiPaths;
+import ua.edu.ukma.community.config.ImageUploadErrorResponses;
 import ua.edu.ukma.community.config.OpenApiConfig;
 
 import java.util.UUID;
@@ -49,14 +50,8 @@ public class EventImageController {
             description = "Голова організації-власника. JPEG, PNG або WebP до 5 МБ, поле форми `file`. "
                     + "Відхилену подію змінити не можна (409). Попередня картинка видаляється зі сховища.")
     @ApiResponse(responseCode = "200", description = "Подію з новим imageUrl повернуто")
-    @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
-    @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
-    @ApiResponse(responseCode = "403", ref = OpenApiConfig.FORBIDDEN)
-    @ApiResponse(responseCode = "404", ref = OpenApiConfig.NOT_FOUND)
     @ApiResponse(responseCode = "409", ref = OpenApiConfig.CONFLICT)
-    @ApiResponse(responseCode = "413", ref = OpenApiConfig.PAYLOAD_TOO_LARGE)
-    @ApiResponse(responseCode = "415", ref = OpenApiConfig.UNSUPPORTED_MEDIA_TYPE)
-    @ApiResponse(responseCode = "503", ref = OpenApiConfig.STORAGE_UNAVAILABLE)
+    @ImageUploadErrorResponses
     public EventResponse uploadEventImage(
             @Parameter(description = "Ідентифікатор події (UUID)", example = EventController.EVENT_ID_EXAMPLE)
             @PathVariable("eventId") UUID eventId,
