@@ -7,16 +7,13 @@ name: SonarQube Cloud
 # Requires Automatic Analysis to be OFF in SonarQube Cloud (Administration -> Analysis Method)
 # and a SONAR_TOKEN repository secret.
 
-# DISABLED until Automatic Analysis is switched off (needs org admin rights).
-# To enable: replace `workflow_dispatch:` with the commented triggers and remove `if: false` from the job.
-#   push:
-#     branches:
-#       - main
-#   pull_request:
-#     branches:
-#       - main
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -28,7 +25,6 @@ concurrency:
 jobs:
   sonar:
     name: SonarQube Cloud Analysis
-    if: false # disabled, see the note above `on:`
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
 
@@ -44,6 +40,18 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web-src/package-lock.json
+
+      # no build or tests: node_modules only gives the TypeScript analyzer the library types
+      - name: Install frontend dependencies
+        working-directory: web-src
+        run: npm ci
 
       # test-compile gives Sonar the bytecode (main + test); the plugin passes dependency jars itself.
       # Only the listed sources are analyzed, so generated/committed artifacts
