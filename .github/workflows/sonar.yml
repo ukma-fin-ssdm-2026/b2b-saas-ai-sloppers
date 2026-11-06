@@ -1,0 +1,71 @@
+name: SonarQube Cloud
+
+# CI-based analysis: Sonar gets compiled classes and dependency jars.
+# No tests run here (they run in ci.yml), so no coverage is reported and the
+# quality gate's coverage condition is skipped.
+# Kept separate from ci.yml so that Sonar problems never affect the required CI checks.
+# Requires Automatic Analysis to be OFF in SonarQube Cloud (Administration -> Analysis Method)
+# and a SONAR_TOKEN repository secret.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sonar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sonar:
+    name: SonarQube Cloud Analysis
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for New Code detection and blame
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web-src/package-lock.json
+
+      # no build or tests: node_modules only gives the TypeScript analyzer the library types
+      - name: Install frontend dependencies
+        working-directory: web-src
+        run: npm ci
+
+      # test-compile gives Sonar the bytecode (main + test); the plugin passes dependency jars itself.
+      # Only the listed sources are analyzed, so generated/committed artifacts
+      # (docs/**, web-src/coverage/**, dist, target, node_modules) stay out of the analysis.
+      - name: Compile and analyze
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          ./mvnw -B -ntp test-compile org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Dcheckstyle.skip
+          -Dsonar.host.url=https://sonarcloud.io
+          -Dsonar.organization=ukma-fin-ssdm-2026
+          -Dsonar.projectKey=ukma-fin-ssdm-2026_b2b-saas-ai-sloppers
+          -Dsonar.sources=pom.xml,src/main,web-src/src
+          -Dsonar.tests=src/test,web-src/src
+          -Dsonar.test.inclusions=src/test/**,web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**
+          -Dsonar.exclusions=web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**,**/*.d.ts
