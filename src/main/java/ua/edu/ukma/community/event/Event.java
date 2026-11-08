@@ -44,10 +44,10 @@ public record Event(
     }
 
     public Event approve(OffsetDateTime now) {
-        boolean allowed = status == EventStatus.PENDING
-                || status == EventStatus.UNPUBLISHED
-                || status == EventStatus.PUBLISHED && !verified;
-        if (!allowed) {
+        boolean fromPending = status == EventStatus.PENDING;
+        boolean fromUnpublished = status == EventStatus.UNPUBLISHED;
+        boolean republishUnverified = status == EventStatus.PUBLISHED && !verified;
+        if (!(fromPending || fromUnpublished || republishUnverified)) {
             throw transitionNotAllowed("схвалити");
         }
         return withStatus(EventStatus.PUBLISHED, true, now);
