@@ -41,12 +41,12 @@ Vite проксує `/api` -> `http://localhost:8080`, тож у коді вик
 |------|------|
 | `/organizations`, `/organizations/:id` | Публічний каталог / профіль |
 | `/events`, `/events/:id` | Дайджест / деталі + календар |
-| `/login` | Вхід (demo admin або mock @ukma.edu.ua) |
-| `/register`, `/verify` | Реєстрація + код (US-001 mock на фронті) |
+| `/login` | Вхід через @ukma.edu.ua (JWT) |
+| `/register`, `/verify` | Реєстрація + код підтвердження |
 | `/admin/*` | Адмін: org CRUD/logo + кабінет подій |
 | `/lab/*` | Моки в пам’яті браузера (потрібен логін) |
 
-Демо-адмін: `bot` / `huyesosik` (або `VITE_DEMO_*`). Реєстрація — лише `@ukma.edu.ua`, код показується на `/verify` (немає email-бекенду). При `401` з API — сесія скидається й редірект на `/login`.
+Вхід — лише зареєстрований `@ukma.edu.ua` з JWT від бекенду. При `401` з API — сесія скидається й редірект на `/login`.
 
 ## Структура
 
@@ -54,7 +54,7 @@ Vite проксує `/api` -> `http://localhost:8080`, тож у коді вик
 web-src/
 ├── src/
 │   ├── api/              # HTTP-клієнт + org/events/calendar
-│   ├── auth/             # демо-сесія, RequireAuth
+│   ├── auth/             # JWT-сесія, RequireAuth
 │   ├── mock/             # in-memory store для /lab
 │   ├── components/
 │   ├── pages/            # public + admin/ + lab/

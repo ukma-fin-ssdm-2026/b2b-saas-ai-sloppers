@@ -5,7 +5,7 @@ import { listOrganizations } from '../../api/organizations'
 import { useAuth } from '../../auth/AuthContext'
 
 function AdminHomePage() {
-  const { isDemo, session } = useAuth()
+  const { session } = useAuth()
   const [orgCount, setOrgCount] = useState<number | null>(null)
   const [eventCount, setEventCount] = useState<number | null>(null)
 
@@ -58,8 +58,8 @@ function AdminHomePage() {
 
       <ol className="panel-steps">
         <li>
-          Увійди JWT-акаунтом Global Admin
-          {session && !isDemo ? ` (${session.username})` : ''}.
+          Увійди акаунтом Global Admin
+          {session ? ` (${session.username})` : ''}.
         </li>
         <li>
           Створи організацію з логотипом → зʼявиться в каруселі на
