@@ -1,8 +1,7 @@
 name: SonarQube Cloud
 
-# CI-based analysis: Sonar gets compiled classes and dependency jars.
-# No tests run here (they run in ci.yml), so no coverage is reported and the
-# quality gate's coverage condition is skipped.
+# CI-based analysis: Sonar gets compiled classes, dependency jars, and frontend lcov.
+# Frontend Vitest coverage is uploaded so Coverage on New Code can pass the quality gate.
 # Kept separate from ci.yml so that Sonar problems never affect the required CI checks.
 # Requires Automatic Analysis to be OFF in SonarQube Cloud (Administration -> Analysis Method)
 # and a SONAR_TOKEN repository secret.
@@ -48,10 +47,13 @@ jobs:
           cache: npm
           cache-dependency-path: web-src/package-lock.json
 
-      # no build or tests: node_modules only gives the TypeScript analyzer the library types
       - name: Install frontend dependencies
         working-directory: web-src
         run: npm ci
+
+      - name: Frontend tests with coverage
+        working-directory: web-src
+        run: npm run test:coverage
 
       # test-compile gives Sonar the bytecode (main + test); the plugin passes dependency jars itself.
       # Only the listed sources are analyzed, so generated/committed artifacts
@@ -69,3 +71,4 @@ jobs:
           -Dsonar.tests=src/test,web-src/src
           -Dsonar.test.inclusions=src/test/**,web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**
           -Dsonar.exclusions=web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**,**/*.d.ts
+          -Dsonar.javascript.lcov.reportPaths=web-src/coverage/lcov.info
