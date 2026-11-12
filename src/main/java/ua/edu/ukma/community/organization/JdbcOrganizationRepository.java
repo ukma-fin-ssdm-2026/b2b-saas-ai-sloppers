@@ -64,6 +64,35 @@ public class JdbcOrganizationRepository implements OrganizationRepository {
                 .list();
     }
 
+    /**
+     * Фільтр у SQL, щоб каталог не тягнув усю таблицю (R3). Індексу тут немає й бути не може:
+     * {@code LIKE '%...%'} з ведучим шаблоном btree не використовує. Виграш у тому, що рядки
+     * відсіюються в БД, а не передаються й не перетворюються в об'єкти.
+     *
+     * <p>Сортування лишається в сервісі: {@code String.CASE_INSENSITIVE_ORDER} і {@code ORDER BY}
+     * з колацією Postgres дають різний порядок для української.
+     */
+    @Override
+    public List<Organization> findMatching(String needle) {
+        return jdbc.sql("SELECT " + COLUMNS + """
+                         FROM organization
+                         WHERE :needle = ''
+                            OR lower(name) LIKE :pattern ESCAPE '!'
+                            OR slug LIKE :pattern ESCAPE '!'""")
+                .param("needle", needle)
+                .param("pattern", "%" + escapeLike(needle) + "%")
+                .query(mapper)
+                .list();
+    }
+
+    /**
+     * Знешкоджує символи шаблону {@code LIKE}, щоб пошук «50%» чи «a_b» означав те саме, що
+     * {@code String.contains}, а не підстановку.
+     */
+    private static String escapeLike(String value) {
+        return value.replace("!", "!!").replace("%", "!%").replace("_", "!_");
+    }
+
     @Override
     public boolean existsBySlug(String slug, UUID excludedId) {
         return jdbc.sql("""

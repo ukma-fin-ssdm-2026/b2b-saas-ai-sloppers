@@ -13,6 +13,14 @@ public interface OrganizationRepository {
 
     List<Organization> findAll();
 
+    /**
+     * Організації, що відповідають пошуку, без заданого порядку. Фільтр виконує сховище, щоб каталог
+     * не завантажував усю таблицю (R3).
+     *
+     * @param needle підрядок у нижньому регістрі, уже обрізаний; порожній означає «усі»
+     */
+    List<Organization> findMatching(String needle);
+
     boolean existsBySlug(String slug, UUID excludedId);
 
     Organization save(Organization organization);

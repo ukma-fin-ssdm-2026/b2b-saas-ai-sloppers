@@ -46,11 +46,7 @@ public class EventService {
         }
         OffsetDateTime now = OffsetDateTime.now(clock);
         OffsetDateTime lowerBound = from != null && from.isAfter(now) ? from : now;
-        List<Event> upcoming = events.findAll().stream()
-                .filter(Event::isPublished)
-                .filter(e -> !e.startsAt().isBefore(lowerBound))
-                .filter(e -> to == null || e.startsAt().isBefore(to))
-                .filter(e -> organizationId == null || organizationId.equals(e.organizationId()))
+        List<Event> upcoming = events.findPublishedBetween(organizationId, lowerBound, to).stream()
                 .sorted(BY_START)
                 .toList();
         return OffsetPage.of(upcoming, limit, offset);

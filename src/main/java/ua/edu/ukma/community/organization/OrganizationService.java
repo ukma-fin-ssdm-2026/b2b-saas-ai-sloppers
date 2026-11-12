@@ -33,8 +33,7 @@ public class OrganizationService {
 
     public OffsetPage<Organization> list(String query, int limit, int offset) {
         String needle = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
-        List<Organization> matching = organizations.findAll().stream()
-                .filter(o -> matches(o, needle))
+        List<Organization> matching = organizations.findMatching(needle).stream()
                 .sorted(BY_NAME)
                 .toList();
         return OffsetPage.of(matching, limit, offset);
@@ -88,12 +87,6 @@ public class OrganizationService {
             throw notFound(id.toString());
         }
         events.publishEvent(new OrganizationDeleted(id));
-    }
-
-    private static boolean matches(Organization organization, String needle) {
-        return needle.isEmpty()
-                || organization.name().toLowerCase(Locale.ROOT).contains(needle)
-                || organization.slug().contains(needle);
     }
 
     private void ensureSlugFree(String slug, UUID exceptId) {

@@ -60,6 +60,26 @@ public class JdbcEventRepository implements EventRepository {
                 .list();
     }
 
+    /**
+     * Фільтри в SQL, тому індекс {@code event_digest_idx (status, starts_at)} нарешті використовується.
+     * Сортування й пагінація лишаються в сервісі: набір майбутніх подій обмежений, а порядок у Java
+     * і в Postgres не збігається (колація й знакове порівняння {@code UUID}).
+     */
+    @Override
+    public List<Event> findPublishedBetween(UUID organizationId, OffsetDateTime from, OffsetDateTime to) {
+        return jdbc.sql("SELECT " + COLUMNS + """
+                         FROM event
+                         WHERE status = 'PUBLISHED'
+                           AND starts_at >= :from
+                           AND (CAST(:to AS timestamptz) IS NULL OR starts_at < :to)
+                           AND (CAST(:organizationId AS uuid) IS NULL OR organization_id = :organizationId)""")
+                .param("from", from)
+                .param("to", to)
+                .param("organizationId", organizationId)
+                .query(mapper)
+                .list();
+    }
+
     @Override
     public List<Event> findByOrganizationId(UUID organizationId) {
         return jdbc.sql("SELECT " + COLUMNS + " FROM event WHERE organization_id = ?")

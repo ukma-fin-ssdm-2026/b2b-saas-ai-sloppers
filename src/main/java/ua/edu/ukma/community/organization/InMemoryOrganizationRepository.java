@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,6 +53,15 @@ public class InMemoryOrganizationRepository implements OrganizationRepository {
     @Override
     public List<Organization> findAll() {
         return List.copyOf(store.values());
+    }
+
+    @Override
+    public List<Organization> findMatching(String needle) {
+        return store.values().stream()
+                .filter(o -> needle.isEmpty()
+                        || o.name().toLowerCase(Locale.ROOT).contains(needle)
+                        || o.slug().contains(needle))
+                .toList();
     }
 
     @Override

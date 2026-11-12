@@ -50,6 +50,41 @@ class InMemoryOrganizationRepositoryTest {
     }
 
     @Test
+    @DisplayName("порожній запит повертає всі організації, відсортовані за назвою")
+    void blankQueryReturnsAllSortedByName() {
+        var page = service.list(null, 20, 0);
+
+        assertThat(page.data()).extracting(Organization::name).containsExactly(
+                "Волонтерський рух Могилянки", "Дебатний клуб НаУКМА", "Клуб програмування");
+        assertThat(page.pagination().total()).isEqualTo(3);
+    }
+
+    @Test
+    @DisplayName("пошук нечутливий до регістру й обрізає пробіли навколо запиту")
+    void searchIsCaseInsensitiveAndTrimmed() {
+        var page = service.list("  КЛУБ ", 20, 0);
+
+        assertThat(page.data()).extracting(Organization::slug)
+                .containsExactly("debate-club", "coding-club");
+    }
+
+    @Test
+    @DisplayName("пошук знаходить організацію за slug")
+    void searchMatchesSlug() {
+        assertThat(service.list("coding", 20, 0).data())
+                .extracting(Organization::slug).containsExactly("coding-club");
+    }
+
+    @Test
+    @DisplayName("запит без збігів дає порожню сторінку")
+    void searchWithoutMatches() {
+        var page = service.list("нічого такого", 20, 0);
+
+        assertThat(page.data()).isEmpty();
+        assertThat(page.pagination().total()).isZero();
+    }
+
+    @Test
     @DisplayName("пагінація поверх демо-даних: зсув за межами списку дає порожню сторінку")
     void paginationBeyondSeedData() {
         var page = service.list(null, 2, 10);

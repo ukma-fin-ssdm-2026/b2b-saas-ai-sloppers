@@ -65,11 +65,11 @@ class OrganizationServiceTest {
     @DisplayName("list")
     class ListOrganizations {
 
-        @ParameterizedTest(name = "порожній запит [{0}] повертає всі організації за назвою")
+        @ParameterizedTest(name = "запит [{0}] перетворюється на порожній пошук")
         @NullAndEmptySource
         @ValueSource(strings = {"   "})
-        void blankQueryReturnsAllSortedByName(String query) {
-            when(repository.findAll()).thenReturn(List.of(debate, coding, volunteers));
+        void blankQueryBecomesEmptyNeedle(String query) {
+            when(repository.findMatching("")).thenReturn(List.of(debate, coding, volunteers));
 
             OffsetPage<Organization> page = service.list(query, 20, 0);
 
@@ -79,21 +79,20 @@ class OrganizationServiceTest {
         }
 
         @Test
-        @DisplayName("пошук нечутливий до регістру й обрізає пробіли навколо запиту")
-        void searchIsCaseInsensitiveAndTrimmed() {
-            when(repository.findAll()).thenReturn(List.of(debate, coding, volunteers));
+        @DisplayName("запит обрізається й переводиться в нижній регістр перед запитом у сховище")
+        void queryIsTrimmedAndLowercasedBeforeLookup() {
+            // сам пошук тепер у сховищі, тож перевіряємо рядок, який сервіс йому передає
+            service.list("  КЛУБ ", 20, 0);
 
-            OffsetPage<Organization> page = service.list("  КЛУБ ", 20, 0);
-
-            assertThat(page.data()).containsExactly(debate, coding);
+            verify(repository).findMatching("клуб");
         }
 
         @Test
-        @DisplayName("пошук знаходить організацію за slug")
-        void searchMatchesSlug() {
-            when(repository.findAll()).thenReturn(List.of(debate, coding, volunteers));
+        @DisplayName("сортує за назвою те, що віддало сховище")
+        void sortsWhatRepositoryReturned() {
+            when(repository.findMatching("клуб")).thenReturn(List.of(coding, debate));
 
-            assertThat(service.list("coding", 20, 0).data()).containsExactly(coding);
+            assertThat(service.list("клуб", 20, 0).data()).containsExactly(debate, coding);
         }
     }
 
