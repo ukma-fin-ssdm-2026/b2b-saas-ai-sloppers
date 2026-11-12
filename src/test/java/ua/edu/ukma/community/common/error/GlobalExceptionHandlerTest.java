@@ -100,8 +100,9 @@ class GlobalExceptionHandlerTest {
         return new MethodParameter(method, index);
     }
 
+    /** Носій анотацій для {@link #methodParameter(int)}; викликається лише рефлексією. */
     @SuppressWarnings("unused")
-    private void sample(@RequestParam(name = "q") String named,
+    void sample(@RequestParam(name = "q") String named,
                         @RequestParam String unnamed,
                         @PathVariable(name = "orgId") String pathNamed) {
     }
