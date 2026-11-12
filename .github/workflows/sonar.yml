@@ -1,8 +1,8 @@
 name: SonarQube Cloud
 
-# CI-based analysis: Sonar gets compiled classes and dependency jars.
-# No tests run here (they run in ci.yml), so no coverage is reported and the
-# quality gate's coverage condition is skipped.
+# CI-based analysis: Sonar gets compiled classes, dependency jars and coverage reports.
+# Backend tests run here too (besides ci.yml), because the quality gate checks
+# "Coverage on New Code": without the JaCoCo report Sonar counts new Java code as 0% covered.
 # Kept separate from ci.yml so that Sonar problems never affect the required CI checks.
 # Requires Automatic Analysis to be OFF in SonarQube Cloud (Administration -> Analysis Method)
 # and a SONAR_TOKEN repository secret.
@@ -48,19 +48,20 @@ jobs:
           cache: npm
           cache-dependency-path: web-src/package-lock.json
 
-      # no build or tests: node_modules only gives the TypeScript analyzer the library types
+      # no frontend build or tests: node_modules only gives the TypeScript analyzer the library types
       - name: Install frontend dependencies
         working-directory: web-src
         run: npm ci
 
-      # test-compile gives Sonar the bytecode (main + test); the plugin passes dependency jars itself.
+      # test runs the backend tests and writes target/site/jacoco/jacoco.xml (jacoco-report runs in the test phase);
+      # it also gives Sonar the bytecode (main + test); the plugin passes dependency jars itself.
       # Only the listed sources are analyzed, so generated/committed artifacts
       # (docs/**, web-src/coverage/**, dist, target, node_modules) stay out of the analysis.
       - name: Compile and analyze
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
-          ./mvnw -B -ntp test-compile org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          ./mvnw -B -ntp test org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -Dcheckstyle.skip
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=ukma-fin-ssdm-2026
@@ -69,3 +70,4 @@ jobs:
           -Dsonar.tests=src/test,web-src/src
           -Dsonar.test.inclusions=src/test/**,web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**
           -Dsonar.exclusions=web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**,**/*.d.ts
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml

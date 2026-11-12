@@ -1,11 +1,7 @@
 package ua.edu.ukma.community.subscription;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import ua.edu.ukma.community.common.LogSafe;
 import ua.edu.ukma.community.event.Event;
 import ua.edu.ukma.community.organization.Organization;
 
@@ -14,7 +10,6 @@ import java.util.Locale;
 
 public class SmtpEventAnnouncementMailer implements EventAnnouncementMailer {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SmtpEventAnnouncementMailer.class);
     private static final DateTimeFormatter WHEN =
             DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm", Locale.forLanguageTag("uk"));
 
@@ -44,10 +39,7 @@ public class SmtpEventAnnouncementMailer implements EventAnnouncementMailer {
         }
         body.append("\n— Студентське ком'юніті НаУКМА");
         message.setText(body.toString());
-        try {
-            mail.send(message);
-        } catch (MailException e) {
-            LOG.error("Failed to send new-event email to {}: {}", LogSafe.of(email), LogSafe.of(e.getMessage()));
-        }
+        // MailException не ловимо тут: SubscriptionService рахує невдалі листи і пише їх у лог
+        mail.send(message);
     }
 }

@@ -9,12 +9,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.common.error.ErrorCode;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.organization.OrganizationDeleted;
 import ua.edu.ukma.community.organization.OrganizationService;
-import ua.edu.ukma.community.subscription.SubscriptionService;
 
 import java.util.List;
 import java.util.Optional;
@@ -45,13 +45,13 @@ class EventServiceTest {
     @Mock
     private OrganizationService organizations;
     @Mock
-    private SubscriptionService subscriptions;
+    private ApplicationEventPublisher publisher;
 
     private EventService service;
 
     @BeforeEach
     void setUp() {
-        service = new EventService(repository, organizations, subscriptions, FIXED_CLOCK);
+        service = new EventService(repository, organizations, publisher, FIXED_CLOCK);
     }
 
     private static ApiException notFound(ErrorCode code) {
@@ -154,6 +154,8 @@ class EventServiceTest {
             assertThat(created.verified()).isTrue();
             assertThat(created.isScraped()).isFalse();
             assertThat(created.createdAt()).isEqualTo(NOW);
+            // R1: сервіс лише ставить розсилку в чергу, листи надсилає слухач у фоні
+            verify(publisher).publishEvent(new EventPublished(created));
         }
 
         @Test
@@ -193,6 +195,11 @@ class EventServiceTest {
                 assertThat(e.title()).isEqualTo("Вечір настільних ігор");
                 assertThat(e.isScraped()).isTrue();
             });
+            if (expected == EventStatus.PUBLISHED) {
+                verify(publisher).publishEvent(new EventPublished(ingested.orElseThrow()));
+            } else {
+                verify(publisher, never()).publishEvent(any(EventPublished.class));
+            }
         }
 
         @Test
@@ -223,6 +230,7 @@ class EventServiceTest {
             assertThat(approved.status()).isEqualTo(EventStatus.PUBLISHED);
             assertThat(approved.verified()).isTrue();
             assertThat(approved.updatedAt()).isEqualTo(NOW);
+            verify(publisher).publishEvent(new EventPublished(approved));
         }
 
         @Test
