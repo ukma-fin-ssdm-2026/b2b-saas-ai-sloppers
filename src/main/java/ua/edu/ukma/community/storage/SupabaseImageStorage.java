@@ -11,9 +11,10 @@ import ua.edu.ukma.community.common.LogSafe;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.common.error.ErrorCode;
 
-import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Картинки в Supabase Storage через його REST API.
@@ -27,7 +28,11 @@ public class SupabaseImageStorage implements ImageStorage {
     // імена файлів унікальні, тож кешувати можна довго
     private static final String CACHE_CONTROL = "max-age=31536000";
     /** Скільки записів просимо за один запит списку і скільки видаляємо за один запит видалення. */
-    static final int PAGE_SIZE = 1000;
+    public static final int PAGE_SIZE = 1000;
+    /** Межа сторінок на одну папку: 50 × 1000 файлів — у сотні разів більше, ніж має організація. */
+    public static final int MAX_PAGES_PER_FOLDER = 50;
+    /** Межа ключів за одне прибирання, щоб список не з'їв пам'ять поду. */
+    public static final int MAX_KEYS = 10_000;
     /** Захист від нескінченної рекурсії: у нас максимум organizations/{id}/events/{id}/файл. */
     private static final int MAX_DEPTH = 5;
     private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_TYPE =
@@ -87,11 +92,18 @@ public class SupabaseImageStorage implements ImageStorage {
         }
     }
 
+    /**
+     * Видаляє всі файли папки (Lab 09, R2, fail safe). Ніколи не кидає {@link RestClientException}:
+     * організація вже видалена з БД, а файли, які не вдалося прибрати, лишаються «сиротами»
+     * і записуються в WARN, щоб їх можна було прибрати вручну.
+     */
     @Override
     public void deleteFolderQuietly(String folder) {
+        Listing listing = new Listing();
+        int deleted = 0;
         try {
-            List<String> keys = new ArrayList<>();
-            collectKeys(folder, 0, keys);
+            collectKeys(folder, 0, listing);
+            List<String> keys = List.copyOf(listing.keys);
             for (int from = 0; from < keys.size(); from += PAGE_SIZE) {
                 List<String> batch = keys.subList(from, Math.min(from + PAGE_SIZE, keys.size()));
                 client.method(HttpMethod.DELETE)
@@ -100,45 +112,98 @@ public class SupabaseImageStorage implements ImageStorage {
                         .body(Map.of("prefixes", batch))
                         .retrieve()
                         .toBodilessEntity();
+                deleted += batch.size();
             }
-            LOG.info("Deleted {} file(s) under {}/{}", keys.size(), bucket, LogSafe.of(folder));
         } catch (RestClientException e) {
-            LOG.warn("Supabase Storage folder cleanup failed for {}/{}: {}", bucket, LogSafe.of(folder),
-                    LogSafe.of(e.getMessage()));
+            LOG.warn("Supabase Storage cleanup of {}/{} failed after {} deleted file(s); "
+                            + "remaining files are orphans: {}",
+                    bucket, LogSafe.of(folder), deleted, LogSafe.of(e.getMessage()));
+            return;
+        }
+        if (listing.incomplete) {
+            LOG.warn("Supabase Storage cleanup of {}/{} stopped early ({}): deleted {} file(s), "
+                    + "the rest are orphans", bucket, LogSafe.of(folder), listing.reason, deleted);
+        } else {
+            LOG.info("Deleted {} file(s) under {}/{}", deleted, bucket, LogSafe.of(folder));
         }
     }
 
     /**
      * Збирає повні ключі всіх файлів у папці й підпапках. Supabase повертає вміст лише одного рівня:
      * файли мають {@code id}, а підпапки — {@code id = null}.
+     *
+     * <p>Раніше тут був {@code while (true)}: якби Supabase проігнорував {@code offset} і віддавав ту саму
+     * повну сторінку, цикл ніколи б не завершився. Тепер вихід гарантований трьома межами:
+     * не більше {@link #MAX_PAGES_PER_FOLDER} сторінок на папку, не більше {@link #MAX_KEYS} ключів
+     * загалом і зупинка, якщо сторінка повторює попередню.
      */
-    private void collectKeys(String folder, int depth, List<String> keys) {
+    private void collectKeys(String folder, int depth, Listing listing) {
         if (depth > MAX_DEPTH) {
+            listing.skip("folder nesting deeper than " + MAX_DEPTH);
             return;
         }
-        int offset = 0;
-        while (true) {
+        List<Object> previousPage = List.of();
+        for (int pageNo = 0; pageNo < MAX_PAGES_PER_FOLDER && !listing.truncated; pageNo++) {
             List<Map<String, Object>> page = client.post()
                     .uri("/object/list/" + bucket)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("prefix", folder, "limit", PAGE_SIZE, "offset", offset))
+                    .body(Map.of("prefix", folder, "limit", PAGE_SIZE, "offset", pageNo * PAGE_SIZE))
                     .retrieve()
                     .body(LIST_TYPE);
             if (page == null || page.isEmpty()) {
                 return;
             }
+            List<Object> names = page.stream().map(item -> item.get("name")).toList();
+            if (names.equals(previousPage)) {
+                listing.stop("storage returned the same page twice for " + folder);
+                return;
+            }
+            previousPage = names;
             for (Map<String, Object> item : page) {
                 String path = folder + "/" + item.get("name");
                 if (item.get("id") == null) {
-                    collectKeys(path, depth + 1, keys);
+                    collectKeys(path, depth + 1, listing);
                 } else {
-                    keys.add(path);
+                    listing.add(path);
+                }
+                if (listing.truncated) {
+                    return;
                 }
             }
             if (page.size() < PAGE_SIZE) {
                 return;
             }
-            offset += PAGE_SIZE;
+        }
+        if (!listing.truncated) {
+            listing.stop("more than " + MAX_PAGES_PER_FOLDER + " pages in " + folder);
+        }
+    }
+
+    /**
+     * Результат обходу: унікальні ключі в порядку знаходження. {@code truncated} — обхід зупинено на межі,
+     * {@code incomplete} — якісь файли не потрапили в список (з причиною для логу).
+     */
+    private static final class Listing {
+        private final Set<String> keys = new LinkedHashSet<>();
+        private boolean truncated;
+        private boolean incomplete;
+        private String reason;
+
+        void add(String key) {
+            keys.add(key);
+            if (keys.size() >= MAX_KEYS) {
+                stop("reached " + MAX_KEYS + " files");
+            }
+        }
+
+        void stop(String why) {
+            truncated = true;
+            skip(why);
+        }
+
+        void skip(String why) {
+            incomplete = true;
+            reason = why;
         }
     }
 

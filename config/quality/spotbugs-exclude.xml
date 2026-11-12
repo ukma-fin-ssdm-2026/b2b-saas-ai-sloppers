@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Винятки SpotBugs / find-sec-bugs. Кожен виняток — підтверджене хибне спрацьовування з поясненням.
-  Справжні знахідки виправляються в коді, а не тут.
--->
+
 <FindBugsFilter>
 
     <!--
@@ -32,12 +29,21 @@
         <Bug pattern="BC_UNCONFIRMED_CAST,RV_RETURN_VALUE_IGNORED_INFERRED,RV_RETURN_VALUE_IGNORED_BAD_PRACTICE,NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE,NP_NULL_PARAM_DEREF_NONVIRTUAL"/>
     </Match>
 
+    <!--
+      CRLF у логах: у цих класах усі значення ззовні (пошта, назви подій, відповіді Supabase/SMTP)
+      проходять через LogSafe.of, який замінює переноси рядка на "_". find-sec-bugs не знає про LogSafe.
+      AsyncConfig пише лише ідентифікатори з коду (назва пулу, класу й методу) і числа.
+    -->
     <Match>
         <Bug pattern="CRLF_INJECTION_LOGS"/>
         <Or>
             <Class name="ua.edu.ukma.community.auth.LogCodeSender"/>
             <Class name="ua.edu.ukma.community.auth.MailCodeSender"/>
             <Class name="ua.edu.ukma.community.storage.SupabaseImageStorage"/>
+            <Class name="ua.edu.ukma.community.storage.SupabaseStorageHealthIndicator"/>
+            <Class name="ua.edu.ukma.community.subscription.SubscriptionService"/>
+            <Class name="ua.edu.ukma.community.subscription.LogEventAnnouncementMailer"/>
+            <Class name="ua.edu.ukma.community.config.AsyncConfig"/>
         </Or>
     </Match>
 

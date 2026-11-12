@@ -1,5 +1,6 @@
 package ua.edu.ukma.community.event;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import ua.edu.ukma.community.common.error.ApiException;
@@ -8,7 +9,6 @@ import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.organization.Organization;
 import ua.edu.ukma.community.organization.OrganizationDeleted;
 import ua.edu.ukma.community.organization.OrganizationService;
-import ua.edu.ukma.community.subscription.SubscriptionService;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
@@ -27,14 +27,14 @@ public class EventService {
 
     private final EventRepository events;
     private final OrganizationService organizations;
-    private final SubscriptionService subscriptions;
+    private final ApplicationEventPublisher publisher;
     private final Clock clock;
 
     public EventService(EventRepository events, OrganizationService organizations,
-                        SubscriptionService subscriptions, Clock clock) {
+                        ApplicationEventPublisher publisher, Clock clock) {
         this.events = events;
         this.organizations = organizations;
-        this.subscriptions = subscriptions;
+        this.publisher = publisher;
         this.clock = clock;
     }
 
@@ -81,7 +81,7 @@ public class EventService {
         Event created = events.save(new Event(UUID.randomUUID(), organizationId, request.title().trim(),
                 request.description(), request.startsAt(), request.location(), request.originalUrl(),
                 null, null, null, EventStatus.PUBLISHED, true, now, now));
-        subscriptions.notifyNewEvent(created);
+        announce(created);
         return created;
     }
 
@@ -98,7 +98,7 @@ public class EventService {
         Event before = get(id);
         Event after = change(id, event -> event.approve(OffsetDateTime.now(clock)));
         if (before.status() != EventStatus.PUBLISHED && after.isPublished()) {
-            subscriptions.notifyNewEvent(after);
+            announce(after);
         }
         return after;
     }
@@ -123,7 +123,7 @@ public class EventService {
                 null, scraped.startsAt(), null, scraped.originalUrl(), null, scraped.sourceId(),
                 scraped.externalPostId(), status, false, now, now));
         if (saved.isPublished()) {
-            subscriptions.notifyNewEvent(saved);
+            announce(saved);
         }
         return Optional.of(saved);
     }
@@ -131,6 +131,15 @@ public class EventService {
     @EventListener
     public synchronized void onOrganizationDeleted(OrganizationDeleted deleted) {
         events.deleteByOrganizationId(deleted.organizationId());
+    }
+
+    /**
+     * Лише ставить розсилку в чергу (R1): листи надсилає слухач {@link EventPublished}
+     * після коміту в окремому обмеженому пулі. Раніше SMTP викликався тут, під {@code synchronized},
+     * і повільний поштовий сервер блокував створення й модерацію подій для всіх.
+     */
+    private void announce(Event published) {
+        publisher.publishEvent(new EventPublished(published));
     }
 
     private Event change(UUID id, UnaryOperator<Event> transition) {
