@@ -16,6 +16,7 @@ import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.organization.OrganizationDeleted;
 import ua.edu.ukma.community.organization.OrganizationService;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -63,14 +64,11 @@ class EventServiceTest {
     class Digest {
 
         @Test
-        @DisplayName("лише опубліковані майбутні події, відсортовані за часом початку")
-        void onlyPublishedUpcomingSortedByStart() {
+        @DisplayName("сортує за часом початку те, що віддало сховище")
+        void sortsWhatRepositoryReturned() {
             Event later = publishedEvent(NOW.plusDays(5));
             Event sooner = publishedEvent(NOW.plusHours(2));
-            Event past = publishedEvent(NOW.minusHours(1));
-            Event pending = event(ORG_ID, EventStatus.PENDING, false, NOW.plusDays(1));
-            Event unpublished = event(ORG_ID, EventStatus.UNPUBLISHED, true, NOW.plusDays(1));
-            when(repository.findAll()).thenReturn(List.of(later, past, pending, sooner, unpublished));
+            when(repository.findPublishedBetween(null, NOW, null)).thenReturn(List.of(later, sooner));
 
             OffsetPage<Event> page = service.digest(null, null, null, 20, 0);
 
@@ -79,37 +77,32 @@ class EventServiceTest {
         }
 
         @Test
-        @DisplayName("межі: подія рівно «зараз» входить, подія рівно о `to` — ні")
-        void boundariesAreInclusiveLowerExclusiveUpper() {
-            Event startsNow = publishedEvent(NOW);
-            Event startsAtTo = publishedEvent(NOW.plusDays(1));
-            when(repository.findAll()).thenReturn(List.of(startsNow, startsAtTo));
-
-            OffsetPage<Event> page = service.digest(null, null, NOW.plusDays(1), 20, 0);
-
-            assertThat(page.data()).containsExactly(startsNow);
-        }
-
-        @Test
-        @DisplayName("`from` у минулому не повертає минулих подій — нижня межа завжди не раніше «зараз»")
+        @DisplayName("`from` у минулому підтягується до «зараз» перед запитом у сховище")
         void pastFromIsClampedToNow() {
-            Event yesterdayEvening = publishedEvent(NOW.minusHours(12));
-            Event tomorrow = publishedEvent(NOW.plusDays(1));
-            when(repository.findAll()).thenReturn(List.of(yesterdayEvening, tomorrow));
+            // відбір подій тепер у сховищі, тож перевіряємо саме межу, яку сервіс йому передає
+            service.digest(null, NOW.minusDays(2), null, 20, 0);
 
-            OffsetPage<Event> page = service.digest(null, NOW.minusDays(2), null, 20, 0);
-
-            assertThat(page.data()).containsExactly(tomorrow);
+            verify(repository).findPublishedBetween(null, NOW, null);
         }
 
         @Test
-        @DisplayName("фільтр за організацією")
-        void filtersByOrganization() {
-            Event ours = publishedEvent(NOW.plusDays(1));
-            Event theirs = event(OTHER_ORG_ID, EventStatus.PUBLISHED, true, NOW.plusDays(1));
-            when(repository.findAll()).thenReturn(List.of(ours, theirs));
+        @DisplayName("`from` у майбутньому передається як є")
+        void futureFromIsPassedThrough() {
+            OffsetDateTime from = NOW.plusDays(3);
 
-            assertThat(service.digest(OTHER_ORG_ID, null, null, 20, 0).data()).containsExactly(theirs);
+            service.digest(null, from, null, 20, 0);
+
+            verify(repository).findPublishedBetween(null, from, null);
+        }
+
+        @Test
+        @DisplayName("організація і верхня межа передаються у сховище без змін")
+        void organizationAndUpperBoundArePassedThrough() {
+            OffsetDateTime to = NOW.plusDays(10);
+
+            service.digest(OTHER_ORG_ID, null, to, 20, 0);
+
+            verify(repository).findPublishedBetween(OTHER_ORG_ID, NOW, to);
         }
 
         @Test
