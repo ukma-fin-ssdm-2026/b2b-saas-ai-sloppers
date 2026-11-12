@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,26 +27,38 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
-// change our application => to test deployment
 @Configuration
 @EnableConfigurationProperties(AuthProperties.class)
 public class AuthConfig {
 
     static final String ISSUER = "student-community";
 
+    /** Profiles where JWT/mail stubs are allowed for local runs and tests. */
+    static final Profiles DEV_STUB_PROFILES = Profiles.of("dev", "test", "inmemory");
+
     private static final Logger LOG = LoggerFactory.getLogger(AuthConfig.class);
     private static final int MIN_SECRET_BYTES = 32;
     private static final String HMAC = "HmacSHA256";
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    private final Environment environment;
+
+    public AuthConfig(Environment environment) {
+        this.environment = environment;
+    }
+
     @Bean
-    PasswordEncoder passwordEncoder() {
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
     @Bean
-    SecretKey jwtKey(AuthProperties properties) {
+    public SecretKey jwtKey(AuthProperties properties) {
         if (properties.jwtSecret().isBlank()) {
+            requireDevStubs(
+                    "AUTH_JWT_SECRET is not set. Provide a secret of at least "
+                            + MIN_SECRET_BYTES
+                            + " bytes, or activate profile 'dev', 'test', or 'inmemory' to allow a random key.");
             LOG.warn("AUTH_JWT_SECRET is not set: using a random key, tokens will be invalid after restart");
             byte[] random = new byte[MIN_SECRET_BYTES];
             RANDOM.nextBytes(random);
@@ -58,29 +72,37 @@ public class AuthConfig {
     }
 
     @Bean
-    JwtEncoder jwtEncoder(SecretKey jwtKey) {
+    public JwtEncoder jwtEncoder(SecretKey jwtKey) {
         return new NimbusJwtEncoder(new ImmutableSecret<>(jwtKey));
     }
 
     @Bean
-    JwtDecoder jwtDecoder(SecretKey jwtKey) {
+    public JwtDecoder jwtDecoder(SecretKey jwtKey) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtKey).macAlgorithm(MacAlgorithm.HS256).build();
         decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(ISSUER));
         return decoder;
     }
 
-
     @Bean
-    CodeSender codeSender(ObjectProvider<JavaMailSender> mailSender, AuthProperties properties,
+    public CodeSender codeSender(ObjectProvider<JavaMailSender> mailSender, AuthProperties properties,
                           @Value("${spring.mail.host:}") String mailHost,
                           @Value("${spring.mail.username:}") String mailUsername) {
         JavaMailSender mail = mailSender.getIfAvailable();
 
         if (mail == null || mailHost.isBlank()) {
+            requireDevStubs(
+                    "SPRING_MAIL_HOST is not set. Configure SMTP, or activate profile 'dev', 'test', or 'inmemory' "
+                            + "to write verification codes to the log.");
             LOG.warn("SMTP is not configured (spring.mail.host): verification codes will be written to the log");
             return new LogCodeSender();
         }
         String from = properties.mailFrom().isBlank() ? mailUsername : properties.mailFrom();
         return new MailCodeSender(mail, from, properties.codeTtl());
+    }
+
+    private void requireDevStubs(String message) {
+        if (!environment.acceptsProfiles(DEV_STUB_PROFILES)) {
+            throw new IllegalStateException(message);
+        }
     }
 }

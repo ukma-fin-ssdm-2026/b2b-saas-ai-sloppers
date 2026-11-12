@@ -3,6 +3,8 @@ package ua.edu.ukma.community.auth;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.oauth2.jwt.Jwt;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.common.error.ErrorCode;
@@ -12,6 +14,9 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static ua.edu.ukma.community.auth.AuthTestSupport.FAST_BCRYPT;
 import static ua.edu.ukma.community.auth.AuthTestSupport.PROPERTIES;
 import static ua.edu.ukma.community.support.TestFixtures.FIXED_CLOCK;
@@ -20,9 +25,15 @@ import static ua.edu.ukma.community.support.TestFixtures.FIXED_CLOCK;
 class LoginServiceTest {
 
     InMemoryUserRepository users;
-    AuthConfig config = new AuthConfig();
+    AuthConfig config = new AuthConfig(stubProfilesAllowed());
     javax.crypto.SecretKey key;
     LoginService service;
+
+    private static Environment stubProfilesAllowed() {
+        Environment env = mock(Environment.class);
+        when(env.acceptsProfiles(any(Profiles.class))).thenReturn(true);
+        return env;
+    }
 
     @BeforeEach
     void setUp() {

@@ -234,6 +234,8 @@ LOG.warn("SMTP is not configured. Verification code for {}: {}", LogSafe.of(emai
 
 **Як виправити:** дозволяти заглушки лише в профілях `dev`/`test`/`inmemory`; в інших — падати на старті (`IllegalStateException`) з чітким повідомленням, яку змінну не задано.
 
+**Статус:** виправлено в `AuthConfig` (fail fast поза stub-профілями). Тест: `AuthStubGuardTest`. Деталі — у [reliability-report.md](reliability-report.md) § R5.
+
 ---
 
 ## R6. Анонси подій губляться без повторних спроб
