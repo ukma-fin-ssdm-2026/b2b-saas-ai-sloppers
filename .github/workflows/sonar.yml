@@ -1,7 +1,8 @@
 name: SonarQube Cloud
 
-# CI-based analysis: Sonar gets compiled classes, dependency jars, and frontend lcov.
-# Frontend Vitest coverage is uploaded so Coverage on New Code can pass the quality gate.
+# CI-based analysis: Sonar gets compiled classes, dependency jars and coverage reports.
+# Backend tests run here too (besides ci.yml), because the quality gate checks
+# "Coverage on New Code": without the JaCoCo report Sonar counts new Java code as 0% covered.
 # Kept separate from ci.yml so that Sonar problems never affect the required CI checks.
 # Requires Automatic Analysis to be OFF in SonarQube Cloud (Administration -> Analysis Method)
 # and a SONAR_TOKEN repository secret.
@@ -47,6 +48,7 @@ jobs:
           cache: npm
           cache-dependency-path: web-src/package-lock.json
 
+      # no frontend build or tests: node_modules only gives the TypeScript analyzer the library types
       - name: Install frontend dependencies
         working-directory: web-src
         run: npm ci
@@ -62,7 +64,7 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
-          ./mvnw -B -ntp test-compile org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          ./mvnw -B -ntp test org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -Dcheckstyle.skip
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=ukma-fin-ssdm-2026
@@ -72,3 +74,4 @@ jobs:
           -Dsonar.test.inclusions=src/test/**,web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**
           -Dsonar.exclusions=web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**,**/*.d.ts
           -Dsonar.javascript.lcov.reportPaths=web-src/coverage/lcov.info
+          -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml

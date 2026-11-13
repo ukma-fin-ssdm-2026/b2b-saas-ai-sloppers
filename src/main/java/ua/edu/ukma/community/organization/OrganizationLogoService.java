@@ -1,9 +1,12 @@
 package ua.edu.ukma.community.organization;
 
-import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.web.multipart.MultipartFile;
 import ua.edu.ukma.community.common.error.ApiException;
+import ua.edu.ukma.community.config.AsyncConfig;
 import ua.edu.ukma.community.storage.ImageService;
 
 import java.util.UUID;
@@ -44,7 +47,13 @@ public class OrganizationLogoService {
         images.deleteQuietly(current.logoUrl());
     }
 
-    @EventListener
+    /**
+     * Прибирає файли організації у фоні (Lab 09, R2): після коміту видалення і в окремому пулі
+     * {@link AsyncConfig#STORAGE_CLEANUP}. {@code DELETE /organizations/{id}} відповідає одразу,
+     * не чекаючи Supabase, і не тримає монітор {@code OrganizationService}.
+     */
+    @Async(AsyncConfig.STORAGE_CLEANUP)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onOrganizationDeleted(OrganizationDeleted deleted) {
         images.deleteFolderQuietly(folder(deleted.organizationId()));
     }
