@@ -5,16 +5,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import ua.edu.ukma.community.common.LogSafe;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.common.error.ErrorCode;
 
+import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.DoubleSupplier;
+import java.util.function.LongSupplier;
 
 /**
  * Картинки в Supabase Storage через його REST API.
@@ -35,6 +41,12 @@ public class SupabaseImageStorage implements ImageStorage {
     public static final int MAX_KEYS = 10_000;
     /** Захист від нескінченної рекурсії: у нас максимум organizations/{id}/events/{id}/файл. */
     private static final int MAX_DEPTH = 5;
+    /** Перша спроба плюс два повтори. */
+    static final int UPLOAD_ATTEMPTS = 3;
+    static final Duration BACKOFF_BASE = Duration.ofMillis(100);
+    static final Duration BACKOFF_CAP = Duration.ofSeconds(2);
+    /** Межа на час, не лише на спроби: read-тайм-аут 30 с × 3 спроби — це 90 с очікування. */
+    static final Duration RETRY_WINDOW = Duration.ofSeconds(10);
     private static final ParameterizedTypeReference<List<Map<String, Object>>> LIST_TYPE =
             new ParameterizedTypeReference<>() {
             };
@@ -42,12 +54,38 @@ public class SupabaseImageStorage implements ImageStorage {
     private final RestClient client;
     private final String bucket;
     private final String publicPrefix;
+    private final RetrySeams retry;
+
+    interface Sleeper {
+        void sleep(Duration duration) throws InterruptedException;
+    }
+
+    /**
+     * Підміни для тесту, щоб він не чекав насправді.
+     *
+     * @param sleeper  пауза між спробами
+     * @param jitter   частка поточного відступу в діапазоні {@code [0, 1)}
+     * @param nanoTime джерело часу для вікна повторів
+     */
+    record RetrySeams(Sleeper sleeper, DoubleSupplier jitter, LongSupplier nanoTime) {
+
+        static RetrySeams real() {
+            return new RetrySeams(duration -> Thread.sleep(duration.toMillis()),
+                    () -> ThreadLocalRandom.current().nextDouble(), System::nanoTime);
+        }
+    }
 
     /**
      * @param builder    білдер з налаштованими таймаутами (див. {@link StorageConfig}); у тестах — з моком сервера
      * @param projectUrl {@code https://<project-ref>.supabase.co}
      */
     public SupabaseImageStorage(RestClient.Builder builder, String projectUrl, String secretKey, String bucket) {
+        this(builder, projectUrl, secretKey, bucket, RetrySeams.real());
+    }
+
+    SupabaseImageStorage(RestClient.Builder builder, String projectUrl, String secretKey, String bucket,
+                         RetrySeams retry) {
+        this.retry = retry;
         String base = projectUrl.endsWith("/") ? projectUrl.substring(0, projectUrl.length() - 1) : projectUrl;
         this.client = builder
                 .baseUrl(base + "/storage/v1")
@@ -57,22 +95,56 @@ public class SupabaseImageStorage implements ImageStorage {
         this.publicPrefix = base + "/storage/v1/object/public/" + bucket + "/";
     }
 
+    /**
+     * Повтори тут законні лише завдяки {@code x-upsert}: він робить виклик ідемпотентним, тож
+     * повторна спроба перезаписує той самий об'єкт замість {@code 409 Duplicate}.
+     */
     @Override
     public String upload(String key, byte[] data, String contentType) {
-        try {
-            client.post()
-                    .uri(objectPath(key))
-                    .header("Content-Type", contentType)
-                    .header("cache-control", CACHE_CONTROL)
-                    .body(data)
-                    .retrieve()
-                    .toBodilessEntity();
-        } catch (RestClientException e) {
-            LOG.error("Supabase Storage upload failed for {}/{}: {}", bucket, LogSafe.of(key),
-                    LogSafe.of(e.getMessage()));
-            throw new ApiException(ErrorCode.STORAGE_UNAVAILABLE, "Не вдалося зберегти файл у сховищі");
+        long startedAt = retry.nanoTime().getAsLong();
+        for (int attempt = 1; ; attempt++) {
+            try {
+                client.post()
+                        .uri(objectPath(key))
+                        .header("Content-Type", contentType)
+                        .header("cache-control", CACHE_CONTROL)
+                        .header("x-upsert", "true")
+                        .body(data)
+                        .retrieve()
+                        .toBodilessEntity();
+                return publicPrefix + key;
+            } catch (RestClientException e) {
+                if (attempt == UPLOAD_ATTEMPTS || !worthRetrying(e) || windowSpent(startedAt)) {
+                    LOG.error("Supabase Storage upload failed for {}/{} after {} attempt(s): {}",
+                            bucket, LogSafe.of(key), attempt, LogSafe.of(e.getMessage()));
+                    throw new ApiException(ErrorCode.STORAGE_UNAVAILABLE, "Не вдалося зберегти файл у сховищі");
+                }
+                LOG.warn("Supabase Storage upload attempt {} of {} for {}/{} failed, retrying: {}",
+                        attempt, UPLOAD_ATTEMPTS, bucket, LogSafe.of(key), LogSafe.of(e.getMessage()));
+                pauseBefore(attempt);
+            }
         }
-        return publicPrefix + key;
+    }
+
+    /** {@code 4xx} не повторюємо: запит був неправильний, і повтор його не виправить. */
+    private static boolean worthRetrying(RestClientException e) {
+        return e instanceof HttpServerErrorException || e instanceof ResourceAccessException;
+    }
+
+    private boolean windowSpent(long startedAt) {
+        return retry.nanoTime().getAsLong() - startedAt >= RETRY_WINDOW.toNanos();
+    }
+
+    /** Повний джитер: пауза випадкова в межах відступу, щоб клієнти не повторювали синхронно. */
+    private void pauseBefore(int attempt) {
+        long exponential = BACKOFF_BASE.toMillis() << (attempt - 1);
+        long ceiling = Math.min(exponential, BACKOFF_CAP.toMillis());
+        try {
+            retry.sleeper().sleep(Duration.ofMillis((long) (retry.jitter().getAsDouble() * ceiling)));
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ApiException(ErrorCode.STORAGE_UNAVAILABLE, "Збереження файлу перервано");
+        }
     }
 
     @Override
