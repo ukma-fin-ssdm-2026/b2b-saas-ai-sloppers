@@ -218,9 +218,9 @@ curl -X PUT -F "file=@poster.jpg" http://localhost:8080/api/v1/events/<id>/image
 
 | Змінна | Що це |
 | ------ | ----- |
-| `AUTH_JWT_SECRET` | секрет підпису JWT, щонайменше 32 символи (`openssl rand -base64 48`). Без нього ключ генерується при старті, і після перезапуску всім доведеться увійти знову |
+| `AUTH_JWT_SECRET` | секрет підпису JWT, щонайменше 32 символи (`openssl rand -base64 48`). **Обов'язковий** поза профілями `dev`/`test`/`inmemory`; інакше застосунок не стартує. У stub-профілях без секрету генерується випадковий ключ (після рестарту всім треба увійти знову) |
 | `AUTH_ADMIN_EMAILS` | пошти через кому, які при реєстрації отримують роль Global Admin |
-| `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | SMTP для листів з кодом. Без них код пишеться в лог бекенду (`docker compose logs backend`) |
+| `SPRING_MAIL_HOST`, `SPRING_MAIL_PORT`, `SPRING_MAIL_USERNAME`, `SPRING_MAIL_PASSWORD` | SMTP для листів з кодом. **Обов'язкові** поза `dev`/`test`/`inmemory`. У stub-профілях без SMTP код пишеться в лог (`docker compose logs backend` / консоль) |
 
 Сценарій: `POST /api/v1/auth/register` → код з листа (або з логу) → `POST /api/v1/auth/verify` → `POST /api/v1/auth/login` → токен у Swagger UI через кнопку **Authorize**.
 

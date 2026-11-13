@@ -1,5 +1,4 @@
-import { DEMO_TOKEN } from '../auth/credentials'
-import { clearSession, isDemoSession, readSession } from '../auth/session'
+import { clearSession, readSession } from '../auth/session'
 
 export const API_BASE = '/api/v1'
 
@@ -70,15 +69,6 @@ export async function apiFetch<T>(
   if (!response.ok) {
     const body = await response.text()
     if (response.status === 401 && !skipAuth) {
-      // Demo token is not a JWT — backend rejects it. Keep the FE session so
-      // Lab still works; surface a clear error instead of hard logout.
-      if (isDemoSession(session) || resolvedToken === DEMO_TOKEN) {
-        throw new ApiError(
-          401,
-          'Демо-сесія не приймається бекендом. Увійдіть через @ukma.edu.ua (реєстрація → код у логах сервера → вхід), щоб керувати даними в адмінці.',
-          body,
-        )
-      }
       redirectToLoginOn401()
     }
     throw new ApiError(

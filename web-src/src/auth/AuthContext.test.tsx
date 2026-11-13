@@ -1,9 +1,8 @@
+import { useState } from 'react'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DEMO_PASSWORD, DEMO_USER } from './credentials'
 import { AuthProvider, useAuth } from './AuthContext'
-import { registerMock, verifyMock } from './mockAuthApi'
 import { clearSession } from './session'
 
 function Probe() {
@@ -12,13 +11,14 @@ function Probe() {
     <div>
       <span data-testid="auth">{isAuthenticated ? 'yes' : 'no'}</span>
       <span data-testid="user">{session?.username ?? ''}</span>
+      <span data-testid="role">{session?.role ?? ''}</span>
       <button
         type="button"
         onClick={() => {
-          void login(DEMO_USER, DEMO_PASSWORD)
+          void login('admin@ukma.edu.ua', 'secret12')
         }}
       >
-        demo-login
+        jwt-login
       </button>
       <button
         type="button"
@@ -43,7 +43,44 @@ describe('AuthContext', () => {
     vi.restoreAllMocks()
   })
 
-  it('demo-логін створює admin-сесію; logout очищає', async () => {
+  it('JWT-логін створює сесію; logout очищає', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.includes('/auth/login')) {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+            json: async () => ({ accessToken: 'jwt-token' }),
+            text: async () => '',
+          }
+        }
+        if (url.includes('/auth/me')) {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+            json: async () => ({
+              id: '1',
+              email: 'admin@ukma.edu.ua',
+              status: 'ACTIVE',
+              globalAdmin: true,
+              headOf: [],
+            }),
+            text: async () => '',
+          }
+        }
+        return {
+          ok: false,
+          status: 404,
+          headers: new Headers(),
+          text: async () => 'missing',
+        }
+      }),
+    )
+
     const user = userEvent.setup()
     render(
       <AuthProvider>
@@ -52,40 +89,146 @@ describe('AuthContext', () => {
     )
 
     expect(screen.getByTestId('auth')).toHaveTextContent('no')
-    await user.click(screen.getByRole('button', { name: 'demo-login' }))
+    await user.click(screen.getByRole('button', { name: 'jwt-login' }))
     await waitFor(() =>
       expect(screen.getByTestId('auth')).toHaveTextContent('yes'),
     )
-    expect(screen.getByTestId('user')).toHaveTextContent(DEMO_USER)
+    expect(screen.getByTestId('user')).toHaveTextContent('admin@ukma.edu.ua')
+    expect(screen.getByTestId('role')).toHaveTextContent('admin')
 
     await user.click(screen.getByRole('button', { name: 'logout' }))
     expect(screen.getByTestId('auth')).toHaveTextContent('no')
   })
 
-  it('логін зареєстрованого користувача після verify (mock fallback)', async () => {
+  it('невдалий логін не створює сесію', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockRejectedValue(new TypeError('network down')),
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        headers: new Headers(),
+        text: async () => 'unauthorized',
+      }),
     )
 
-    const reg = registerMock('ctx@ukma.edu.ua', 'secret12')
-    expect(reg.ok).toBe(true)
-    if (!reg.ok) return
-    expect(verifyMock('ctx@ukma.edu.ua', reg.data.demoCode).ok).toBe(true)
+    const user = userEvent.setup()
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'bad-login' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('auth')).toHaveTextContent('no'),
+    )
+  })
 
-    function UserLoginProbe() {
-      const { isAuthenticated, login, session } = useAuth()
+  it('логін працює навіть якщо /me впав; роль лишається user', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.includes('/auth/login')) {
+          return {
+            ok: true,
+            status: 200,
+            headers: new Headers({ 'Content-Type': 'application/json' }),
+            json: async () => ({ accessToken: 'jwt-token' }),
+            text: async () => '',
+          }
+        }
+        return {
+          ok: false,
+          status: 500,
+          headers: new Headers(),
+          text: async () => 'boom',
+        }
+      }),
+    )
+
+    const user = userEvent.setup()
+    render(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'jwt-login' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('auth')).toHaveTextContent('yes'),
+    )
+    expect(screen.getByTestId('role')).toHaveTextContent('user')
+  })
+
+  it('ACCOUNT_NOT_VERIFIED повертає зрозумілу помилку', async () => {
+    function ErrorProbe() {
+      const { login } = useAuth()
+      const [error, setError] = useState('')
       return (
         <div>
-          <span data-testid="auth">{isAuthenticated ? 'yes' : 'no'}</span>
-          <span data-testid="role">{session?.role ?? ''}</span>
+          <span data-testid="error">{error}</span>
           <button
             type="button"
             onClick={() => {
-              void login('ctx@ukma.edu.ua', 'secret12')
+              void login('x@ukma.edu.ua', 'secret12').then((r) => {
+                if (!r.ok) setError(r.error)
+              })
             }}
           >
-            user-login
+            try-login
+          </button>
+        </div>
+      )
+    }
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        headers: new Headers(),
+        text: async () =>
+          JSON.stringify({
+            error: { code: 'ACCOUNT_NOT_VERIFIED', message: 'verify first' },
+          }),
+      }),
+    )
+
+    const user = userEvent.setup()
+    render(
+      <AuthProvider>
+        <ErrorProbe />
+      </AuthProvider>,
+    )
+    await user.click(screen.getByRole('button', { name: 'try-login' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('error')).toHaveTextContent(
+        'Акаунт ще не підтверджено',
+      ),
+    )
+  })
+
+  it('setSessionFromOutside пише і чистить сесію', async () => {
+    function SessionProbe() {
+      const { session, setSessionFromOutside, isAuthenticated } = useAuth()
+      return (
+        <div>
+          <span data-testid="auth">{isAuthenticated ? 'yes' : 'no'}</span>
+          <span data-testid="user">{session?.username ?? ''}</span>
+          <button
+            type="button"
+            onClick={() =>
+              setSessionFromOutside({
+                username: 'a@ukma.edu.ua',
+                role: 'admin',
+                token: 'jwt',
+                kind: 'api',
+              })
+            }
+          >
+            set
+          </button>
+          <button type="button" onClick={() => setSessionFromOutside(null)}>
+            clear
           </button>
         </div>
       )
@@ -94,13 +237,23 @@ describe('AuthContext', () => {
     const user = userEvent.setup()
     render(
       <AuthProvider>
-        <UserLoginProbe />
+        <SessionProbe />
       </AuthProvider>,
     )
-    await user.click(screen.getByRole('button', { name: 'user-login' }))
-    await waitFor(() =>
-      expect(screen.getByTestId('auth')).toHaveTextContent('yes'),
+    await user.click(screen.getByRole('button', { name: 'set' }))
+    expect(screen.getByTestId('auth')).toHaveTextContent('yes')
+    expect(screen.getByTestId('user')).toHaveTextContent('a@ukma.edu.ua')
+    await user.click(screen.getByRole('button', { name: 'clear' }))
+    expect(screen.getByTestId('auth')).toHaveTextContent('no')
+  })
+
+  it('useAuth поза провайдером кидає', () => {
+    function Bare() {
+      useAuth()
+      return null
+    }
+    expect(() => render(<Bare />)).toThrow(
+      'useAuth must be used within AuthProvider',
     )
-    expect(screen.getByTestId('role')).toHaveTextContent('user')
   })
 })

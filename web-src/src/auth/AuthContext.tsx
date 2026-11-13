@@ -7,8 +7,6 @@ import {
   type ReactNode,
 } from 'react'
 import { ApiError, loginApi, meApi } from '../api/auth'
-import { DEMO_PASSWORD, DEMO_USER } from './credentials'
-import { loginMock } from './mockAuthApi'
 import {
   clearSession,
   createSession,
@@ -22,7 +20,6 @@ type LoginResult = { ok: true } | { ok: false; error: string }
 type AuthContextValue = {
   session: AuthSession | null
   isAuthenticated: boolean
-  isDemo: boolean
   login: (username: string, password: string) => Promise<LoginResult>
   logout: () => void
   setSessionFromOutside: (session: AuthSession | null) => void
@@ -59,13 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const trimmed = username.trim()
 
-    if (trimmed === DEMO_USER && password === DEMO_PASSWORD) {
-      const next = createSession(trimmed, 'admin', undefined, 'demo')
-      writeSession(next)
-      setSession(next)
-      return { ok: true as const }
-    }
-
     try {
       const tokens = await loginApi(trimmed, password)
       let role: AuthSession['role'] = 'user'
@@ -79,26 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         trimmed.toLowerCase(),
         role,
         tokens.accessToken,
-        'api',
       )
       writeSession(next)
       setSession(next)
       return { ok: true as const }
     } catch (apiErr) {
-      const mock = loginMock(trimmed, password)
-      if (mock.ok) {
-        const next = createSession(mock.data.email, mock.data.role, undefined, 'demo')
-        writeSession(next)
-        setSession(next)
-        return { ok: true as const }
-      }
-
       return {
         ok: false as const,
-        error: messageFromApiError(
-          apiErr,
-          mock.error || 'Не вдалося увійти',
-        ),
+        error: messageFromApiError(apiErr, 'Не вдалося увійти'),
       }
     }
   }, [])
@@ -112,7 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       session,
       isAuthenticated: session !== null,
-      isDemo: session?.kind === 'demo',
       login,
       logout,
       setSessionFromOutside,

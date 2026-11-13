@@ -23,8 +23,8 @@ function instagramUrl(handle: string): string {
 
 function OrganizationDetailPage() {
   const { organizationId } = useParams<{ organizationId: string }>()
-  const { isAuthenticated, isDemo } = useAuth()
-  const canSubscribe = isAuthenticated && !isDemo
+  const { isAuthenticated } = useAuth()
+  const canSubscribe = isAuthenticated
 
   const [organization, setOrganization] = useState<Organization | null>(null)
   const [orgLoading, setOrgLoading] = useState(true)
@@ -313,10 +313,6 @@ function OrganizationDetailPage() {
                         ? 'Відписатися'
                         : 'Підписатися'}
                   </button>
-                ) : isDemo ? (
-                  <Link to={loginFrom} className="orgs-btn org-detail__subscribe">
-                    Увійти для підписки
-                  </Link>
                 ) : (
                   <Link to={loginFrom} className="orgs-btn org-detail__subscribe">
                     Увійти, щоб підписатися

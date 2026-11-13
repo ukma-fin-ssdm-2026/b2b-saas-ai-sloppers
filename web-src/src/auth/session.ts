@@ -1,9 +1,7 @@
-import { DEMO_TOKEN } from './credentials'
-
 export type AuthRole = 'admin' | 'user'
 
-/** demo = FE-only Lab gate; api = real JWT from backend */
-export type AuthKind = 'demo' | 'api'
+/** Real JWT session from backend auth. Legacy FE-only "demo" sessions are dropped. */
+export type AuthKind = 'api'
 
 export interface AuthSession {
   username: string
@@ -13,22 +11,24 @@ export interface AuthSession {
 }
 
 const SESSION_KEY = 'community-auth-session'
+const LEGACY_DEMO_TOKEN = 'demo-admin-token'
 
 function normalizeSession(raw: unknown): AuthSession | null {
   if (!raw || typeof raw !== 'object') return null
-  const parsed = raw as Partial<AuthSession>
+  const parsed = raw as {
+    username?: string
+    role?: AuthRole
+    token?: string
+    kind?: string
+  }
   if (!parsed.username || !parsed.token || !parsed.role) return null
-  const kind: AuthKind =
-    parsed.kind === 'api' || parsed.kind === 'demo'
-      ? parsed.kind
-      : parsed.token === DEMO_TOKEN
-        ? 'demo'
-        : 'api'
+  // Drop old bot/demo Lab gate sessions — only real JWT is accepted.
+  if (parsed.kind === 'demo' || parsed.token === LEGACY_DEMO_TOKEN) return null
   return {
     username: parsed.username,
     role: parsed.role,
     token: parsed.token,
-    kind,
+    kind: 'api',
   }
 }
 
@@ -36,7 +36,12 @@ export function readSession(): AuthSession | null {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY)
     if (!raw) return null
-    return normalizeSession(JSON.parse(raw) as unknown)
+    const session = normalizeSession(JSON.parse(raw) as unknown)
+    if (!session) {
+      sessionStorage.removeItem(SESSION_KEY)
+      return null
+    }
+    return session
   } catch {
     return null
   }
@@ -50,20 +55,10 @@ export function clearSession(): void {
   sessionStorage.removeItem(SESSION_KEY)
 }
 
-export function isDemoSession(session: AuthSession | null = readSession()): boolean {
-  return session?.kind === 'demo' || session?.token === DEMO_TOKEN
-}
-
 export function createSession(
   username: string,
   role: AuthRole,
-  token = DEMO_TOKEN,
-  kind: AuthKind = token === DEMO_TOKEN ? 'demo' : 'api',
+  token: string,
 ): AuthSession {
-  return { username, role, token, kind }
-}
-
-/** @deprecated use createSession */
-export function createDemoSession(username: string): AuthSession {
-  return createSession(username, 'admin')
+  return { username, role, token, kind: 'api' }
 }
