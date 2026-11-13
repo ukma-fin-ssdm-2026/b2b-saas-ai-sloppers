@@ -32,7 +32,7 @@ describe('apiFetch', () => {
   })
 
   it('підставляє Bearer з сесії', async () => {
-    writeSession(createSession('bot', 'admin'))
+    writeSession(createSession('admin@ukma.edu.ua', 'admin', 'real-jwt'))
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 204,
@@ -44,7 +44,7 @@ describe('apiFetch', () => {
     await apiFetch('/secure')
     const init = fetchMock.mock.calls[0]?.[1] as RequestInit
     const headers = new Headers(init.headers)
-    expect(headers.get('Authorization')).toBe('Bearer demo-admin-token')
+    expect(headers.get('Authorization')).toBe('Bearer real-jwt')
   })
 
   it('кидає ApiError на non-OK', async () => {
@@ -66,31 +66,8 @@ describe('apiFetch', () => {
     })
   })
 
-  it('на 401 з демо-сесією не розлогінює', async () => {
-    writeSession(createSession('bot', 'admin'))
-    const assign = vi.fn()
-    vi.stubGlobal('location', {
-      pathname: '/admin',
-      search: '',
-      assign,
-    })
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 401,
-        headers: new Headers(),
-        text: async () => 'unauthorized',
-      }),
-    )
-
-    await expect(apiFetch('/secure')).rejects.toMatchObject({ status: 401 })
-    expect(sessionStorage.getItem('community-auth-session')).not.toBeNull()
-    expect(assign).not.toHaveBeenCalled()
-  })
-
-  it('на 401 з api-сесією очищає сесію і редіректить на login', async () => {
-    writeSession(createSession('admin@ukma.edu.ua', 'admin', 'real-jwt', 'api'))
+  it('на 401 очищає сесію і редіректить на login', async () => {
+    writeSession(createSession('admin@ukma.edu.ua', 'admin', 'real-jwt'))
     const assign = vi.fn()
     vi.stubGlobal('location', {
       pathname: '/admin',

@@ -53,8 +53,11 @@ jobs:
         working-directory: web-src
         run: npm ci
 
-      # test runs the backend tests and writes target/site/jacoco/jacoco.xml (jacoco-report runs in the test phase);
-      # it also gives Sonar the bytecode (main + test); the plugin passes dependency jars itself.
+      - name: Frontend tests with coverage
+        working-directory: web-src
+        run: npm run test:coverage
+
+      # test-compile gives Sonar the bytecode (main + test); the plugin passes dependency jars itself.
       # Only the listed sources are analyzed, so generated/committed artifacts
       # (docs/**, web-src/coverage/**, dist, target, node_modules) stay out of the analysis.
       - name: Compile and analyze
@@ -70,4 +73,5 @@ jobs:
           -Dsonar.tests=src/test,web-src/src
           -Dsonar.test.inclusions=src/test/**,web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**
           -Dsonar.exclusions=web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**,**/*.d.ts
+          -Dsonar.javascript.lcov.reportPaths=web-src/coverage/lcov.info
           -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml

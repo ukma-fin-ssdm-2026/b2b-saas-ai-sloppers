@@ -51,14 +51,14 @@ function LoginPage() {
           <p className="panel-ok">Email підтверджено. Увійдіть паролем.</p>
         ) : (
           <p className="panel-page__lead">
-            Для адмінки потрібен реальний акаунт @ukma.edu.ua (JWT). Демо-логін
-            лише для Lab.
+            Увійдіть акаунтом @ukma.edu.ua (після реєстрації та підтвердження
+            коду).
           </p>
         )}
 
         <form className="panel-form" onSubmit={(e) => void onSubmit(e)}>
           <div className="panel-field">
-            <label htmlFor="login-user">Email або логін</label>
+            <label htmlFor="login-user">Email</label>
             <input
               id="login-user"
               autoComplete="username"
