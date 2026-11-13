@@ -55,6 +55,16 @@ public class InMemoryEventRepository implements EventRepository {
     }
 
     @Override
+    public List<Event> findPublishedBetween(UUID organizationId, OffsetDateTime from, OffsetDateTime to) {
+        return store.values().stream()
+                .filter(Event::isPublished)
+                .filter(e -> !e.startsAt().isBefore(from))
+                .filter(e -> to == null || e.startsAt().isBefore(to))
+                .filter(e -> organizationId == null || organizationId.equals(e.organizationId()))
+                .toList();
+    }
+
+    @Override
     public List<Event> findByOrganizationId(UUID organizationId) {
         return store.values().stream()
                 .filter(e -> e.organizationId().equals(organizationId))
