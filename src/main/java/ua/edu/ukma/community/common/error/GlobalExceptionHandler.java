@@ -8,6 +8,7 @@ import org.slf4j.MDC;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
 import org.springframework.validation.method.ParameterErrors;
 import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -27,6 +28,8 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -40,6 +43,9 @@ public class GlobalExceptionHandler {
 
     private static final int REQUEST_ID_HEX_LENGTH = 16;
 
+    /** Поля, значення яких не можна повертати у відповіді (R10): пароль і код підтвердження. */
+    private static final Set<String> SENSITIVE_FIELDS = Set.of("password", "code");
+
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ErrorResponse> handleApi(ApiException ex) {
         return build(ex.code(), ex.getMessage(), ex.details());
@@ -48,7 +54,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ErrorResponse> handleBodyValidation(MethodArgumentNotValidException ex) {
         List<FieldViolation> details = ex.getBindingResult().getFieldErrors().stream()
-                .map(fe -> new FieldViolation(fe.getField(), fe.getDefaultMessage(), fe.getRejectedValue()))
+                .map(GlobalExceptionHandler::violation)
                 .collect(Collectors.toCollection(ArrayList::new));
         ex.getBindingResult().getGlobalErrors()
                 .forEach(ge -> details.add(new FieldViolation(ge.getObjectName(), ge.getDefaultMessage(), null)));
@@ -60,8 +66,7 @@ public class GlobalExceptionHandler {
         List<FieldViolation> details = new ArrayList<>();
         for (ParameterValidationResult result : ex.getParameterValidationResults()) {
             if (result instanceof ParameterErrors errors) {
-                errors.getFieldErrors().forEach(fe ->
-                        details.add(new FieldViolation(fe.getField(), fe.getDefaultMessage(), fe.getRejectedValue())));
+                errors.getFieldErrors().forEach(fe -> details.add(violation(fe)));
             } else {
                 String name = parameterName(result.getMethodParameter());
                 result.getResolvableErrors().forEach(err ->
@@ -154,6 +159,18 @@ public class GlobalExceptionHandler {
         }
         ApiError error = new ApiError(code, message, details, requestId, DOCS_BASE_URL + "#" + code.anchor());
         return new ErrorResponse(error);
+    }
+
+    /** Порушення по полю; для чутливих полів передане значення не повертається. */
+    private static FieldViolation violation(FieldError fe) {
+        Object provided = isSensitive(fe.getField()) ? null : fe.getRejectedValue();
+        return new FieldViolation(fe.getField(), fe.getDefaultMessage(), provided);
+    }
+
+    /** Порівнює останній сегмент шляху (для вкладених DTO, напр. {@code user.password}) без урахування регістру. */
+    private static boolean isSensitive(String field) {
+        String leaf = field.substring(field.lastIndexOf('.') + 1);
+        return SENSITIVE_FIELDS.contains(leaf.toLowerCase(Locale.ROOT));
     }
 
     private static String parameterName(MethodParameter p) {
