@@ -1496,7 +1496,8 @@ components:
           example: "Slug: 3–50 символів, лише a-z, 0-9 і дефіс"
         providedValue:
           type: object
-          description: Передане значення (може бути відсутнє)
+          description: Передане значення (може бути відсутнє; для пароля й коду підтвердження
+            не повертається)
           example: Debate Club!
     GoogleCalendarLink:
       type: object
