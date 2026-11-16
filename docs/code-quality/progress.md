@@ -26,7 +26,7 @@
 | C-09 | PostgreSQL           | `infra/migrations/`       | ✅ міграції V1–V4, JDBC-реалізації репозиторіїв; профіль `inmemory` лишається для тестів |
 | C-01 | React Web Client     | `web-src/`                | 🟡 каталог організацій працює; форми входу й кабінету голови ще немає |
 | C-07 | Scraper Worker       | `scraper/`                | 🟡 контракт `ScrapedEvent` та `EventService.ingest` готові; сам збір пише команда |
-| C-06 | Bulletin Board       | `board/`                  | ⏳ межа модуля описана в `package-info.java` |
+| C-06 | Bulletin Board       | `board/`                  | ✅ оголошення, відгуки, приватний контакт, автозакриття за місцями й дедлайном (V6) |
 
 ✅ працює · 🟡 частково · ⏳ не розпочато
 
@@ -56,7 +56,7 @@ src/main/java/ua/edu/ukma/community/
 ├── calendar/        C-08: CalendarExportService, CalendarController
 ├── storage/         збереження картинок у Supabase Storage, валідація формату й розміру
 ├── scraper/         C-07: контракт для команди (package-info.java)
-└── board/           C-06: межа модуля (package-info.java)
+└── board/           C-06: Advert, Reply, BoardService, 2 контролери, BoardScheduler (автозакриття)
 ```
 
 Кожен репозиторій має дві реалізації: `Jdbc*` для PostgreSQL і `InMemory*` для профілю `inmemory`. Завдяки цьому тести й генерація OpenAPI-специфікації працюють без бази — але SQL у `Jdbc*` через це не покривається тестами (див. [testing-strategy.md](../testing/testing-strategy.md)).
@@ -97,11 +97,23 @@ src/main/java/ua/edu/ukma/community/
 | `GET` | `/api/v1/events/{id}/calendar/google` | посилання «Додати в Google Calendar» | FR-041 |
 | `PUT` | `/api/v1/events/{id}/image` | завантаження зображення події | FR-034 |
 | `DELETE` | `/api/v1/events/{id}/image` | видалення зображення | FR-034 |
+| `GET` | `/api/v1/adverts` | активні оголошення, фільтр `type`; контакт лише автору й підтвердженим | FR-045, FR-052 |
+| `POST` | `/api/v1/adverts` | створення оголошення | FR-043, FR-044 |
+| `GET` | `/api/v1/adverts/mine` | мої оголошення (активні й закриті) | FR-051 |
+| `GET` | `/api/v1/adverts/replied` | оголошення, на які я відгукнувся; підтвердженим видно контакт | FR-049 |
+| `GET` | `/api/v1/adverts/{id}` | деталі; видалене → `404` | FR-049 |
+| `POST` | `/api/v1/adverts/{id}/close` | автор закриває вручну | FR-051 |
+| `DELETE` | `/api/v1/adverts/{id}` | автор видаляє | FR-051 |
+| `GET` | `/api/v1/adverts/{id}/replies` | відгуки, лише автору | FR-047 |
+| `POST` | `/api/v1/adverts/{id}/replies` | відгукнутися | FR-046 |
+| `POST` | `/api/v1/adverts/{id}/replies/{replyId}/confirm` | підтвердити; заповнені місця → оголошення `CLOSED` | FR-048, FR-050 |
+| `POST` | `/api/v1/adverts/{id}/replies/{replyId}/reject` | відхилити | FR-048 |
+| `POST` | `/api/v1/adverts/{id}/replies/{replyId}/withdraw` | відкликати свій відгук до рішення автора | FR-053 |
 | `GET` | `/actuator/health` | перевірка стану для probes у Minikube | ADR-004 |
 
-Разом 28 кінцевих точок API плюс `/actuator/health`.
+Разом 40 кінцевих точок API плюс `/actuator/health`.
 
-Коди помилок, що з'явилися разом із модулями: `EVENT_NOT_FOUND` (`404`), `INVALID_STATE_TRANSITION` (`409`, наприклад для повторного зняття з публікації), `UNAUTHORIZED` (`401`), `FORBIDDEN` (`403`), `ACCOUNT_NOT_VERIFIED` (`403`), `USER_NOT_FOUND` (`404`), `LAST_HEAD` (`409`).
+Коди помилок, що з'явилися разом із модулями: `EVENT_NOT_FOUND` (`404`), `INVALID_STATE_TRANSITION` (`409`, наприклад для повторного зняття з публікації), `UNAUTHORIZED` (`401`), `FORBIDDEN` (`403`), `ACCOUNT_NOT_VERIFIED` (`403`), `USER_NOT_FOUND` (`404`), `LAST_HEAD` (`409`); дошка: `ADVERT_NOT_FOUND`, `REPLY_NOT_FOUND` (`404`), `OWN_ADVERT` (`403`), `ALREADY_REPLIED`, `ADVERT_CLOSED` (`409`).
 
 ### Життєвий цикл події
 

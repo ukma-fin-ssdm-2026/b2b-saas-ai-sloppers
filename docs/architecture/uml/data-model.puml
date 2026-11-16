@@ -126,7 +126,7 @@ entity "event" as event {
 
 ' ===== Дошка оголошень =====
 
-entity "advert" as advert <<план>> {
+entity "advert" as advert {
   * id : uuid <<PK>>
   --
   * author_id : uuid <<FK>>
@@ -138,14 +138,15 @@ entity "advert" as advert <<план>> {
   * contact : varchar <<PII>>
   * status : enum(ACTIVE, CLOSED, DELETED)
   * created_at : timestamptz
+  * updated_at : timestamptz
 }
 
-entity "advert_response" as advert_response <<план>> {
+entity "advert_response" as advert_response {
   * id : uuid <<PK>>
   --
   * advert_id : uuid <<FK>>
   * user_id : uuid <<FK>>
-  message : text <<PII>>
+  message : varchar(500) <<PII>>
   * status : enum(PENDING, CONFIRMED, REJECTED, WITHDRAWN)
   * created_at : timestamptz
   decided_at : timestamptz

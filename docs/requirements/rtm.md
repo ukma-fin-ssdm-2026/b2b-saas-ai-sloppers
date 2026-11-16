@@ -166,15 +166,15 @@
 | TC-025 | US-009, FR-006 | Голова іншої організації не бачить чужої черги модерації (403) | П-16 ⏳ |
 | TC-026 | US-010, FR-031 | З увімкненою автопублікацією подія з розпізнаними полями публікується одразу | П-14 ✅ `EventServiceTest.Ingest#statusDependsOnAutoPublish` (true) |
 | TC-027 | US-010, FR-031, FR-032 | Подія без розпізнаної дати йде на модерацію навіть при автопублікації | поза планом: `ScrapedEvent` не приймає подію без дати |
-| TC-028 | US-011, FR-043 | Оголошення створюється з усіма обов'язковими полями | П-17 ⏳ |
-| TC-029 | US-011, FR-044 | Оголошення без контакту або з дедлайном у минулому відхиляється | П-17 ⏳ |
-| TC-030 | US-011, FR-045, NFR-009 | Контакт автора відсутній у списку оголошень для всіх, крім автора | П-18 ⏳ |
-| TC-031 | US-012, FR-046 | Повторний відгук і відгук на власне оголошення відхиляються | П-19 ⏳ |
-| TC-032 | US-012, FR-047, FR-048 | Автор бачить відгуки й може підтвердити або відхилити кожен | П-19 ⏳ |
-| TC-033 | US-012, FR-049, NFR-009 | Контакт відкривається лише підтвердженому відгукувачу; в логах його немає | П-18 ⏳ |
-| TC-034 | US-013, FR-050, NFR-006 | Підтверджених відгуків не більше, ніж місць, навіть при паралельних запитах | П-20 ⏳ |
-| TC-035 | US-013, FR-050 | Після дедлайну оголошення закривається протягом 1 години | П-21 ⏳ |
-| TC-036 | US-013, FR-052, NFR-009 | Відгук на закрите оголошення відхиляється; підтверджені зберігають контакт | П-21 ⏳ |
+| TC-028 | US-011, FR-043 | Оголошення створюється з усіма обов'язковими полями | П-17 ✅ `BoardServiceTest.Create#createsActiveAdvert`, `BoardFlowIntegrationTest#fullFlowKeepsContactPrivate` |
+| TC-029 | US-011, FR-044 | Оголошення без контакту або з дедлайном у минулому відхиляється | П-17 ✅ `BoardServiceTest.Create#rejectsPastDeadline`, `BoardFlowIntegrationTest#createValidation`, `#guestHasNoAccess` |
+| TC-030 | US-011, FR-045, NFR-009 | Контакт автора відсутній у списку оголошень для всіх, крім автора | П-18 ✅ `BoardServiceTest.Listing#contactHiddenInListForOthers`, `BoardFlowIntegrationTest#fullFlowKeepsContactPrivate` |
+| TC-031 | US-012, FR-046 | Повторний відгук і відгук на власне оголошення відхиляються | П-19 ✅ `BoardServiceTest.Replies#oneReplyOnSomeoneElsesAdvert`, `#rejectedCannotReplyAgain` |
+| TC-032 | US-012, FR-047, FR-048 | Автор бачить відгуки й може підтвердити або відхилити кожен | П-19 ✅ `BoardServiceTest.Replies#onlyAuthorSeesReplies`, `#decisionsByAuthorOnly` |
+| TC-033 | US-012, FR-049, NFR-009 | Контакт відкривається лише підтвердженому відгукувачу; в логах його немає | П-18 ✅ `BoardServiceTest.Replies#contactOnlyAfterConfirmation`, `AdvertTest#toStringHidesPersonalData`, `BoardFlowIntegrationTest#fullFlowKeepsContactPrivate` |
+| TC-034 | US-013, FR-050, NFR-006 | Підтверджених відгуків не більше, ніж місць, навіть при паралельних запитах | П-20 🟡 `BoardServiceTest.Closing#closesWhenSlotsFilled`, `#concurrentConfirmationsNeverExceedSlots` (100 потоків, in-memory); `FOR UPDATE` у PostgreSQL — після Testcontainers |
+| TC-035 | US-013, FR-050 | Після дедлайну оголошення закривається протягом 1 години | П-21 ✅ `BoardServiceTest.Closing#closeExpiredAfterDeadline`, `Listing#expiredShownAsClosed`, `BoardSchedulerTest` |
+| TC-036 | US-013, FR-052, NFR-009 | Відгук на закрите оголошення відхиляється; підтверджені зберігають контакт | П-21 ✅ `BoardServiceTest.Closing#confirmedKeepContactAfterClose`, `#closeAndDeleteByAuthorOnly`, `BoardFlowIntegrationTest#fullFlowKeepsContactPrivate` |
 | TC-037 | US-014, FR-056, FR-057 | Скарга створюється; Global Admin бачить її та видаляє контент | поза планом: скарги (FR-056, FR-057) не реалізовано |
 | TC-038 | US-014, FR-054, FR-055 | Заблокований користувач не може створювати оголошення й відгуки | П-22 ⏳ |
 | TC-039 | US-014, FR-054 | Після завершення строку блокування обмеження знімаються автоматично | П-22 ⏳ |

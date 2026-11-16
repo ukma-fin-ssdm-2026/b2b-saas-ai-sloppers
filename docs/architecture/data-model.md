@@ -15,7 +15,7 @@
 | `role_change` | реалізовано | V4 |
 | `scraper_source` | заплановано (Scraper Worker) | — |
 | `tag`, `organization_tag` | заплановано | — |
-| `advert`, `advert_response` | заплановано (дошка оголошень) | — |
+| `advert`, `advert_response` | реалізовано | V6 |
 | `ban`, `complaint`, `banned_word` | заплановано (модерація) | — |
 | `author_rating`, `organization_rating` | заплановано, пріоритет Низький | — |
 
@@ -63,11 +63,11 @@
 
 У дайджест потрапляють події зі статусом `PUBLISHED` і `starts_at` у майбутньому (FR-038); після появи `archived_at` — ще й з організацією не в архіві. Для цього запиту є індекс `(status, starts_at)`.
 
-### Дошка оголошень *(план)*
+### Дошка оголошень
 
 **advert** — оголошення про пошук команди (`TEAM`) чи компанії для дозвілля (`LEISURE`) (FR-043). `contact` обов'язковий (FR-044) і є персональними даними (див. нижче). `status`: `ACTIVE`, `CLOSED` (закрите вручну, за дедлайном або після заповнення `slots`; FR-050, FR-051), `DELETED`. Оголошення заблокованого автора приховуються за наявністю активного бану, окремого статусу для цього немає (FR-055).
 
-**advert_response** — відгук на оголошення (FR-046). `status`: `PENDING`, `CONFIRMED` (автор підтвердив, відгукувач бачить контакт; FR-049), `REJECTED`, `WITHDRAWN` (відкликаний до підтвердження; FR-053).
+**advert_response** — відгук на оголошення (FR-046). `status`: `PENDING`, `CONFIRMED` (автор підтвердив, відгукувач бачить контакт; FR-049), `REJECTED`, `WITHDRAWN` (відкликаний до підтвердження; FR-053). Відкликаний відгук можна подати знову: оновлюється той самий рядок (`UNIQUE (advert_id, user_id)` лишається чесним), відхилений — ні. `decided_at` — час рішення автора або відкликання. У коді сутність називається `Reply`, щоб не плутати її з DTO відповідей API.
 
 ### Модерація контенту *(план)*
 
@@ -94,6 +94,9 @@
 | `CHECK(action IN ('APPOINTED','REMOVED'))` | `role_change` | FR-013 |
 | `UNIQUE(source_id, external_post_id)` — повторний або паралельний запуск скрейпера не створює дублікатів | `event` | FR-025, NFR-005 |
 | `CHECK(status IN ('PENDING','PUBLISHED','UNPUBLISHED','REJECTED'))` | `event` | FR-030 – FR-036 |
+| `UNIQUE(advert_id, user_id)` — один відгук на оголошення | `advert_response` | FR-046 |
+| `CHECK(slots > 0)`, `CHECK` на `type` і `status` | `advert` | FR-043 |
+| `ON DELETE CASCADE` від `app_user` і `advert` | `advert`, `advert_response` | — |
 | `ON DELETE CASCADE` від `organization` | `event`, `organization_head`, `role_change` | FR-015 |
 
 Заплановані (разом із відповідними таблицями):
@@ -101,17 +104,15 @@
 | Обмеження | Сутність | Вимога |
 |---|---|---|
 | FK `event.source_id` → `scraper_source` з `ON DELETE SET NULL` — видалення джерела не видаляє події | `event` | FR-022 |
-| `UNIQUE(advert_id, user_id)` — один відгук на оголошення | `advert_response` | FR-046 |
 | `CHECK` — заповнено рівно одне з `advert_id`, `response_id` | `complaint` | FR-056 |
 | `UNIQUE(rater_id, advert_id)` | `author_rating` | FR-061 |
 | `UNIQUE(user_id, organization_id)` | `organization_rating` | FR-063 |
 | `CHECK(score BETWEEN 1 AND 5)` | `author_rating`, `organization_rating` | FR-061, FR-063 |
-| `CHECK(slots > 0)` | `advert` | FR-043 |
 
 Інваріанти, які схемою не виражаються і забезпечуються транзакціями з блокуванням рядків (NFR-006):
 
 - в організації завжди є щонайменше один голова (FR-011, FR-014);
-- кількість відгуків зі статусом `CONFIRMED` не перевищує `advert.slots`; досягнення ліміту закриває оголошення (FR-050).
+- кількість відгуків зі статусом `CONFIRMED` не перевищує `advert.slots`; досягнення ліміту закриває оголошення (FR-050). `BoardService` змінює відгуки лише в транзакції з `SELECT ... FOR UPDATE` на рядок `advert`, тож підтвердження одного оголошення виконуються по черзі.
 
 Виявлення дублікатів однієї події з різних джерел (FR-026) ґрунтується на нечіткому збігу назви, тому виконується логікою Scraper Worker (`DedupKey`), а не обмеженням БД.
 
