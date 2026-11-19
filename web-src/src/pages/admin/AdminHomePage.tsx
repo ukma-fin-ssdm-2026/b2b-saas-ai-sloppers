@@ -105,6 +105,21 @@ function AdminHomePage() {
         <li>
           <div className="panel-row">
             <div className="panel-row__main">
+              <h2 className="panel-row__title">Модерація</h2>
+              <p className="panel-row__meta">
+                Скарги на оголошення й відгуки, блокування, заборонені слова
+              </p>
+            </div>
+            <div className="panel-row__actions">
+              <Link className="orgs-btn" to="/admin/moderation">
+                Відкрити
+              </Link>
+            </div>
+          </div>
+        </li>
+        <li>
+          <div className="panel-row">
+            <div className="panel-row__main">
               <h2 className="panel-row__title">Публічний сайт</h2>
               <p className="panel-row__meta">Перевірити, як бачать гості</p>
             </div>

@@ -26,6 +26,7 @@ function AdminLayout() {
           </NavLink>
           <NavLink to="/admin/organizations">Організації</NavLink>
           <NavLink to="/admin/events">Усі події</NavLink>
+          <NavLink to="/admin/moderation">Модерація</NavLink>
           <NavLink to="/">Сайт →</NavLink>
           <button type="button" className="orgs-btn" onClick={onLogout}>
             Вийти
