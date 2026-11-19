@@ -177,9 +177,9 @@
 | TC-034 | US-013, FR-050, NFR-006 | Підтверджених відгуків не більше, ніж місць, навіть при паралельних запитах | П-20 ✅ `BoardServiceTest.Closing#closesWhenSlotsFilled`, `#concurrentConfirmationsNeverExceedSlots` (100 потоків, in-memory), `BoardConcurrencyPostgresTest` (4 «поди», PostgreSQL, `FOR UPDATE`) |
 | TC-035 | US-013, FR-050 | Після дедлайну оголошення закривається протягом 1 години | П-21 ✅ `BoardServiceTest.Closing#closeExpiredAfterDeadline`, `Listing#expiredShownAsClosed`, `BoardSchedulerTest` |
 | TC-036 | US-013, FR-052, NFR-009 | Відгук на закрите оголошення відхиляється; підтверджені зберігають контакт | П-21 ✅ `BoardServiceTest.Closing#confirmedKeepContactAfterClose`, `#closeAndDeleteByAuthorOnly`, `BoardFlowIntegrationTest#fullFlowKeepsContactPrivate` |
-| TC-037 | US-014, FR-056, FR-057 | Скарга створюється; Global Admin бачить її та видаляє контент | поза планом: скарги (FR-056, FR-057) не реалізовано |
-| TC-038 | US-014, FR-054, FR-055 | Заблокований користувач не може створювати оголошення й відгуки | П-22 ⏳ |
-| TC-039 | US-014, FR-054 | Після завершення строку блокування обмеження знімаються автоматично | П-22 ⏳ |
+| TC-037 | US-014, FR-056, FR-057 | Скарга створюється; Global Admin бачить її та видаляє контент | ✅ `ModerationServiceTest.Complaints`, `.Queue#resolveRemovesAdvert`, `#resolveRemovesReply`, `ModerationFlowIntegrationTest#complaintResolvedRemovesAdvert`, `JdbcModerationRepositoryTest` |
+| TC-038 | US-014, FR-054, FR-055 | Заблокований користувач не може створювати оголошення й відгуки | П-22 ✅ `ModerationFlowIntegrationTest#banLocksTheAccountOut` (403 `ACCOUNT_BLOCKED`), `ModerationServiceTest.Hiding#hiddenFromOthers` |
+| TC-039 | US-014, FR-054 | Після завершення строку блокування обмеження знімаються автоматично | П-22 ✅ `ModerationServiceTest.Banning#schedulerLiftsExpired`, `Hiding#expiredBanHidesNothing`, `AutoBan#autoBanExpires`, `ModerationSchedulerTest` |
 | TC-040 | NFR-003 | Моніторинг `/actuator/health`: доступність ≥ 99% за місяць | поза планом: після деплою в Minikube |
 | TC-041 | NFR-004 | Вимкнення основного пода PostgreSQL: відновлення роботи ≤ 30 с | ⏳ ручний запуск у Minikube: `infra/helpers/db-failover-test.sh` |
 | TC-042 | NFR-012 | Специфікація OpenAPI 3 генерується, формат помилок єдиний | П-23 ✅ `api-docs.yml` |

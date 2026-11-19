@@ -35,16 +35,17 @@ entity "app_user" as app_user {
   * updated_at : timestamptz
 }
 
-entity "ban" as ban <<план>> {
+entity "ban" as ban {
   * id : uuid <<PK>>
   --
   * user_id : uuid <<FK>>
   banned_by : uuid <<FK>>
-  * reason : text <<sensitive>>
-  * created_at : timestamptz
+  * reason : varchar(500) <<sensitive>>
   expires_at : timestamptz
-  lifted_by : uuid <<FK>>
+  * previous_status : enum(PENDING, ACTIVE)
+  * created_at : timestamptz
   lifted_at : timestamptz
+  lifted_by : uuid <<FK>>
 }
 
 ' ===== Організації =====
@@ -149,31 +150,44 @@ entity "advert_response" as advert_response {
   * advert_id : uuid <<FK>>
   * user_id : uuid <<FK>>
   message : varchar(500) <<PII>>
-  * status : enum(PENDING, CONFIRMED, REJECTED, WITHDRAWN)
+  * status : enum(PENDING, CONFIRMED, REJECTED, WITHDRAWN, REMOVED)
   * created_at : timestamptz
   decided_at : timestamptz
 }
 
 ' ===== Модерація контенту =====
 
-entity "complaint" as complaint <<план>> {
+entity "complaint" as complaint {
   * id : uuid <<PK>>
   --
   * reporter_id : uuid <<FK>>
+  * author_id : uuid <<FK>>
   advert_id : uuid <<FK>>
   response_id : uuid <<FK>>
-  * reason : enum(SPAM, ABUSE, OTHER)
-  comment : text
+  * category : enum(SPAM, ABUSE, OTHER)
+  comment : varchar(500)
   * status : enum(OPEN, RESOLVED, DISMISSED)
   resolved_by : uuid <<FK>>
+  resolution : varchar(500)
+  * created_at : timestamptz
+  resolved_at : timestamptz
+}
+
+entity "banned_word" as banned_word {
+  * id : uuid <<PK>>
+  --
+  * word : varchar(100) <<UNIQUE>>
+  added_by : uuid <<FK>>
   * created_at : timestamptz
 }
 
-entity "banned_word" as banned_word <<план>> {
+entity "filter_rejection" as filter_rejection {
   * id : uuid <<PK>>
   --
-  * word : varchar <<UNIQUE>>
-  * created_by : uuid <<FK>>
+  * user_id : uuid <<FK>>
+  * target_type : enum(ADVERT, REPLY)
+  * matched_word : varchar(100)
+  * created_at : timestamptz
 }
 
 ' ===== Рейтинги (пріоритет Низький) =====
@@ -216,6 +230,7 @@ app_user ||--o{ complaint : "скаржиться"
 advert |o--o{ complaint
 advert_response |o--o{ complaint
 app_user ||--o{ banned_word : "веде"
+app_user ||--o{ filter_rejection : "відхилено автофільтром"
 app_user ||--o{ author_rating
 advert ||--o{ author_rating
 app_user ||--o{ organization_rating
@@ -234,6 +249,13 @@ end note
 
 note bottom of complaint
   CHECK: заповнено рівно одне з advert_id / response_id
+  одна скарга на об'єкт — два часткові UNIQUE-індекси
+  author_id — автор контенту на момент скарги (FR-060)
+end note
+
+note bottom of ban
+  один незнятий бан на людину — частковий UNIQUE
+  app_user.status = BLOCKED пишеться в тій самій транзакції
 end note
 
 @enduml
