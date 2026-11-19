@@ -11,9 +11,16 @@ export type TokenResponse = {
 export type UserResponse = {
   id: string
   email: string
-  status: string
   globalAdmin: boolean
   headOf: string[]
+  /** Необов'язкові: користувач може задати їх пізніше (FR-069) */
+  firstName?: string
+  lastName?: string
+}
+
+export type UpdateProfileRequest = {
+  firstName?: string
+  lastName?: string
 }
 
 export async function loginApi(
@@ -35,6 +42,15 @@ export async function registerApi(
     method: 'POST',
     body: JSON.stringify({ email, password }),
     skipAuth: true,
+  })
+}
+
+export async function updateProfileApi(
+  body: UpdateProfileRequest,
+): Promise<UserResponse> {
+  return apiFetch<UserResponse>('/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
   })
 }
 
