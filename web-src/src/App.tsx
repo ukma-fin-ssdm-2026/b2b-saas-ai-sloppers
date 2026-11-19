@@ -11,6 +11,7 @@ import AdminOrganizationDetailPage from './pages/admin/AdminOrganizationDetailPa
 import AdminOrganizationEventsPage from './pages/admin/AdminOrganizationEventsPage'
 import AdminOrganizationsPage from './pages/admin/AdminOrganizationsPage'
 import EventDetailPage from './pages/EventDetailPage'
+import BoardPage from './pages/BoardPage'
 import EventsPage from './pages/EventsPage'
 import HomePage from './pages/HomePage'
 import LabHomePage from './pages/lab/LabHomePage'
@@ -78,6 +79,14 @@ function App() {
               />
               <Route path="/events" element={<EventsPage />} />
               <Route path="/events/:eventId" element={<EventDetailPage />} />
+              <Route
+                path="/board"
+                element={
+                  <RequireAuth>
+                    <BoardPage />
+                  </RequireAuth>
+                }
+              />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify" element={<VerifyPage />} />

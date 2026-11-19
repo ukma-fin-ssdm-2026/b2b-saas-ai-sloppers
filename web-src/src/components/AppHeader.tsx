@@ -37,6 +37,14 @@ function AppHeader() {
           {isAuthenticated ? (
             <>
               <NavLink
+                to="/board"
+                className={({ isActive }) =>
+                  `app-header__link${isActive ? ' app-header__link--active' : ''}`
+                }
+              >
+                Дошка
+              </NavLink>
+              <NavLink
                 to="/admin"
                 className={({ isActive }) =>
                   `app-header__link${isActive ? ' app-header__link--active' : ''}`
