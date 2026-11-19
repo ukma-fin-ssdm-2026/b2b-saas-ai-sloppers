@@ -44,7 +44,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // реєстрація й вхід
                         .requestMatchers(HttpMethod.POST, V1 + "/auth/register", V1 + "/auth/verify",
-                                V1 + "/auth/resend-code", V1 + "/auth/login").permitAll()
+                                V1 + "/auth/resend-code", V1 + "/auth/login", V1 + "/auth/password-reset",
+                                V1 + "/auth/password-reset/confirm").permitAll()
                         // гості: каталог, події, календар (FR-007)
                         .requestMatchers(HttpMethod.GET, V1 + "/organizations", V1 + "/organizations/{organizationId}",
                                 V1 + "/events", V1 + "/events/{eventId}", V1 + "/events/{eventId}/calendar.ics",

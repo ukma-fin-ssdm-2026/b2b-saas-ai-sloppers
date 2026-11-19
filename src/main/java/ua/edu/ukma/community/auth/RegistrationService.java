@@ -8,6 +8,7 @@ import ua.edu.ukma.community.common.error.FieldViolation;
 
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -64,6 +65,55 @@ public class RegistrationService {
             throw new ApiException(ErrorCode.ACCOUNT_BLOCKED, "Акаунт заблоковано");
         }
         OffsetDateTime now = OffsetDateTime.now(clock);
+        checkCode(user, code, now);
+        users.save(user.activated(now));
+    }
+
+    public synchronized void resendCode(String rawEmail) {
+        String email = Emails.normalize(rawEmail);
+        User user = users.findByEmail(email).orElse(null);
+        if (user == null || user.status() != UserStatus.PENDING) {
+            return;
+        }
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        requireCooldownPassed(user, now);
+        String code = newCode();
+        codeSender.send(email, code);
+        users.save(user.withVerification(verification(code, now), now));
+    }
+
+    /**
+     * Скидання пароля, крок 1 (FR-065): надсилає код на пошту. Для невідомої чи заблокованої пошти тихо
+     * нічого не робить, щоб відповідь не розкривала, які пошти зареєстровані. Код займає те саме місце,
+     * що й код підтвердження, тож у непідтвердженого акаунта він замінює попередній.
+     */
+    public synchronized void requestPasswordReset(String rawEmail) {
+        String email = Emails.normalize(rawEmail);
+        User user = users.findByEmail(email).orElse(null);
+        if (user == null || user.status() == UserStatus.BLOCKED) {
+            return;
+        }
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        requireCooldownPassed(user, now);
+        String code = newCode();
+        codeSender.sendPasswordReset(email, code);
+        users.save(user.withVerification(verification(code, now), now));
+    }
+
+    /** Скидання пароля, крок 2 (FR-065): правильний код із листа замінює пароль. */
+    public synchronized void resetPassword(String rawEmail, String code, String newPassword) {
+        String email = Emails.normalize(rawEmail);
+        User user = users.findByEmail(email).orElseThrow(RegistrationService::invalidCode);
+        if (user.status() == UserStatus.BLOCKED) {
+            throw new ApiException(ErrorCode.ACCOUNT_BLOCKED, "Акаунт заблоковано");
+        }
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        checkCode(user, code, now);
+        users.save(user.withNewPassword(passwords.encode(newPassword), now));
+    }
+
+    /** Спільна перевірка коду для підтвердження пошти й скидання пароля: строк, спроби, збіг (FR-003). */
+    private void checkCode(User user, String code, OffsetDateTime now) {
         VerificationCode current = user.verification();
         if (current == null || !current.usable(now)) {
             throw new ApiException(ErrorCode.VERIFICATION_CODE_EXPIRED,
@@ -75,26 +125,15 @@ public class RegistrationService {
             throw new ApiException(ErrorCode.INVALID_VERIFICATION_CODE, "Неправильний код",
                     List.of(new FieldViolation("code", "Залишилось спроб: " + failed.attemptsLeft(), null)));
         }
-        users.save(user.activated(now));
     }
 
-    public synchronized void resendCode(String rawEmail) {
-        String email = Emails.normalize(rawEmail);
-        User user = users.findByEmail(email).orElse(null);
-        if (user == null || user.status() != UserStatus.PENDING) {
-            return;
-        }
-        OffsetDateTime now = OffsetDateTime.now(clock);
+    private void requireCooldownPassed(User user, OffsetDateTime now) {
         VerificationCode current = user.verification();
         if (current != null && now.isBefore(current.sentAt().plus(properties.resendCooldown()))) {
-            long wait = java.time.Duration.between(now, current.sentAt().plus(properties.resendCooldown()))
-                    .toSeconds() + 1;
+            long wait = Duration.between(now, current.sentAt().plus(properties.resendCooldown())).toSeconds() + 1;
             throw new ApiException(ErrorCode.TOO_MANY_REQUESTS,
                     "Новий код можна запросити через " + wait + " с");
         }
-        String code = newCode();
-        codeSender.send(email, code);
-        users.save(user.withVerification(verification(code, now), now));
     }
 
     private VerificationCode verification(String code, OffsetDateTime now) {

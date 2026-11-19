@@ -37,6 +37,15 @@ public record User(
         return new User(id, email, passwordHash, UserStatus.ACTIVE, globalAdmin, null, createdAt, now);
     }
 
+    /**
+     * Новий пароль після скидання (FR-065). Код скидання доводить володіння поштою, тож непідтверджений
+     * акаунт заодно стає активним; заблокований сюди не доходить.
+     */
+    public User withNewPassword(String newPasswordHash, OffsetDateTime now) {
+        UserStatus newStatus = status == UserStatus.PENDING ? UserStatus.ACTIVE : status;
+        return new User(id, email, newPasswordHash, newStatus, globalAdmin, null, createdAt, now);
+    }
+
     /** Без хеша пароля: запис може потрапити в лог (NFR-008). */
     @Override
     public String toString() {

@@ -65,7 +65,7 @@ src/main/java/ua/edu/ukma/community/
 
 ## 3. Кінцеві точки
 
-Права доступу **перевіряються**: типове правило в `auth/SecurityConfig` — `anyRequest().authenticated()`, відкриті лише реєстрація, вхід, читання каталогу (FR-007), Swagger UI і `/actuator/health`. Ролі всередині організації перевіряє `OrgRolePolicy`. Доведено `AuthFlowIntegrationTest`. У попередній редакції цього розділу було написано, що `401`/`403` лише описані в контракті — це вже не так.
+Права доступу **перевіряються**: типове правило в `auth/SecurityConfig` — `anyRequest().authenticated()`, відкриті лише реєстрація, вхід, скидання пароля, читання каталогу (FR-007), Swagger UI і `/actuator/health`. Ролі всередині організації перевіряє `OrgRolePolicy`. Доведено `AuthFlowIntegrationTest`. У попередній редакції цього розділу було написано, що `401`/`403` лише описані в контракті — це вже не так.
 
 | Метод | Шлях | Що робить | Вимоги |
 | ----- | ---- | --------- | ------ |
@@ -73,6 +73,8 @@ src/main/java/ua/edu/ukma/community/
 | `POST` | `/api/v1/auth/verify` | підтвердження пошти кодом | FR-003 |
 | `POST` | `/api/v1/auth/resend-code` | повторне надсилання коду | FR-002 |
 | `POST` | `/api/v1/auth/login` | вхід, видача JWT | FR-004, NFR-010 |
+| `POST` | `/api/v1/auth/password-reset` | забули пароль: код на пошту; для невідомої пошти теж `204` | FR-065 |
+| `POST` | `/api/v1/auth/password-reset/confirm` | новий пароль за кодом | FR-065 |
 | `GET` | `/api/v1/auth/me` | свій профіль, ознака адміна, перелік організацій, де користувач голова | FR-005 |
 | `GET` | `/api/v1/organizations` | каталог: пошук, пагінація | FR-017, FR-018 |
 | `GET` | `/api/v1/organizations/{id}` | профіль організації | FR-020 |
@@ -111,7 +113,7 @@ src/main/java/ua/edu/ukma/community/
 | `POST` | `/api/v1/adverts/{id}/replies/{replyId}/withdraw` | відкликати свій відгук до рішення автора | FR-053 |
 | `GET` | `/actuator/health` | перевірка стану для probes у Minikube | ADR-004 |
 
-Разом 40 кінцевих точок API плюс `/actuator/health`.
+Разом 42 кінцевих точки API плюс `/actuator/health`.
 
 Коди помилок, що з'явилися разом із модулями: `EVENT_NOT_FOUND` (`404`), `INVALID_STATE_TRANSITION` (`409`, наприклад для повторного зняття з публікації), `UNAUTHORIZED` (`401`), `FORBIDDEN` (`403`), `ACCOUNT_NOT_VERIFIED` (`403`), `USER_NOT_FOUND` (`404`), `LAST_HEAD` (`409`); дошка: `ADVERT_NOT_FOUND`, `REPLY_NOT_FOUND` (`404`), `OWN_ADVERT` (`403`), `ALREADY_REPLIED`, `ADVERT_CLOSED` (`409`).
 

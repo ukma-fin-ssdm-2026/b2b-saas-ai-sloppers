@@ -74,6 +74,31 @@ public class AuthController {
         registration.resendCode(request.email());
     }
 
+    @PostMapping("/password-reset")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(operationId = "requestPasswordReset", summary = "Забули пароль: надіслати код",
+            description = "FR-065: 6-значний код на пошту, дійсний 15 хв, 5 спроб. Не частіше ніж раз на хвилину. "
+                    + "Для невідомої чи заблокованої пошти теж 204, щоб не розкривати, які пошти зареєстровані.")
+    @ApiResponse(responseCode = "204", description = "Якщо акаунт існує, код надіслано")
+    @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = "429", ref = OpenApiConfig.TOO_MANY_REQUESTS)
+    @ApiResponse(responseCode = "503", ref = OpenApiConfig.MAIL_UNAVAILABLE)
+    public void requestPasswordReset(@Valid @RequestBody AuthRequests.PasswordReset request) {
+        registration.requestPasswordReset(request.email());
+    }
+
+    @PostMapping("/password-reset/confirm")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(operationId = "confirmPasswordReset", summary = "Забули пароль: задати новий",
+            description = "FR-065: код із листа + новий пароль. Після успіху входьте з новим паролем; "
+                    + "непідтверджений акаунт заодно активується, бо код підтверджує пошту.")
+    @ApiResponse(responseCode = "204", description = "Пароль змінено")
+    @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = "403", ref = OpenApiConfig.FORBIDDEN)
+    public void confirmPasswordReset(@Valid @RequestBody AuthRequests.PasswordResetConfirm request) {
+        registration.resetPassword(request.email(), request.code(), request.newPassword());
+    }
+
     @PostMapping("/login")
     @Operation(operationId = "login", summary = "Увійти",
             description = "Повертає JWT на 60 хв (FR-004, NFR-010). Неактивний акаунт — 403 ACCOUNT_NOT_VERIFIED.")

@@ -13,4 +13,9 @@ public class LogCodeSender implements CodeSender {
     public void send(String email, String code) {
         LOG.warn("SMTP is not configured. Verification code for {}: {}", LogSafe.of(email), code);
     }
+
+    @Override
+    public void sendPasswordReset(String email, String code) {
+        LOG.warn("SMTP is not configured. Password reset code for {}: {}", LogSafe.of(email), code);
+    }
 }

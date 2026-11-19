@@ -10,8 +10,10 @@ import ua.edu.ukma.community.common.error.ErrorCode;
 import ua.edu.ukma.community.support.MutableClock;
 
 import java.time.Duration;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
@@ -221,5 +223,100 @@ class RegistrationServiceTest {
         service.verify(EMAIL, lastCode());
         assertThatThrownBy(() -> service.verify(EMAIL, lastCode()))
                 .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.ACCOUNT_ALREADY_VERIFIED));
+    }
+
+    // ---- скидання пароля (FR-065) ----
+
+    private void registerAndVerify() {
+        service.register(EMAIL, "password123");
+        service.verify(EMAIL, lastCode());
+    }
+
+    private String passwordHash() {
+        return users.findByEmail(EMAIL).orElseThrow().passwordHash();
+    }
+
+    @Test
+    @DisplayName("FR-065: код із листа + новий пароль → старий пароль не підходить, код одноразовий")
+    void resetsPasswordWithCode() {
+        registerAndVerify();
+        service.requestPasswordReset("  Student@UKMA.edu.ua ");
+        String code = lastCode();
+
+        service.resetPassword(EMAIL, code, "new-password-456");
+
+        User user = users.findByEmail(EMAIL).orElseThrow();
+        assertThat(FAST_BCRYPT.matches("new-password-456", user.passwordHash())).isTrue();
+        assertThat(FAST_BCRYPT.matches("password123", user.passwordHash())).isFalse();
+        assertThat(user.status()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(user.verification()).isNull();
+        assertThatThrownBy(() -> service.resetPassword(EMAIL, code, "third-password-789"))
+                .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.VERIFICATION_CODE_EXPIRED));
+    }
+
+    @Test
+    @DisplayName("FR-065: невідома або заблокована пошта — без листа й без помилки; підтвердження для них не проходить")
+    void resetForUnknownOrBlockedEmail() {
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        users.save(new User(UUID.randomUUID(), "blocked@ukma.edu.ua", FAST_BCRYPT.encode("password123"),
+                UserStatus.BLOCKED, false, null, now, now));
+
+        assertThatNoException().isThrownBy(() -> service.requestPasswordReset("nobody@ukma.edu.ua"));
+        assertThatNoException().isThrownBy(() -> service.requestPasswordReset("blocked@ukma.edu.ua"));
+        assertThat(sentCodes).isEmpty();
+        assertThatThrownBy(() -> service.resetPassword("blocked@ukma.edu.ua", "123456", "new-password-456"))
+                .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.ACCOUNT_BLOCKED));
+        assertThatThrownBy(() -> service.resetPassword("nobody@ukma.edu.ua", "123456", "new-password-456"))
+                .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.INVALID_VERIFICATION_CODE));
+    }
+
+    @Test
+    @DisplayName("FR-065 + FR-003: 5 неправильних спроб або 15 хв — і код скидання більше не діє, пароль старий")
+    void resetCodeHasAttemptsAndTtl() {
+        registerAndVerify();
+        service.requestPasswordReset(EMAIL);
+        String code = lastCode();
+        String wrong = "000000".equals(code) ? "111111" : "000000";
+        for (int i = 0; i < PROPERTIES.codeAttempts(); i++) {
+            assertThatThrownBy(() -> service.resetPassword(EMAIL, wrong, "new-password-456"))
+                    .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.INVALID_VERIFICATION_CODE));
+        }
+        assertThatThrownBy(() -> service.resetPassword(EMAIL, code, "new-password-456"))
+                .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.VERIFICATION_CODE_EXPIRED));
+
+        clock.advance(Duration.ofSeconds(61));
+        service.requestPasswordReset(EMAIL);
+        String fresh = lastCode();
+        clock.advance(Duration.ofMinutes(15));
+        assertThatThrownBy(() -> service.resetPassword(EMAIL, fresh, "new-password-456"))
+                .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.VERIFICATION_CODE_EXPIRED));
+        assertThat(FAST_BCRYPT.matches("password123", passwordHash())).isTrue();
+    }
+
+    @Test
+    @DisplayName("FR-065: новий код скидання не частіше ніж раз на хвилину")
+    void resetRequestCooldown() {
+        registerAndVerify();
+        service.requestPasswordReset(EMAIL);
+
+        assertThatThrownBy(() -> service.requestPasswordReset(EMAIL))
+                .satisfies(e -> assertThat(codeOf(e)).isEqualTo(ErrorCode.TOO_MANY_REQUESTS));
+        clock.advance(Duration.ofSeconds(61));
+        service.requestPasswordReset(EMAIL);
+
+        assertThat(sentCodes).hasSize(3);
+    }
+
+    @Test
+    @DisplayName("FR-065: непідтверджений акаунт після скидання стає активним — код підтверджує пошту")
+    void resetActivatesPendingAccount() {
+        service.register(EMAIL, "password123");
+        clock.advance(Duration.ofSeconds(61));
+        service.requestPasswordReset(EMAIL);
+
+        service.resetPassword(EMAIL, lastCode(), "new-password-456");
+
+        assertThat(users.findByEmail(EMAIL).orElseThrow().status()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(FAST_BCRYPT.matches("new-password-456", passwordHash())).isTrue();
     }
 }

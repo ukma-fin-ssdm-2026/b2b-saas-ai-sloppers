@@ -52,6 +52,36 @@ public final class AuthRequests {
     ) {
     }
 
+    @Schema(name = "PasswordResetRequest", description = "Запит коду для скидання пароля")
+    public record PasswordReset(
+            @Schema(example = "student@ukma.edu.ua")
+            @NotBlank(message = "Пошта обов'язкова")
+            String email
+    ) {
+    }
+
+    @Schema(name = "PasswordResetConfirmRequest", description = "Новий пароль за кодом з листа")
+    public record PasswordResetConfirm(
+            @Schema(example = "student@ukma.edu.ua")
+            @NotBlank(message = "Пошта обов'язкова")
+            String email,
+
+            @Schema(example = "042517")
+            @NotBlank(message = "Код обов'язковий")
+            @Pattern(regexp = "\\s*\\d{6}\\s*", message = "Код: 6 цифр")
+            String code,
+
+            @Schema(example = "new-horse-battery", minLength = 8, maxLength = 72)
+            @NotBlank(message = "Новий пароль обов'язковий")
+            @Size(min = 8, max = 72, message = "Пароль: від 8 до 72 символів")
+            String newPassword
+    ) {
+        @Override
+        public String toString() {
+            return "PasswordResetConfirm[email=" + email + "]";
+        }
+    }
+
     @Schema(name = "LoginRequest", description = "Вхід за поштою й паролем")
     public record Login(
             @Schema(example = "student@ukma.edu.ua")

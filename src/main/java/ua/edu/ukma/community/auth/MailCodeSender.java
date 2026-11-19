@@ -28,13 +28,26 @@ public class MailCodeSender implements CodeSender {
 
     @Override
     public void send(String email, String code) {
+        deliver(email, "Код підтвердження — Студентське ком'юніті НаУКМА",
+                "Ваш код підтвердження: " + code + "\n\n"
+                        + "Код дійсний " + codeTtl.toMinutes() + " хв. "
+                        + "Якщо ви не реєструвалися, просто проігноруйте цей лист.");
+    }
+
+    @Override
+    public void sendPasswordReset(String email, String code) {
+        deliver(email, "Скидання пароля — Студентське ком'юніті НаУКМА",
+                "Код для скидання пароля: " + code + "\n\n"
+                        + "Код дійсний " + codeTtl.toMinutes() + " хв. "
+                        + "Якщо ви не просили скинути пароль, проігноруйте цей лист: пароль лишиться тим самим.");
+    }
+
+    private void deliver(String email, String subject, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(from);
         message.setTo(email);
-        message.setSubject("Код підтвердження — Студентське ком'юніті НаУКМА");
-        message.setText("Ваш код підтвердження: " + code + "\n\n"
-                + "Код дійсний " + codeTtl.toMinutes() + " хв. "
-                + "Якщо ви не реєструвалися, просто проігноруйте цей лист.");
+        message.setSubject(subject);
+        message.setText(text);
         try {
             mail.send(message);
         } catch (MailException e) {

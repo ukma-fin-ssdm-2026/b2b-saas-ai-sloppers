@@ -181,4 +181,36 @@ class AuthFlowIntegrationTest {
         mvc.perform(withToken(delete(API + "/organizations/" + orgId), adminToken))
                 .andExpect(status().isNoContent());
     }
+
+    @Test
+    @DisplayName("FR-065: забули пароль → код на пошту → новий пароль; старий більше не пускає")
+    void passwordReset() throws Exception {
+        String email = uniqueEmail("forgetful");
+        registerVerifyLogin(email);
+
+        // невідома пошта — так само 204, щоб не розкривати зареєстровані адреси
+        postJson(API + "/auth/password-reset", null, "{\"email\":\"" + uniqueEmail("nobody") + "\"}")
+                .andExpect(status().isNoContent());
+        postJson(API + "/auth/password-reset", null, "{\"email\":\"" + email + "\"}")
+                .andExpect(status().isNoContent());
+        ArgumentCaptor<String> code = ArgumentCaptor.forClass(String.class);
+        verify(codeSender).sendPasswordReset(eq(email), code.capture());
+
+        String confirm = API + "/auth/password-reset/confirm";
+        postJson(confirm, null, "{\"email\":\"" + email + "\",\"code\":\"" + code.getValue()
+                + "\",\"newPassword\":\"short\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.details[0].field").value("newPassword"))
+                .andExpect(jsonPath("$.error.details[0].providedValue").doesNotExist());
+        postJson(confirm, null, "{\"email\":\"" + email + "\",\"code\":\"" + code.getValue()
+                + "\",\"newPassword\":\"new-password-456\"}")
+                .andExpect(status().isNoContent());
+
+        postJson(API + "/auth/login", null, "{\"email\":\"" + email + "\",\"password\":\"password123\"}")
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error.code").value("INVALID_CREDENTIALS"));
+        postJson(API + "/auth/login", null, "{\"email\":\"" + email + "\",\"password\":\"new-password-456\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty());
+    }
 }
