@@ -40,7 +40,7 @@ function AdvertCreatePage() {
         deadline: new Date(deadline).toISOString(),
         contact: contact.trim(),
       })
-      navigate(`/board/${created.id}`, { replace: true })
+      void navigate(`/board/${created.id}`, { replace: true })
     } catch (err) {
       setError(errorMessage(err, 'Не вдалося створити оголошення'))
     } finally {

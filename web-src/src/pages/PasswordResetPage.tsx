@@ -52,7 +52,7 @@ function PasswordResetPage() {
     setSubmitting(true)
     try {
       await confirmPasswordResetApi(email, code.trim(), password)
-      navigate('/login', {
+      void navigate('/login', {
         replace: true,
         state: { verifiedEmail: email },
       })

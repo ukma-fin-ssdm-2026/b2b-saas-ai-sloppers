@@ -19,7 +19,7 @@ function ProfilePage() {
   useEffect(() => {
     if (!isAuthenticated) return
     let cancelled = false
-    ;(async () => {
+    void (async () => {
       setLoading(true)
       try {
         const me = await meApi()

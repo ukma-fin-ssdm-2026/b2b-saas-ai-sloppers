@@ -170,7 +170,7 @@ function AdvertDetailPage() {
               if (!window.confirm('Видалити оголошення?')) return
               void run(async () => {
                 await deleteAdvert(advertId)
-                navigate('/board/mine', { replace: true })
+                void navigate('/board/mine', { replace: true })
               }, 'Видалено')
             }}
           >

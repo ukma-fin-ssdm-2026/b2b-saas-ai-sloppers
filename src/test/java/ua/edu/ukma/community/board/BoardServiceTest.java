@@ -232,7 +232,10 @@ class BoardServiceTest {
 
             AdvertView forAlice = board.get(alice, advert.id());
             assertThat(forAlice.myReplyStatus()).isEqualTo(ReplyStatus.CONFIRMED);
+            assertThat(forAlice.myReplyId()).isEqualTo(fromAlice.id());
             assertThat(forAlice.visibleContact()).isEqualTo(CONTACT);
+            assertThat(board.get(bob, advert.id()).myReplyId()).isEqualTo(fromBob.id());
+            assertThat(board.get(stranger, advert.id()).myReplyId()).isNull();
             assertThat(board.get(bob, advert.id()).visibleContact()).isNull();
             assertThat(board.get(stranger, advert.id()).visibleContact()).isNull();
             assertThat(board.listOpen(alice, null, 20, 0).data())

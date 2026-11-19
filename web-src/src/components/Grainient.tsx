@@ -679,7 +679,7 @@ const Grainient = ({
       style={style}
       {...rest}
     >
-      <canvas ref={canvasRef} className="grainient-canvas" aria-hidden="true" />
+      <canvas ref={canvasRef} className="grainient-canvas" />
     </div>
   );
 };
