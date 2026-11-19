@@ -47,8 +47,8 @@ public class EventImageController {
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = "uploadEventImage", summary = "Завантажити або замінити картинку події",
-            description = "Голова організації-власника. JPEG, PNG або WebP до 5 МБ, поле форми `file`. "
-                    + "Відхилену подію змінити не можна (409). Попередня картинка видаляється зі сховища.")
+            description = "Голова організації-власника або Global Admin. JPEG, PNG або WebP до 5 МБ, поле "
+                    + "форми `file`. Відхилену подію змінити не можна (409). Попередня картинка видаляється зі сховища.")
     @ApiResponse(responseCode = "200", description = "Подію з новим imageUrl повернуто")
     @ApiResponse(responseCode = "409", ref = OpenApiConfig.CONFLICT)
     @ImageUploadErrorResponses
@@ -64,7 +64,7 @@ public class EventImageController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = "deleteEventImage", summary = "Прибрати картинку події",
-            description = "Голова організації-власника. Якщо картинки немає, нічого не змінюється.")
+            description = "Голова організації-власника або Global Admin. Якщо картинки немає, нічого не змінюється.")
     @ApiResponse(responseCode = "204", description = "Картинки більше немає")
     @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
     @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
@@ -79,6 +79,6 @@ public class EventImageController {
     }
 
     private void requireHeadOfEvent(UUID eventId) {
-        policy.requireHead(currentUser.require(), events.get(eventId).organizationId());
+        policy.requireHeadOrAdmin(currentUser.require(), events.get(eventId).organizationId());
     }
 }

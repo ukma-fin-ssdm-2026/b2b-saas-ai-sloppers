@@ -2,10 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { listEvents } from '../../api/events'
 import { listOrganizations } from '../../api/organizations'
-import { useAuth } from '../../auth/AuthContext'
 
 function AdminHomePage() {
-  const { session } = useAuth()
   const [orgCount, setOrgCount] = useState<number | null>(null)
   const [eventCount, setEventCount] = useState<number | null>(null)
 
@@ -36,11 +34,6 @@ function AdminHomePage() {
 
   return (
     <section>
-      <p className="panel-page__lead">
-        Швидкий стенд для тестових даних. Публічний каталог читає той самий
-        `/api/v1`.
-      </p>
-
       <div className="panel-stats">
         <div className="panel-stat">
           <span className="panel-stat__value">
@@ -55,21 +48,6 @@ function AdminHomePage() {
           <span className="panel-stat__label">подій (публічних)</span>
         </div>
       </div>
-
-      <ol className="panel-steps">
-        <li>
-          Увійди акаунтом Global Admin
-          {session ? ` (${session.username})` : ''}.
-        </li>
-        <li>
-          Створи організацію з логотипом → зʼявиться в каруселі на
-          «Організації».
-        </li>
-        <li>
-          У кабінеті подій додай подію + афішу → зʼявиться на головній
-          «Події».
-        </li>
-      </ol>
 
       <ul className="panel-list">
         <li>

@@ -2,13 +2,11 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError, resendCodeApi, verifyApi } from '../api/auth'
 import { useAuth } from '../auth/AuthContext'
-import { resendMockCode, verifyMock } from '../auth/mockAuthApi'
 import './OrganizationsPage.css'
 import './panel.css'
 
 type VerifyState = {
   email?: string
-  demoCode?: string
   hint?: string
 }
 
@@ -20,7 +18,6 @@ function VerifyPage() {
 
   const [email, setEmail] = useState(state.email ?? '')
   const [code, setCode] = useState('')
-  const [demoCode, setDemoCode] = useState(state.demoCode ?? '')
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(state.hint ?? null)
   const [submitting, setSubmitting] = useState(false)
@@ -35,34 +32,23 @@ function VerifyPage() {
     setSubmitting(true)
     const trimmed = email.trim().toLowerCase()
     try {
-      try {
-        await verifyApi(trimmed, code.trim())
-        navigate('/login', {
-          replace: true,
-          state: { verifiedEmail: trimmed },
-        })
-        return
-      } catch (apiErr) {
-        if (apiErr instanceof ApiError && apiErr.status > 0 && apiErr.status < 500) {
-          try {
-            const parsed = JSON.parse(apiErr.body) as {
-              error?: { message?: string }
-            }
-            setError(parsed.error?.message || apiErr.message)
-          } catch {
-            setError(apiErr.message)
+      await verifyApi(trimmed, code.trim())
+      navigate('/login', {
+        replace: true,
+        state: { verifiedEmail: trimmed },
+      })
+    } catch (err) {
+      if (err instanceof ApiError) {
+        try {
+          const parsed = JSON.parse(err.body) as {
+            error?: { message?: string }
           }
-          return
+          setError(parsed.error?.message || err.message)
+        } catch {
+          setError(err.message)
         }
-        const result = verifyMock(trimmed, code)
-        if (!result.ok) {
-          setError(result.error)
-          return
-        }
-        navigate('/login', {
-          replace: true,
-          state: { verifiedEmail: result.data.email },
-        })
+      } else {
+        setError('Не вдалося підтвердити код')
       }
     } finally {
       setSubmitting(false)
@@ -75,15 +61,22 @@ function VerifyPage() {
     const trimmed = email.trim().toLowerCase()
     try {
       await resendCodeApi(trimmed)
-      setMessage('Якщо акаунт існує й не підтверджений — код надіслано (або в лог сервера).')
-    } catch {
-      const result = resendMockCode(trimmed)
-      if (!result.ok) {
-        setError(result.error)
-        return
+      setMessage(
+        'Якщо акаунт існує й не підтверджений — код надіслано (або в лог сервера).',
+      )
+    } catch (err) {
+      if (err instanceof ApiError) {
+        try {
+          const parsed = JSON.parse(err.body) as {
+            error?: { message?: string }
+          }
+          setError(parsed.error?.message || err.message)
+        } catch {
+          setError(err.message)
+        }
+      } else {
+        setError('Не вдалося надіслати код')
       }
-      setDemoCode(result.data.demoCode)
-      setMessage('Новий демо-код згенеровано')
     }
   }
 
@@ -95,9 +88,6 @@ function VerifyPage() {
         <p className="panel-page__lead">
           Введіть 6-значний код з листа. Без SMTP код пишеться в лог бекенда.
         </p>
-        {demoCode ? (
-          <p className="panel-banner">Демо-код: {demoCode}</p>
-        ) : null}
 
         <form className="panel-form" onSubmit={(e) => void onSubmit(e)}>
           <div className="panel-field">

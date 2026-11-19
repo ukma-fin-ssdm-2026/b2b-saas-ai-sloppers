@@ -2,7 +2,6 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { ApiError, registerApi } from '../api/auth'
 import { useAuth } from '../auth/AuthContext'
-import { registerMock } from '../auth/mockAuthApi'
 import './OrganizationsPage.css'
 import './panel.css'
 
@@ -25,52 +24,27 @@ function RegisterPage() {
     setSubmitting(true)
     const trimmed = email.trim().toLowerCase()
     try {
-      try {
-        await registerApi(trimmed, password)
-        navigate('/verify', {
-          replace: true,
-          state: {
-            email: trimmed,
-            hint: 'Код надіслано на пошту або записано в лог бекенда (якщо SMTP не налаштовано).',
-          },
-        })
-        return
-      } catch (apiErr) {
-        if (apiErr instanceof ApiError && apiErr.status >= 500) {
-          throw apiErr
-        }
-        if (apiErr instanceof ApiError && apiErr.status !== 0) {
-          try {
-            const parsed = JSON.parse(apiErr.body) as {
-              error?: { message?: string }
-            }
-            setError(parsed.error?.message || apiErr.message)
-            return
-          } catch {
-            setError(apiErr.message)
-            return
-          }
-        }
-        // Network / no backend — fall back to FE mock for Lab.
-        const result = registerMock(trimmed, password)
-        if (!result.ok) {
-          setError(result.error)
-          return
-        }
-        navigate('/verify', {
-          replace: true,
-          state: {
-            email: result.data.email,
-            demoCode: result.data.demoCode,
-          },
-        })
-      }
+      await registerApi(trimmed, password)
+      navigate('/verify', {
+        replace: true,
+        state: {
+          email: trimmed,
+          hint: 'Код надіслано на пошту або записано в лог бекенда (якщо SMTP не налаштовано).',
+        },
+      })
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : 'Не вдалося зареєструватися',
-      )
+      if (err instanceof ApiError) {
+        try {
+          const parsed = JSON.parse(err.body) as {
+            error?: { message?: string }
+          }
+          setError(parsed.error?.message || err.message)
+        } catch {
+          setError(err.message)
+        }
+      } else {
+        setError('Не вдалося зареєструватися')
+      }
     } finally {
       setSubmitting(false)
     }

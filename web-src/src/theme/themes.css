@@ -1,0 +1,238 @@
+/* Theme tokens + page surface overrides */
+
+:root,
+html[data-theme='black'] {
+  --theme-bg: #0a0a0a;
+  --theme-fg: #f2f2f2;
+  --theme-muted: #8e8e8e;
+  --theme-border: #222;
+  --theme-surface: #121212;
+  --theme-header-bg: rgba(10, 10, 10, 0.92);
+  --theme-input-bg: #121212;
+  --theme-card: #111;
+}
+
+html[data-theme='white'] {
+  --theme-bg: #f4f2ee;
+  --theme-fg: #161616;
+  --theme-muted: #5c5c5c;
+  --theme-border: #d8d4cc;
+  --theme-surface: #ffffff;
+  --theme-header-bg: rgba(244, 242, 238, 0.94);
+  --theme-input-bg: #ffffff;
+  --theme-card: #ffffff;
+}
+
+html[data-theme='grainient'],
+html[data-theme='grainient-teal'],
+html[data-theme='grainient-mono'] {
+  --theme-bg: transparent;
+  --theme-fg: #f2f2f2;
+  --theme-muted: #cfcfcf;
+  --theme-border: rgba(255, 255, 255, 0.18);
+  --theme-surface: rgba(18, 15, 23, 0.72);
+  --theme-header-bg: rgba(18, 15, 23, 0.78);
+  --theme-input-bg: rgba(18, 15, 23, 0.78);
+  --theme-card: rgba(18, 15, 23, 0.65);
+}
+
+html[data-theme='grainient-teal'] {
+  --theme-surface: rgba(7, 19, 24, 0.72);
+  --theme-header-bg: rgba(7, 19, 24, 0.78);
+  --theme-input-bg: rgba(7, 19, 24, 0.78);
+  --theme-card: rgba(7, 19, 24, 0.65);
+}
+
+html[data-theme='grainient-mono'] {
+  --theme-fg: #141416;
+  --theme-muted: #3f3f46;
+  --theme-border: rgba(24, 24, 27, 0.28);
+  --theme-surface: rgba(250, 250, 250, 0.72);
+  --theme-header-bg: rgba(250, 250, 250, 0.82);
+  --theme-input-bg: rgba(250, 250, 250, 0.88);
+  --theme-card: rgba(250, 250, 250, 0.7);
+}
+
+html,
+body,
+#root {
+  background: var(--theme-bg);
+  color: var(--theme-fg);
+}
+
+.app-theme-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.app-shell {
+  position: relative;
+  z-index: 1;
+  background: var(--theme-bg);
+  color: var(--theme-fg);
+}
+
+html[data-theme='grainient'] .app-shell,
+html[data-theme='grainient-teal'] .app-shell,
+html[data-theme='grainient-mono'] .app-shell {
+  background: transparent;
+}
+
+.app-header {
+  border-bottom-color: var(--theme-border);
+  background: var(--theme-header-bg);
+}
+
+.app-header__brand,
+.app-header__link--active {
+  color: var(--theme-fg);
+}
+
+.app-header__link {
+  color: var(--theme-muted);
+}
+
+.app-header__link:hover {
+  color: var(--theme-fg);
+}
+
+html[data-theme='white'] .app-header__link:focus-visible {
+  outline-color: #333;
+}
+
+/* Public / admin page surfaces */
+.home-page,
+.orgs-page,
+.panel-page {
+  background: var(--theme-bg) !important;
+  color: var(--theme-fg) !important;
+}
+
+html[data-theme='grainient'] .home-page,
+html[data-theme='grainient'] .orgs-page,
+html[data-theme='grainient'] .panel-page,
+html[data-theme='grainient-teal'] .home-page,
+html[data-theme='grainient-teal'] .orgs-page,
+html[data-theme='grainient-teal'] .panel-page,
+html[data-theme='grainient-mono'] .home-page,
+html[data-theme='grainient-mono'] .orgs-page,
+html[data-theme='grainient-mono'] .panel-page {
+  background: transparent !important;
+}
+
+html[data-theme='white'] .orgs-page__title,
+html[data-theme='white'] .panel-page__title,
+html[data-theme='white'] .orgs-page__eyebrow,
+html[data-theme='white'] .panel-nav a,
+html[data-theme='grainient-mono'] .orgs-page__title,
+html[data-theme='grainient-mono'] .panel-page__title,
+html[data-theme='grainient-mono'] .orgs-page__eyebrow,
+html[data-theme='grainient-mono'] .panel-nav a {
+  color: var(--theme-fg);
+}
+
+html[data-theme='white'] .panel-nav a,
+html[data-theme='grainient-mono'] .panel-nav a {
+  color: var(--theme-muted);
+}
+
+html[data-theme='white'] .panel-nav a:hover,
+html[data-theme='white'] .panel-nav a.active,
+html[data-theme='grainient-mono'] .panel-nav a:hover,
+html[data-theme='grainient-mono'] .panel-nav a.active {
+  color: var(--theme-fg);
+}
+
+html[data-theme='white'] .orgs-page__status,
+html[data-theme='white'] .orgs-page__meta,
+html[data-theme='white'] .orgs-page__eyebrow,
+html[data-theme='grainient-mono'] .orgs-page__status,
+html[data-theme='grainient-mono'] .orgs-page__meta,
+html[data-theme='grainient-mono'] .orgs-page__eyebrow {
+  color: var(--theme-muted);
+}
+
+html[data-theme='grainient-mono'] .panel-page__eyebrow,
+html[data-theme='grainient-mono'] .panel-page__lead,
+html[data-theme='grainient-mono'] .panel-field label,
+html[data-theme='grainient-mono'] .panel-row,
+html[data-theme='grainient-mono'] .panel-row p,
+html[data-theme='grainient-mono'] .panel-row__meta {
+  color: var(--theme-muted) !important;
+}
+
+html[data-theme='grainient-mono'] .panel-page__title,
+html[data-theme='grainient-mono'] .panel-row__title,
+html[data-theme='grainient-mono'] .orgs-page__title {
+  color: var(--theme-fg) !important;
+}
+
+html[data-theme='grainient-mono'] .orgs-btn,
+html[data-theme='grainient-mono'] .panel-actions .orgs-btn {
+  border-color: var(--theme-border);
+  color: var(--theme-fg);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+html[data-theme='grainient-mono'] .panel-stat {
+  background: rgba(24, 24, 27, 0.72) !important;
+  border-color: rgba(24, 24, 27, 0.35) !important;
+  color: #fafafa !important;
+}
+
+html[data-theme='grainient-mono'] .panel-stat__value,
+html[data-theme='grainient-mono'] .panel-stat__label {
+  color: #fafafa !important;
+}
+
+html[data-theme='grainient-mono'] .theme-switcher__swatch--active {
+  box-shadow: 0 0 0 2px #141416;
+}
+
+.home-page__all-link,
+.panel-page__eyebrow,
+.panel-page__lead,
+.orgs-page__lead,
+.events-page__lead {
+  color: var(--theme-muted) !important;
+}
+
+.home-page__all-link:hover {
+  color: var(--theme-fg) !important;
+}
+
+.panel-field input,
+.panel-field textarea,
+.panel-field select,
+.orgs-search input,
+.events-filters__field input,
+.events-filters__field select {
+  background: var(--theme-input-bg) !important;
+  color: var(--theme-fg) !important;
+  border-color: var(--theme-border) !important;
+}
+
+.panel-banner,
+.panel-stat,
+.orgs-card,
+.org-event-card,
+.events-card {
+  background: var(--theme-surface) !important;
+  border-color: var(--theme-border) !important;
+  color: var(--theme-fg) !important;
+}
+
+html[data-theme='white'] .orgs-btn,
+html[data-theme='white'] .panel-actions .orgs-btn {
+  border-color: var(--theme-border);
+  color: var(--theme-fg);
+  background: var(--theme-surface);
+}
+
+html[data-theme='white'] .circular-carousel,
+html[data-theme='white'] .cc-fade,
+html[data-theme='white'] .ag-root {
+  --cc-fade: #f4f2ee;
+}

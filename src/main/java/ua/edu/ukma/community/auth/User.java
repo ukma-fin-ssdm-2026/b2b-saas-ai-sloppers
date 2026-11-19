@@ -69,7 +69,10 @@ public record User(
         return Names.full(firstName, lastName);
     }
 
-    /** Без хеша пароля: запис може потрапити в лог (NFR-008). */
+    public User withGlobalAdmin(boolean admin, OffsetDateTime now) {
+        return new User(id, email, passwordHash, status, admin, verification, createdAt, now);
+    }
+
     @Override
     public String toString() {
         return "User[id=" + id + ", email=" + email + ", status=" + status + ", globalAdmin=" + globalAdmin + "]";

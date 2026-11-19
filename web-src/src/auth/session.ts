@@ -1,6 +1,5 @@
 export type AuthRole = 'admin' | 'user'
 
-/** Real JWT session from backend auth. Legacy FE-only "demo" sessions are dropped. */
 export type AuthKind = 'api'
 
 export interface AuthSession {
@@ -22,7 +21,7 @@ function normalizeSession(raw: unknown): AuthSession | null {
     kind?: string
   }
   if (!parsed.username || !parsed.token || !parsed.role) return null
-  // Drop old bot/demo Lab gate sessions — only real JWT is accepted.
+  // Drop old demo sessions — only real JWT is accepted.
   if (parsed.kind === 'demo' || parsed.token === LEGACY_DEMO_TOKEN) return null
   return {
     username: parsed.username,

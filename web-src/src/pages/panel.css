@@ -48,12 +48,6 @@
   background: #121212;
 }
 
-.panel-banner--lab {
-  border-color: #4a3a1a;
-  background: #16120a;
-  color: #e6d5a8;
-}
-
 .panel-nav {
   display: flex;
   flex-wrap: wrap;

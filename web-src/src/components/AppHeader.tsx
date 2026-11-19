@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { confirmLogout } from '../auth/confirmLogout'
+import ThemeSwitcher from './ThemeSwitcher'
 import './AppHeader.css'
 
 function AppHeader() {
@@ -44,14 +45,6 @@ function AppHeader() {
               >
                 Адмін
               </NavLink>
-              <NavLink
-                to="/lab"
-                className={({ isActive }) =>
-                  `app-header__link${isActive ? ' app-header__link--active' : ''}`
-                }
-              >
-                Lab
-              </NavLink>
               <button
                 type="button"
                 className="app-header__link app-header__button"
@@ -70,6 +63,7 @@ function AppHeader() {
               Вхід
             </NavLink>
           )}
+          <ThemeSwitcher />
         </nav>
       </div>
     </header>

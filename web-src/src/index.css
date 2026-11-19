@@ -2,8 +2,8 @@
   color-scheme: dark;
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
-  color: #f2f2f2;
-  background: #0a0a0a;
+  color: var(--theme-fg, #f2f2f2);
+  background: var(--theme-bg, #0a0a0a);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -17,7 +17,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: #0a0a0a;
+  background: var(--theme-bg, #0a0a0a);
 }
 
 #root {

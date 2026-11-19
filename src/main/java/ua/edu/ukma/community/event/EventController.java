@@ -85,8 +85,8 @@ public class EventController {
     @PatchMapping("/{eventId}")
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = "updateEvent", summary = "Частково оновити подію",
-            description = "Голова організації-власника. Можна редагувати до і після публікації (FR-034), "
-                    + "крім відхилених подій.")
+            description = "Голова організації-власника або Global Admin. Можна редагувати до і після "
+                    + "публікації (FR-034), крім відхилених подій.")
     @ApiResponse(responseCode = "200", description = "Оновлену подію повернуто")
     @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
     @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
@@ -104,8 +104,8 @@ public class EventController {
     @PostMapping("/{eventId}/approve")
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = "approveEvent", summary = "Схвалити подію",
-            description = "Голова організації. PENDING або UNPUBLISHED → PUBLISHED (FR-035); для неперевіреної "
-                    + "автоопублікованої події позначає її переглянутою (FR-032).")
+            description = "Голова організації або Global Admin. PENDING або UNPUBLISHED → PUBLISHED (FR-035); "
+                    + "для неперевіреної автоопублікованої події позначає її переглянутою (FR-032).")
     @ApiResponse(responseCode = "200", description = "Подію опубліковано")
     @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
     @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
@@ -122,7 +122,7 @@ public class EventController {
     @PostMapping("/{eventId}/reject")
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = "rejectEvent", summary = "Відхилити подію",
-            description = "Голова організації. Лише з черги модерації: PENDING → REJECTED (FR-035).")
+            description = "Голова організації або Global Admin. Лише з черги модерації: PENDING → REJECTED (FR-035).")
     @ApiResponse(responseCode = "200", description = "Подію відхилено")
     @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
     @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
@@ -139,7 +139,7 @@ public class EventController {
     @PostMapping("/{eventId}/unpublish")
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = "unpublishEvent", summary = "Зняти подію з публікації",
-            description = "Голова організації. PUBLISHED → UNPUBLISHED (FR-036).")
+            description = "Голова організації або Global Admin. PUBLISHED → UNPUBLISHED (FR-036).")
     @ApiResponse(responseCode = "200", description = "Подію знято з публікації")
     @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
     @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
@@ -153,8 +153,7 @@ public class EventController {
         return EventResponse.from(events.unpublish(eventId));
     }
 
-    /** Подію змінює лише голова організації-власника (FR-006); Global Admin — лише якщо він теж голова. */
     private void requireHeadOfEvent(UUID eventId) {
-        policy.requireHead(currentUser.require(), events.get(eventId).organizationId());
+        policy.requireHeadOrAdmin(currentUser.require(), events.get(eventId).organizationId());
     }
 }
