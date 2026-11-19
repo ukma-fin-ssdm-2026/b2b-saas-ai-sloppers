@@ -17,7 +17,469 @@ tags:
   name: Organizations
 - description: Голови організацій і журнал змін ролей
   name: Heads
+- description: "Дошка оголошень: пошук команди чи компанії, відгуки"
+  name: Board
 paths:
+  /api/v1/adverts:
+    get:
+      description: "Лише відкриті оголошення (ACTIVE і дедлайн не минув), найновіш\
+        і спершу; фільтр за типом (FR-045, FR-052). Контакт автора тут бачить лише\
+        \ сам автор і підтверджені відгукувачі."
+      operationId: listAdverts
+      parameters:
+      - description: Лише цей тип
+        example: TEAM
+        in: query
+        name: type
+        required: false
+        schema:
+          type: string
+          enum:
+          - TEAM
+          - LEISURE
+      - description: "Розмір сторінки, 1–100"
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: string
+          maximum: 100
+          minimum: 1
+      - description: Скільки елементів пропустити
+        in: query
+        name: offset
+        required: false
+        schema:
+          type: string
+          minimum: 0
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OffsetPageAdvertResponse"
+          description: Сторінка оголошень
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - bearerAuth: []
+      summary: Активні оголошення
+      tags:
+      - Board
+    post:
+      description: "FR-043, FR-044: тип, заголовок, опис, кількість місць, дедлайн\
+        \ у майбутньому й контакт (Telegram, телефон або email)."
+      operationId: createAdvert
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdvertCreateRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdvertResponse"
+          description: Оголошення створено
+          headers:
+            Location:
+              description: URL нового оголошення
+              schema:
+                type: string
+                format: uri
+              style: simple
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - bearerAuth: []
+      summary: Створити оголошення
+      tags:
+      - Board
+  /api/v1/adverts/mine:
+    get:
+      description: "Оголошення поточного користувача, активні й закриті, найновіші\
+        \ спершу."
+      operationId: listMyAdverts
+      parameters:
+      - description: "Розмір сторінки, 1–100"
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: string
+          maximum: 100
+          minimum: 1
+      - description: Скільки елементів пропустити
+        in: query
+        name: offset
+        required: false
+        schema:
+          type: string
+          minimum: 0
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OffsetPageAdvertResponse"
+          description: Сторінка оголошень
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - bearerAuth: []
+      summary: Мої оголошення
+      tags:
+      - Board
+  /api/v1/adverts/replied:
+    get:
+      description: "Зокрема закриті: після підтвердження відгуку тут видно контакт\
+        \ автора (FR-049, US-013)."
+      operationId: listRepliedAdverts
+      parameters:
+      - description: "Розмір сторінки, 1–100"
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: string
+          maximum: 100
+          minimum: 1
+      - description: Скільки елементів пропустити
+        in: query
+        name: offset
+        required: false
+        schema:
+          type: string
+          minimum: 0
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OffsetPageAdvertResponse"
+          description: Сторінка оголошень
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - bearerAuth: []
+      summary: "Оголошення, на які я відгукнувся"
+      tags:
+      - Board
+  /api/v1/adverts/{advertId}:
+    delete:
+      description: Автор (FR-051). Оголошення зникає для всіх; рядок лишається в базі
+        зі статусом DELETED.
+      operationId: deleteAdvert
+      parameters:
+      - description: Ідентифікатор оголошення (UUID)
+        example: b1000000-0000-4000-8000-000000000001
+        in: path
+        name: advertId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Оголошення видалено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Видалити оголошення
+      tags:
+      - Board
+    get:
+      description: Активне або закрите; видалене повертає 404. Контакт — лише автору
+        й підтвердженому відгукувачу (FR-049).
+      operationId: getAdvert
+      parameters:
+      - description: Ідентифікатор оголошення (UUID)
+        example: b1000000-0000-4000-8000-000000000001
+        in: path
+        name: advertId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdvertResponse"
+          description: Оголошення знайдено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Оголошення
+      tags:
+      - Board
+  /api/v1/adverts/{advertId}/close:
+    post:
+      description: "Автор, у будь-який момент (FR-051). ACTIVE → CLOSED; нові відг\
+        уки більше не приймаються, підтверджені учасники зберігають контакт."
+      operationId: closeAdvert
+      parameters:
+      - description: Ідентифікатор оголошення (UUID)
+        example: b1000000-0000-4000-8000-000000000001
+        in: path
+        name: advertId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AdvertResponse"
+          description: Оголошення закрито
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Закрити оголошення
+      tags:
+      - Board
+  /api/v1/adverts/{advertId}/replies:
+    get:
+      description: Лише автор (FR-047). Відкликані відгуки не показуються; найстаріші
+        спершу.
+      operationId: listAdvertReplies
+      parameters:
+      - description: Ідентифікатор оголошення (UUID)
+        example: b1000000-0000-4000-8000-000000000001
+        in: path
+        name: advertId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReplyResponse"
+          description: Відгуки
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Відгуки на моє оголошення
+      tags:
+      - Board
+    post:
+      description: "FR-046: лише на чуже (на своє — 403 OWN_ADVERT) відкрите оголо\
+        шення, один відгук на оголошення. Відкликаний раніше відгук можна подати з\
+        нову, відхилений — ні."
+      operationId: replyToAdvert
+      parameters:
+      - description: Ідентифікатор оголошення (UUID)
+        example: b1000000-0000-4000-8000-000000000001
+        in: path
+        name: advertId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplyCreateRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReplyResponse"
+          description: Відгук подано
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Відгукнутися на оголошення
+      tags:
+      - Board
+  /api/v1/adverts/{advertId}/replies/{replyId}/confirm:
+    post:
+      description: "Автор (FR-048). Відгукувач починає бачити контакт (FR-049). Ко\
+        ли підтверджених стає стільки, скільки місць, оголошення закривається (FR-050)."
+      operationId: confirmAdvertReply
+      parameters:
+      - description: Ідентифікатор оголошення (UUID)
+        example: b1000000-0000-4000-8000-000000000001
+        in: path
+        name: advertId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: Ідентифікатор відгуку (UUID)
+        example: c1000000-0000-4000-8000-000000000001
+        in: path
+        name: replyId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReplyResponse"
+          description: Відгук підтверджено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Підтвердити відгук
+      tags:
+      - Board
+  /api/v1/adverts/{advertId}/replies/{replyId}/reject:
+    post:
+      description: Автор (FR-048).
+      operationId: rejectAdvertReply
+      parameters:
+      - description: Ідентифікатор оголошення (UUID)
+        example: b1000000-0000-4000-8000-000000000001
+        in: path
+        name: advertId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: Ідентифікатор відгуку (UUID)
+        example: c1000000-0000-4000-8000-000000000001
+        in: path
+        name: replyId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReplyResponse"
+          description: Відгук відхилено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Відхилити відгук
+      tags:
+      - Board
+  /api/v1/adverts/{advertId}/replies/{replyId}/withdraw:
+    post:
+      description: "Автор відгуку, поки той у статусі PENDING (FR-053)."
+      operationId: withdrawAdvertReply
+      parameters:
+      - description: Ідентифікатор оголошення (UUID)
+        example: b1000000-0000-4000-8000-000000000001
+        in: path
+        name: advertId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - description: Ідентифікатор відгуку (UUID)
+        example: c1000000-0000-4000-8000-000000000001
+        in: path
+        name: replyId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReplyResponse"
+          description: Відгук відкликано
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Відкликати свій відгук
+      tags:
+      - Board
   /api/v1/auth/login:
     post:
       description: "Повертає JWT на 60 хв (FR-004, NFR-010). Неактивний акаунт — 403\
@@ -1250,6 +1712,135 @@ components:
       description: "Файл не є картинкою JPEG, PNG чи WebP або запит не multipart/form-data\
         \ (UNSUPPORTED_MEDIA_TYPE)"
   schemas:
+    AdvertCreateRequest:
+      type: object
+      description: "Нове оголошення на дошці (FR-043, FR-044)"
+      properties:
+        contact:
+          type: string
+          description: "Як з вами зв'язатися: Telegram, телефон або email. Бачать\
+            \ лише ви й ті, чий відгук ви підтвердили (FR-049)"
+          example: '@hackathon_seeker'
+          maxLength: 200
+          minLength: 0
+          pattern: "^(@[A-Za-z0-9_]{5,32}|(https://)?t\\.me/[A-Za-z0-9_]{5,32}|\\\
+            +?[0-9][0-9 ()-]{5,18}[0-9]|[^@\\s]+@[^@\\s]+\\.[^@\\s]+)$"
+        deadline:
+          type: string
+          format: date-time
+          description: До коли збираєте людей (ISO 8601 зі зсувом); після нього оголошення
+            закриється
+          example: 2026-11-20T18:00:00+02:00
+        description:
+          type: string
+          description: Опис
+          example: "Команда з трьох людей, бракує Java/Spring. Хакатон 22–23 листо\
+            пада."
+          maxLength: 2000
+          minLength: 0
+        slots:
+          type: integer
+          format: int32
+          description: "Скільки людей шукаєте, 1–50"
+          example: 2
+          maximum: 50
+          minimum: 1
+        title:
+          type: string
+          description: Заголовок
+          example: Шукаю бекендера на хакатон
+          maxLength: 200
+          minLength: 3
+        type:
+          type: string
+          description: "TEAM — пошук команди, LEISURE — компанія для дозвілля"
+          enum:
+          - TEAM
+          - LEISURE
+          example: TEAM
+      required:
+      - contact
+      - deadline
+      - description
+      - slots
+      - title
+      - type
+    AdvertResponse:
+      type: object
+      description: Оголошення на дошці
+      properties:
+        contact:
+          type: string
+          description: "Контакт автора. null для всіх, крім автора й підтверджених\
+            \ відгукувачів (FR-049)"
+          example: '@hackathon_seeker'
+        createdAt:
+          type: string
+          format: date-time
+          description: Час створення (ISO 8601)
+          example: 2026-11-16T12:00:00+02:00
+        deadline:
+          type: string
+          format: date-time
+          description: Дедлайн (ISO 8601)
+          example: 2026-11-20T18:00:00+02:00
+        description:
+          type: string
+          description: Опис
+          example: "Команда з трьох людей, бракує Java/Spring."
+        id:
+          type: string
+          format: uuid
+          description: Ідентифікатор
+          example: b1000000-0000-4000-8000-000000000001
+        myReplyStatus:
+          type: string
+          description: "Статус вашого відгуку на це оголошення; null, якщо ви не в\
+            ідгукувалися"
+          enum:
+          - PENDING
+          - CONFIRMED
+          - REJECTED
+          - WITHDRAWN
+          example: PENDING
+        own:
+          type: boolean
+          description: Чи ви автор оголошення
+          example: false
+        slots:
+          type: integer
+          format: int32
+          description: Кількість місць
+          example: 2
+        status:
+          type: string
+          description: "ACTIVE або CLOSED; оголошення з дедлайном, що минув, — CLOSED"
+          enum:
+          - ACTIVE
+          - CLOSED
+          - DELETED
+          example: ACTIVE
+        title:
+          type: string
+          description: Заголовок
+          example: Шукаю бекендера на хакатон
+        type:
+          type: string
+          description: Тип
+          enum:
+          - TEAM
+          - LEISURE
+          example: TEAM
+      required:
+      - createdAt
+      - deadline
+      - description
+      - id
+      - own
+      - slots
+      - status
+      - title
+      - type
     ApiError:
       description: "Тіло помилки: код для програми, повідомлення для людини, детал\
         і по полях"
@@ -1268,8 +1859,11 @@ components:
           - FORBIDDEN
           - ACCOUNT_NOT_VERIFIED
           - ACCOUNT_BLOCKED
+          - OWN_ADVERT
           - ORGANIZATION_NOT_FOUND
           - EVENT_NOT_FOUND
+          - ADVERT_NOT_FOUND
+          - REPLY_NOT_FOUND
           - USER_NOT_FOUND
           - HEAD_NOT_FOUND
           - ROUTE_NOT_FOUND
@@ -1280,6 +1874,8 @@ components:
           - ACCOUNT_ALREADY_VERIFIED
           - ALREADY_HEAD
           - LAST_HEAD
+          - ALREADY_REPLIED
+          - ADVERT_CLOSED
           - TOO_MANY_REQUESTS
           - PAYLOAD_TOO_LARGE
           - UNSUPPORTED_MEDIA_TYPE
@@ -1525,6 +2121,16 @@ components:
       required:
       - email
       - password
+    OffsetPageAdvertResponse:
+      type: object
+      description: "Сторінка результатів, пагінація зі зсувом (offset)"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdvertResponse"
+        pagination:
+          $ref: "#/components/schemas/OffsetPagination"
     OffsetPageEventResponse:
       type: object
       description: "Сторінка результатів, пагінація зі зсувом (offset)"
@@ -1744,6 +2350,64 @@ components:
       required:
       - email
       - password
+    ReplyCreateRequest:
+      type: object
+      description: Відгук на оголошення (FR-046)
+      properties:
+        message:
+          type: string
+          description: Коротке повідомлення автору
+          example: "Привіт! Пишу на Spring третій рік, готовий."
+          maxLength: 500
+          minLength: 0
+    ReplyResponse:
+      type: object
+      description: Відгук на оголошення
+      properties:
+        advertId:
+          type: string
+          format: uuid
+          description: Оголошення
+          example: b1000000-0000-4000-8000-000000000001
+        createdAt:
+          type: string
+          format: date-time
+          description: Час подання (ISO 8601)
+          example: 2026-11-16T12:30:00+02:00
+        decidedAt:
+          type: string
+          format: date-time
+          description: Коли автор підтвердив/відхилив або відгук відкликано
+          example: 2026-11-16T13:00:00+02:00
+        id:
+          type: string
+          format: uuid
+          description: Ідентифікатор відгуку
+          example: c1000000-0000-4000-8000-000000000001
+        message:
+          type: string
+          description: Повідомлення автору
+          example: "Привіт! Пишу на Spring третій рік, готовий."
+        status:
+          type: string
+          description: Статус
+          enum:
+          - PENDING
+          - CONFIRMED
+          - REJECTED
+          - WITHDRAWN
+          example: PENDING
+        userId:
+          type: string
+          format: uuid
+          description: Хто відгукнувся
+          example: 0f8d6a3e-2b1c-4d5e-9f0a-1b2c3d4e5f60
+      required:
+      - advertId
+      - createdAt
+      - id
+      - status
+      - userId
     ResendCodeRequest:
       type: object
       description: Запит нового коду підтвердження
