@@ -78,6 +78,15 @@ public class JdbcReplyRepository implements ReplyRepository {
     }
 
     @Override
+    public long countByUserSince(UUID userId, OffsetDateTime since) {
+        return jdbc.sql("SELECT count(*) FROM advert_response WHERE user_id = ? AND created_at > ?")
+                .param(userId)
+                .param(since)
+                .query(Long.class)
+                .single();
+    }
+
+    @Override
     public Reply save(Reply r) {
         jdbc.sql("""
                         INSERT INTO advert_response (id, advert_id, user_id, message, status, created_at, decided_at)

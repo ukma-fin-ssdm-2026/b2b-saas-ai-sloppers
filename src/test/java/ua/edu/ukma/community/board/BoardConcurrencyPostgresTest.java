@@ -7,6 +7,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import ua.edu.ukma.community.auth.JdbcUserRepository;
 import ua.edu.ukma.community.auth.User;
+import ua.edu.ukma.community.moderation.ModerationGate;
 import ua.edu.ukma.community.auth.UserStatus;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.common.error.ErrorCode;
@@ -51,7 +52,7 @@ class BoardConcurrencyPostgresTest {
         JdbcReplyRepository replies = new JdbcReplyRepository(jdbc, clock);
         TransactionTemplate tx = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
         List<BoardService> pods = IntStream.range(0, PODS)
-                .mapToObj(i -> new BoardService(adverts, replies, tx, clock))
+                .mapToObj(i -> new BoardService(adverts, replies, ModerationGate.permissive(), tx, clock))
                 .toList();
 
         OffsetDateTime now = OffsetDateTime.now(clock);

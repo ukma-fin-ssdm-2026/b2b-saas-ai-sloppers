@@ -90,6 +90,16 @@ public class JdbcAdvertRepository implements AdvertRepository {
                 .list();
     }
 
+    /** Разом із видаленими (FR-059): ліміт не має обходитися створенням і видаленням оголошення. */
+    @Override
+    public long countByAuthorSince(UUID authorId, OffsetDateTime since) {
+        return jdbc.sql("SELECT count(*) FROM advert WHERE author_id = ? AND created_at > ?")
+                .param(authorId)
+                .param(since)
+                .query(Long.class)
+                .single();
+    }
+
     @Override
     public Advert save(Advert a) {
         jdbc.sql("""
