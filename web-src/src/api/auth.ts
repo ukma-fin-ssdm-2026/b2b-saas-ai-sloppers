@@ -11,9 +11,18 @@ export type TokenResponse = {
 export type UserResponse = {
   id: string
   email: string
+  firstName: string | null
+  lastName: string | null
   status: string
   globalAdmin: boolean
   headOf: string[]
+}
+
+export type RegisterPayload = {
+  email: string
+  password: string
+  firstName?: string
+  lastName?: string
 }
 
 export async function loginApi(
@@ -28,12 +37,16 @@ export async function loginApi(
 }
 
 export async function registerApi(
-  email: string,
-  password: string,
+  payload: RegisterPayload,
 ): Promise<UserResponse> {
   return apiFetch<UserResponse>('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      email: payload.email,
+      password: payload.password,
+      firstName: payload.firstName?.trim() || null,
+      lastName: payload.lastName?.trim() || null,
+    }),
     skipAuth: true,
   })
 }
@@ -54,6 +67,36 @@ export async function resendCodeApi(email: string): Promise<void> {
   })
 }
 
+export async function requestPasswordResetApi(email: string): Promise<void> {
+  await apiFetch<void>('/auth/password-reset', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+    skipAuth: true,
+  })
+}
+
+export async function confirmPasswordResetApi(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<void> {
+  await apiFetch<void>('/auth/password-reset/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ email, code, newPassword }),
+    skipAuth: true,
+  })
+}
+
 export async function meApi(token?: string): Promise<UserResponse> {
   return apiFetch<UserResponse>('/auth/me', { token })
+}
+
+export async function updateProfileApi(
+  firstName: string,
+  lastName: string,
+): Promise<UserResponse> {
+  return apiFetch<UserResponse>('/auth/me', {
+    method: 'PATCH',
+    body: JSON.stringify({ firstName, lastName }),
+  })
 }

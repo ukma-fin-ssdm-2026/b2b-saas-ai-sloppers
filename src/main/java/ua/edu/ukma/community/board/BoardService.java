@@ -56,7 +56,7 @@ public class BoardService {
         Advert advert = adverts.save(new Advert(UUID.randomUUID(), author.id(), request.type(),
                 request.title().trim(), request.description().trim(), request.slots(), request.deadline(),
                 request.contact().trim(), AdvertStatus.ACTIVE, now, now));
-        return AdvertView.of(advert, author.id(), null, now);
+        return AdvertView.of(advert, author.id(), null, null, now);
     }
 
     /** FR-045, FR-052: лише відкриті оголошення, найновіші спершу. */
@@ -92,8 +92,13 @@ public class BoardService {
 
     public AdvertView get(User viewer, UUID advertId) {
         Advert advert = requireVisible(advertId);
-        ReplyStatus myReply = replies.findByAdvertAndUser(advertId, viewer.id()).map(Reply::status).orElse(null);
-        return AdvertView.of(advert, viewer.id(), myReply, now());
+        Reply myReply = replies.findByAdvertAndUser(advertId, viewer.id()).orElse(null);
+        return AdvertView.of(
+                advert,
+                viewer.id(),
+                myReply != null ? myReply.status() : null,
+                myReply != null ? myReply.id() : null,
+                now());
     }
 
     /** FR-051. Підтверджені відгукувачі зберігають доступ до контакту. */
@@ -101,7 +106,7 @@ public class BoardService {
         return locked(() -> {
             Advert advert = requireAuthor(actor, lockVisible(advertId));
             OffsetDateTime now = now();
-            return AdvertView.of(adverts.save(advert.close(now)), actor.id(), null, now);
+            return AdvertView.of(adverts.save(advert.close(now)), actor.id(), null, null, now);
         });
     }
 
@@ -196,9 +201,17 @@ public class BoardService {
     // ---- допоміжне ----
 
     private OffsetPage<AdvertView> toViews(User viewer, OffsetPage<Advert> page, OffsetDateTime now) {
-        Map<UUID, ReplyStatus> myReplies = replies.findByUser(viewer.id()).stream()
-                .collect(Collectors.toMap(Reply::advertId, Reply::status, (a, b) -> a));
-        return page.map(a -> AdvertView.of(a, viewer.id(), myReplies.get(a.id()), now));
+        Map<UUID, Reply> myReplies = replies.findByUser(viewer.id()).stream()
+                .collect(Collectors.toMap(Reply::advertId, r -> r, (a, b) -> a));
+        return page.map(a -> {
+            Reply mine = myReplies.get(a.id());
+            return AdvertView.of(
+                    a,
+                    viewer.id(),
+                    mine != null ? mine.status() : null,
+                    mine != null ? mine.id() : null,
+                    now);
+        });
     }
 
     private <T> T locked(Supplier<T> action) {

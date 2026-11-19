@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ApiError, listOrganizations } from '../api/organizations'
 import CircularCarousel, {
+  type CircularCarouselHandle,
   type CircularCarouselItem,
 } from '../components/CircularCarousel'
+import { useTheme } from '../theme/ThemeContext'
 import type { Organization } from '../types/organization'
+import { compareOrgNames } from '../utils/orgSort'
 import './OrganizationsPage.css'
 
 const PAGE_SIZE = 20
+const DIRECTORY_PAGE_SIZE = 100
 const SEARCH_DEBOUNCE_MS = 300
 
 function logoPlaceholder(name: string): string {
@@ -30,8 +34,33 @@ function toCarouselItem(org: Organization): CircularCarouselItem {
   }
 }
 
+async function fetchAllOrganizations(
+  q?: string,
+): Promise<{ data: Organization[]; total: number }> {
+  const all: Organization[] = []
+  let offset = 0
+  let total = 0
+  let hasMore = true
+
+  while (hasMore) {
+    const page = await listOrganizations({
+      limit: DIRECTORY_PAGE_SIZE,
+      offset,
+      q: q || undefined,
+    })
+    all.push(...page.data)
+    total = page.pagination.total
+    hasMore = page.pagination.hasMore
+    offset += page.data.length
+    if (page.data.length === 0) break
+  }
+
+  return { data: all, total }
+}
+
 function OrganizationsPage() {
   const navigate = useNavigate()
+  const { theme } = useTheme()
   const [searchInput, setSearchInput] = useState('')
   const [query, setQuery] = useState('')
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -42,6 +71,9 @@ function OrganizationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [reloadToken, setReloadToken] = useState(0)
   const requestIdRef = useRef(0)
+  const carouselRef = useRef<CircularCarouselHandle>(null)
+
+  const fadeColor = theme === 'white' ? '#f4f2ee' : '#0a0a0a'
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -63,16 +95,14 @@ function OrganizationsPage() {
       setTotal(0)
 
       try {
-        const page = await listOrganizations({
-          limit: PAGE_SIZE,
-          offset: 0,
-          q: query || undefined,
-        })
+        const { data, total: nextTotal } = await fetchAllOrganizations(
+          query || undefined,
+        )
         if (cancelled || requestId !== requestIdRef.current) return
 
-        setOrganizations(page.data)
-        setHasMore(page.pagination.hasMore)
-        setTotal(page.pagination.total)
+        setOrganizations(data)
+        setHasMore(false)
+        setTotal(nextTotal)
       } catch (err) {
         if (cancelled || requestId !== requestIdRef.current) return
 
@@ -136,6 +166,23 @@ function OrganizationsPage() {
     [organizations],
   )
 
+  const sortedDirectory = useMemo(
+    () => [...organizations].sort(compareOrgNames),
+    [organizations],
+  )
+
+  const carouselIndexById = useMemo(() => {
+    const map = new Map<string, number>()
+    organizations.forEach((org, index) => map.set(org.id, index))
+    return map
+  }, [organizations])
+
+  const focusOrgInCarousel = useCallback((orgId: string) => {
+    const index = carouselIndexById.get(orgId)
+    if (index === undefined) return
+    carouselRef.current?.focusIndex(index)
+  }, [carouselIndexById])
+
   const showEmpty =
     !loading && !error && organizations.length === 0 && !loadingMore
   const showCarousel = organizations.length > 0
@@ -187,38 +234,58 @@ function OrganizationsPage() {
 
         {showCarousel && (
           <>
-            <div className="orgs-page__carousel">
-              <CircularCarousel
-                items={carouselItems}
-                preset="cylinder"
-                intro="rise"
-                cardWidth={220}
-                aspectRatio={1}
-                speed={14}
-                captions={false}
-                gap={25}
-                tilt={-5}
-                curve={1}
-                perspective={2500}
-                autoplay="drift"
-                interval={3}
-                direction="left"
-                momentum={0.6}
-                snap
-                pauseOnHover
-                focusOnClick
-                draggable
-                parallax={0.3}
-                stretch={0.5}
-                fadeColor="#0a0a0a"
-                depthFade={0.55}
-                innerShade={0.6}
-                cornerRadius={12}
-                onItemClick={(_item, index) => {
-                  const org = organizations.at(index)
-                  if (org) navigate(`/organizations/${org.id}`)
-                }}
-              />
+            <div className="orgs-page__stage">
+              <nav className="orgs-directory" aria-label="Алфавітний список">
+                <ul className="orgs-directory__list">
+                  {sortedDirectory.map((org) => (
+                    <li key={org.id} className="orgs-directory__item">
+                      <Link
+                        to={`/organizations/${org.id}`}
+                        className="orgs-directory__link"
+                        onMouseEnter={() => focusOrgInCarousel(org.id)}
+                        onFocus={() => focusOrgInCarousel(org.id)}
+                      >
+                        {org.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
+
+              <div className="orgs-page__carousel">
+                <CircularCarousel
+                  ref={carouselRef}
+                  items={carouselItems}
+                  preset="cylinder"
+                  intro="rise"
+                  cardWidth={220}
+                  aspectRatio={1}
+                  speed={14}
+                  captions={false}
+                  gap={25}
+                  tilt={-5}
+                  curve={1}
+                  perspective={2500}
+                  autoplay="drift"
+                  interval={3}
+                  direction="left"
+                  momentum={0.6}
+                  snap
+                  pauseOnHover
+                  focusOnClick
+                  draggable
+                  parallax={0.3}
+                  stretch={0.5}
+                  fadeColor={fadeColor}
+                  depthFade={0.55}
+                  innerShade={0.6}
+                  cornerRadius={12}
+                  onItemClick={(_item, index) => {
+                    const org = organizations.at(index)
+                    if (org) navigate(`/organizations/${org.id}`)
+                  }}
+                />
+              </div>
             </div>
 
             {error && (

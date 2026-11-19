@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { ApiError, registerApi } from '../api/auth'
+import { registerApi } from '../api/auth'
+import { errorMessage } from '../api/errorMessage'
 import { useAuth } from '../auth/AuthContext'
 import './OrganizationsPage.css'
 import './panel.css'
@@ -9,13 +10,15 @@ function RegisterPage() {
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   if (isAuthenticated) {
-    return <Navigate to="/admin" replace />
+    return <Navigate to="/board" replace />
   }
 
   const onSubmit = async (event: FormEvent) => {
@@ -24,7 +27,12 @@ function RegisterPage() {
     setSubmitting(true)
     const trimmed = email.trim().toLowerCase()
     try {
-      await registerApi(trimmed, password)
+      await registerApi({
+        email: trimmed,
+        password,
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+      })
       navigate('/verify', {
         replace: true,
         state: {
@@ -33,18 +41,7 @@ function RegisterPage() {
         },
       })
     } catch (err) {
-      if (err instanceof ApiError) {
-        try {
-          const parsed = JSON.parse(err.body) as {
-            error?: { message?: string }
-          }
-          setError(parsed.error?.message || err.message)
-        } catch {
-          setError(err.message)
-        }
-      } else {
-        setError('Не вдалося зареєструватися')
-      }
+      setError(errorMessage(err, 'Не вдалося зареєструватися'))
     } finally {
       setSubmitting(false)
     }
@@ -56,8 +53,8 @@ function RegisterPage() {
         <p className="panel-page__eyebrow">Доступ</p>
         <h1 className="panel-page__title">Реєстрація</h1>
         <p className="panel-page__lead">
-          Лише @ukma.edu.ua. Пароль від 8 символів. Після реєстрації
-          підтвердіть email 6-значним кодом.
+          Лише @ukma.edu.ua. Пароль від 8 символів. Ім’я можна задати зараз або
+          пізніше в профілі. Після реєстрації підтвердіть email кодом.
         </p>
 
         <form className="panel-form" onSubmit={(e) => void onSubmit(e)}>
@@ -71,6 +68,26 @@ function RegisterPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               placeholder="name@ukma.edu.ua"
+            />
+          </div>
+          <div className="panel-field">
+            <label htmlFor="reg-first">Ім’я (опційно)</label>
+            <input
+              id="reg-first"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              maxLength={50}
+              autoComplete="given-name"
+            />
+          </div>
+          <div className="panel-field">
+            <label htmlFor="reg-last">Прізвище (опційно)</label>
+            <input
+              id="reg-last"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              maxLength={50}
+              autoComplete="family-name"
             />
           </div>
           <div className="panel-field">

@@ -27,30 +27,21 @@ html[data-theme='grainient'],
 html[data-theme='grainient-teal'],
 html[data-theme='grainient-mono'] {
   --theme-bg: transparent;
-  --theme-fg: #f2f2f2;
-  --theme-muted: #cfcfcf;
-  --theme-border: rgba(255, 255, 255, 0.18);
-  --theme-surface: rgba(18, 15, 23, 0.72);
-  --theme-header-bg: rgba(18, 15, 23, 0.78);
-  --theme-input-bg: rgba(18, 15, 23, 0.78);
-  --theme-card: rgba(18, 15, 23, 0.65);
+  /* White base + mix-blend-mode: difference → auto opposite of background */
+  --theme-fg: #ffffff;
+  --theme-muted: #ffffff;
+  --theme-border: rgba(255, 255, 255, 0.55);
+  --theme-surface: rgba(12, 12, 16, 0.62);
+  --theme-header-bg: rgba(12, 12, 16, 0.88);
+  --theme-input-bg: rgba(12, 12, 16, 0.78);
+  --theme-card: rgba(12, 12, 16, 0.55);
 }
 
 html[data-theme='grainient-teal'] {
-  --theme-surface: rgba(7, 19, 24, 0.72);
-  --theme-header-bg: rgba(7, 19, 24, 0.78);
+  --theme-surface: rgba(7, 19, 24, 0.62);
+  --theme-header-bg: rgba(7, 19, 24, 0.88);
   --theme-input-bg: rgba(7, 19, 24, 0.78);
-  --theme-card: rgba(7, 19, 24, 0.65);
-}
-
-html[data-theme='grainient-mono'] {
-  --theme-fg: #141416;
-  --theme-muted: #3f3f46;
-  --theme-border: rgba(24, 24, 27, 0.28);
-  --theme-surface: rgba(250, 250, 250, 0.72);
-  --theme-header-bg: rgba(250, 250, 250, 0.82);
-  --theme-input-bg: rgba(250, 250, 250, 0.88);
-  --theme-card: rgba(250, 250, 250, 0.7);
+  --theme-card: rgba(7, 19, 24, 0.55);
 }
 
 html,
@@ -60,16 +51,20 @@ body,
   color: var(--theme-fg);
 }
 
+/*
+ * Keep Grainient behind content WITHOUT giving .app-shell a stacking context.
+ * A z-index on .app-shell isolates mix-blend-mode so text never sees the
+ * gradient and stays white — washing out on bright zones.
+ */
 .app-theme-bg {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
 }
 
 .app-shell {
   position: relative;
-  z-index: 1;
   background: var(--theme-bg);
   color: var(--theme-fg);
 }
@@ -125,70 +120,114 @@ html[data-theme='grainient-mono'] .panel-page {
 html[data-theme='white'] .orgs-page__title,
 html[data-theme='white'] .panel-page__title,
 html[data-theme='white'] .orgs-page__eyebrow,
-html[data-theme='white'] .panel-nav a,
-html[data-theme='grainient-mono'] .orgs-page__title,
-html[data-theme='grainient-mono'] .panel-page__title,
-html[data-theme='grainient-mono'] .orgs-page__eyebrow,
-html[data-theme='grainient-mono'] .panel-nav a {
+html[data-theme='white'] .panel-nav a {
   color: var(--theme-fg);
 }
 
-html[data-theme='white'] .panel-nav a,
-html[data-theme='grainient-mono'] .panel-nav a {
+html[data-theme='white'] .panel-nav a {
   color: var(--theme-muted);
 }
 
 html[data-theme='white'] .panel-nav a:hover,
-html[data-theme='white'] .panel-nav a.active,
-html[data-theme='grainient-mono'] .panel-nav a:hover,
-html[data-theme='grainient-mono'] .panel-nav a.active {
+html[data-theme='white'] .panel-nav a.active {
   color: var(--theme-fg);
 }
 
 html[data-theme='white'] .orgs-page__status,
 html[data-theme='white'] .orgs-page__meta,
-html[data-theme='white'] .orgs-page__eyebrow,
-html[data-theme='grainient-mono'] .orgs-page__status,
-html[data-theme='grainient-mono'] .orgs-page__meta,
-html[data-theme='grainient-mono'] .orgs-page__eyebrow {
+html[data-theme='white'] .orgs-page__eyebrow {
   color: var(--theme-muted);
 }
 
-html[data-theme='grainient-mono'] .panel-page__eyebrow,
-html[data-theme='grainient-mono'] .panel-page__lead,
-html[data-theme='grainient-mono'] .panel-field label,
-html[data-theme='grainient-mono'] .panel-row,
-html[data-theme='grainient-mono'] .panel-row p,
-html[data-theme='grainient-mono'] .panel-row__meta {
-  color: var(--theme-muted) !important;
-}
-
-html[data-theme='grainient-mono'] .panel-page__title,
-html[data-theme='grainient-mono'] .panel-row__title,
-html[data-theme='grainient-mono'] .orgs-page__title {
-  color: var(--theme-fg) !important;
-}
-
-html[data-theme='grainient-mono'] .orgs-btn,
-html[data-theme='grainient-mono'] .panel-actions .orgs-btn {
-  border-color: var(--theme-border);
+html[data-theme='white'] .orgs-directory__link {
   color: var(--theme-fg);
-  background: rgba(255, 255, 255, 0.55);
 }
 
-html[data-theme='grainient-mono'] .panel-stat {
-  background: rgba(24, 24, 27, 0.72) !important;
-  border-color: rgba(24, 24, 27, 0.35) !important;
-  color: #fafafa !important;
+/*
+ * Grainient: white glyphs + mix-blend-mode:difference → opposite of whatever
+ * sits behind the text. Block-level hosts only (not nested span/a).
+ * Requires .app-shell without z-index so backdrop includes .app-theme-bg.
+ */
+:is(
+  html[data-theme='grainient'],
+  html[data-theme='grainient-teal'],
+  html[data-theme='grainient-mono']
+) .app-shell
+  :is(
+    h1,
+    h2,
+    h3,
+    h4,
+    p,
+    li,
+    dt,
+    dd,
+    label,
+    button,
+    legend,
+    figcaption,
+    .app-header__brand,
+    .app-header__link,
+    .orgs-btn,
+    .orgs-directory__link,
+    .org-detail__back,
+    .home-page__all-link,
+    .panel-nav a,
+    .panel-row__title,
+    .panel-row__meta,
+    .panel-field label,
+    .panel-page__eyebrow,
+    .panel-page__lead,
+    .panel-page__title,
+    .circular-carousel__card-name
+  ) {
+  color: #ffffff !important;
+  mix-blend-mode: difference;
 }
 
-html[data-theme='grainient-mono'] .panel-stat__value,
-html[data-theme='grainient-mono'] .panel-stat__label {
-  color: #fafafa !important;
+:is(
+  html[data-theme='grainient'],
+  html[data-theme='grainient-teal'],
+  html[data-theme='grainient-mono']
+) .app-shell
+  :is(
+    img,
+    video,
+    canvas,
+    svg,
+    input,
+    textarea,
+    select,
+    .theme-switcher,
+    .org-detail__logo-wrap,
+    .org-event-card__image,
+    .org-event-card__image-fallback,
+    .events-card__image,
+    .events-card__image-fallback,
+    .circular-carousel__card,
+    .ag-root,
+    .panel-stat,
+    .panel-banner
+  ) {
+  isolation: isolate;
+  mix-blend-mode: normal !important;
 }
 
-html[data-theme='grainient-mono'] .theme-switcher__swatch--active {
-  box-shadow: 0 0 0 2px #141416;
+:is(
+  html[data-theme='grainient'],
+  html[data-theme='grainient-teal'],
+  html[data-theme='grainient-mono']
+) :is(.orgs-btn, .panel-actions .orgs-btn) {
+  border-color: #ffffff;
+  background: transparent;
+}
+
+:is(
+  html[data-theme='grainient'],
+  html[data-theme='grainient-teal'],
+  html[data-theme='grainient-mono']
+) .theme-switcher__swatch--active {
+  box-shadow: 0 0 0 2px #ffffff;
 }
 
 .home-page__all-link,

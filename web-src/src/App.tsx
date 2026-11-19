@@ -21,6 +21,12 @@ import OrganizationDetailPage from './pages/OrganizationDetailPage'
 import OrganizationsPage from './pages/OrganizationsPage'
 import RegisterPage from './pages/RegisterPage'
 import VerifyPage from './pages/VerifyPage'
+import BoardLayout from './pages/board/BoardLayout'
+import BoardListPage from './pages/board/BoardListPage'
+import AdvertCreatePage from './pages/board/AdvertCreatePage'
+import AdvertDetailPage from './pages/board/AdvertDetailPage'
+import ProfilePage from './pages/ProfilePage'
+import PasswordResetPage from './pages/PasswordResetPage'
 import './App.css'
 
 const INTRO_SEEN_KEY = 'community-intro-seen'
@@ -83,6 +89,33 @@ function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/verify" element={<VerifyPage />} />
+                <Route path="/password-reset" element={<PasswordResetPage />} />
+                <Route
+                  path="/profile"
+                  element={
+                    <RequireAuth>
+                      <ProfilePage />
+                    </RequireAuth>
+                  }
+                />
+
+                <Route
+                  path="/board"
+                  element={
+                    <RequireAuth>
+                      <BoardLayout />
+                    </RequireAuth>
+                  }
+                >
+                  <Route index element={<BoardListPage scope="open" />} />
+                  <Route path="mine" element={<BoardListPage scope="mine" />} />
+                  <Route
+                    path="replied"
+                    element={<BoardListPage scope="replied" />}
+                  />
+                  <Route path="new" element={<AdvertCreatePage />} />
+                  <Route path=":advertId" element={<AdvertDetailPage />} />
+                </Route>
 
                 <Route
                   path="/admin"

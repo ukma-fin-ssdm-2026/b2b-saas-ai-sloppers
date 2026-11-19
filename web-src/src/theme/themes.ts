@@ -104,6 +104,5 @@ export function writeSavedTheme(username: string, theme: ThemeId): void {
 export function applyThemeToDocument(theme: ThemeId): void {
   const root = document.documentElement
   root.dataset.theme = theme
-  root.style.colorScheme =
-    theme === 'white' || theme === 'grainient-mono' ? 'light' : 'dark'
+  root.style.colorScheme = theme === 'white' ? 'light' : 'dark'
 }
