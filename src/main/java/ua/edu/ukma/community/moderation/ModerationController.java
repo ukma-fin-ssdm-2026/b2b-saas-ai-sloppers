@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ua.edu.ukma.community.auth.CurrentUser;
-import ua.edu.ukma.community.auth.User;
 import ua.edu.ukma.community.auth.UserDirectory;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.common.pagination.OffsetPage;

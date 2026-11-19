@@ -53,11 +53,12 @@ CREATE INDEX complaint_queue_idx ON complaint (status, created_at DESC);
 -- підрахунок скаржників на контент автора (FR-060); відхилені скарги в ліміт не йдуть
 CREATE INDEX complaint_author_idx ON complaint (author_id) WHERE status <> 'DISMISSED';
 
--- Список заборонених слів для автофільтра, веде Global Admin (FR-058). Слова зберігаються в нижньому
--- регістрі (CHECK), тож UNIQUE працює без урахування регістру — як з email у app_user.
+-- Список заборонених слів для автофільтра, веде Global Admin (FR-058). У нижній регістр слово переводить
+-- застосунок (BannedWord.normalize). CHECK (word = lower(word)), як у app_user.email, тут не годиться:
+-- lower() залежить від локалі бази, і в локалі C кирилицю не змінює, тож обмеження пропускало б «Спам».
 CREATE TABLE banned_word (
     id         uuid         PRIMARY KEY,
-    word       varchar(100) NOT NULL UNIQUE CHECK (word = lower(word) AND length(word) > 1),
+    word       varchar(100) NOT NULL UNIQUE CHECK (length(word) > 1),
     added_by   uuid         REFERENCES app_user(id) ON DELETE SET NULL,
     created_at timestamptz  NOT NULL DEFAULT now()
 );

@@ -8,6 +8,7 @@ import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.auth.User;
 import ua.edu.ukma.community.auth.UserRepository;
 import ua.edu.ukma.community.auth.UserStatus;
+import ua.edu.ukma.community.common.LogSafe;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.common.error.ErrorCode;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
@@ -294,7 +295,7 @@ public class ModerationService implements ModerationGate {
         OffsetDateTime until = now.plus(properties.autoBan().duration());
         String reason = "Автоматичне блокування: " + why;
         transactions.execute(tx -> block(userId, null, reason, until, now));
-        LOG.info("Auto-banned user {} until {}: {}", userId, until, why);
+        LOG.info("Auto-banned user {} until {}: {}", userId, until, LogSafe.of(why));
     }
 
     /**
@@ -343,14 +344,14 @@ public class ModerationService implements ModerationGate {
         return new ApiException(code, targetType.name().toLowerCase(Locale.ROOT) + " " + targetId + " не знайдено");
     }
 
+    /** «добу», «годину», «3 год.» — для повідомлень про ліміти; вікно з конфігурації, тож будь-яке. */
     private static String humanize(Duration window) {
-        if (window.toHours() >= 24 && window.toHours() % 24 == 0) {
-            long days = window.toHours() / 24;
-            return days == 1 ? "добу" : days + " дн.";
+        boolean wholeHours = window.toMinutesPart() == 0 && window.toSecondsPart() == 0;
+        if (wholeHours && window.toHoursPart() == 0 && window.toDays() > 0) {
+            return window.toDays() == 1 ? "добу" : window.toDays() + " дн.";
         }
-        if (window.toMinutes() >= 60 && window.toMinutes() % 60 == 0) {
-            long hours = window.toHours();
-            return hours == 1 ? "годину" : hours + " год.";
+        if (wholeHours && window.toHours() > 0) {
+            return window.toHours() == 1 ? "годину" : window.toHours() + " год.";
         }
         return window.toMinutes() + " хв.";
     }

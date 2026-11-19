@@ -38,8 +38,9 @@ public class WordFilter {
      * @return слово зі списку, або {@code empty}, якщо текст чистий
      */
     public Optional<String> firstBanned(String... texts) {
+        // нормалізуємо й прочитане з бази: регістр там гарантує застосунок, а не обмеження (див. V8)
         Set<String> banned = moderation.findBannedWords().stream()
-                .map(BannedWord::word)
+                .map(word -> BannedWord.normalize(word.word()))
                 .collect(Collectors.toUnmodifiableSet());
         if (banned.isEmpty()) {
             return Optional.empty();

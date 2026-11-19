@@ -33,6 +33,7 @@
       CRLF у логах: у цих класах усі значення ззовні (пошта, назви подій, відповіді Supabase/SMTP)
       проходять через LogSafe.of, який замінює переноси рядка на "_". find-sec-bugs не знає про LogSafe.
       AsyncConfig пише лише ідентифікатори з коду (назва пулу, класу й методу) і числа.
+      ModerationService пише UUID, час і причину автобану, зібрану з чисел (теж через LogSafe.of).
     -->
     <Match>
         <Bug pattern="CRLF_INJECTION_LOGS"/>
@@ -44,6 +45,7 @@
             <Class name="ua.edu.ukma.community.subscription.SubscriptionService"/>
             <Class name="ua.edu.ukma.community.subscription.LogEventAnnouncementMailer"/>
             <Class name="ua.edu.ukma.community.config.AsyncConfig"/>
+            <Class name="ua.edu.ukma.community.moderation.ModerationService"/>
         </Or>
     </Match>
 
