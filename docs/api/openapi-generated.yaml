@@ -525,6 +525,78 @@ paths:
       summary: Поточний користувач
       tags:
       - Auth
+    patch:
+      description: "FR-069: інші користувачі бачать ім'я та прізвище замість ідент\
+        ифікатора — в оголошеннях, відгуках, списку голів і журналі ролей."
+      operationId: updateMe
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+          description: Оновлений користувач
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+      security:
+      - bearerAuth: []
+      summary: Змінити ім'я та прізвище
+      tags:
+      - Auth
+  /api/v1/auth/password-reset:
+    post:
+      description: "FR-065: 6-значний код на пошту, дійсний 15 хв, 5 спроб. Не час\
+        тіше ніж раз на хвилину. Для невідомої чи заблокованої пошти теж 204, щоб\
+        \ не розкривати, які пошти зареєстровані."
+      operationId: requestPasswordReset
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequest"
+        required: true
+      responses:
+        "204":
+          description: "Якщо акаунт існує, код надіслано"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "503":
+          $ref: "#/components/responses/MailUnavailable"
+      summary: "Забули пароль: надіслати код"
+      tags:
+      - Auth
+  /api/v1/auth/password-reset/confirm:
+    post:
+      description: "FR-065: код із листа + новий пароль. Після успіху входьте з но\
+        вим паролем; непідтверджений акаунт заодно активується, бо код підтверджує\
+        \ пошту."
+      operationId: confirmPasswordReset
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetConfirmRequest"
+        required: true
+      responses:
+        "204":
+          description: Пароль змінено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      summary: "Забули пароль: задати новий"
+      tags:
+      - Auth
   /api/v1/auth/register:
     post:
       description: "Лише пошта @ukma.edu.ua (FR-001). Створює неактивний акаунт і\
@@ -1769,6 +1841,10 @@ components:
       type: object
       description: Оголошення на дошці
       properties:
+        authorName:
+          type: string
+          description: "Ім'я та прізвище автора; null, якщо автор їх не задав (FR-069)"
+          example: Теодора Гречко
         contact:
           type: string
           description: "Контакт автора. null для всіх, крім автора й підтверджених\
@@ -2287,6 +2363,10 @@ components:
           type: string
           description: Пошта
           example: head@ukma.edu.ua
+        name:
+          type: string
+          description: "Ім'я та прізвище; null, якщо користувач їх ще не задав (FR-069)"
+          example: Теодора Гречко
         userId:
           type: string
           format: uuid
@@ -2332,6 +2412,38 @@ components:
           maxLength: 50
           minLength: 3
           pattern: "^[a-z0-9]+(-[a-z0-9]+)*$"
+    PasswordResetConfirmRequest:
+      type: object
+      description: Новий пароль за кодом з листа
+      properties:
+        code:
+          type: string
+          example: "042517"
+          minLength: 1
+          pattern: "\\s*\\d{6}\\s*"
+        email:
+          type: string
+          example: student@ukma.edu.ua
+          minLength: 1
+        newPassword:
+          type: string
+          example: new-horse-battery
+          maxLength: 72
+          minLength: 8
+      required:
+      - code
+      - email
+      - newPassword
+    PasswordResetRequest:
+      type: object
+      description: Запит коду для скидання пароля
+      properties:
+        email:
+          type: string
+          example: student@ukma.edu.ua
+          minLength: 1
+      required:
+      - email
     RegisterRequest:
       type: object
       description: Реєстрація з університетською поштою
@@ -2342,6 +2454,20 @@ components:
           example: student@ukma.edu.ua
           maxLength: 320
           minLength: 0
+        firstName:
+          type: string
+          description: "Ім'я; необов'язкове, можна задати пізніше (FR-069)"
+          example: Теодора
+          maxLength: 50
+          minLength: 0
+          pattern: "^\\s*\\p{L}[\\p{L}\\p{M}'ʼ’ -]*\\s*$"
+        lastName:
+          type: string
+          description: "Прізвище; необов'язкове, можна задати пізніше (FR-069)"
+          example: Гречко
+          maxLength: 50
+          minLength: 0
+          pattern: "^\\s*\\p{L}[\\p{L}\\p{M}'ʼ’ -]*\\s*$"
         password:
           type: string
           example: correct-horse-battery
@@ -2402,6 +2528,11 @@ components:
           format: uuid
           description: Хто відгукнувся
           example: 0f8d6a3e-2b1c-4d5e-9f0a-1b2c3d4e5f60
+        userName:
+          type: string
+          description: "Ім'я та прізвище того, хто відгукнувся; null, якщо не зада\
+            но (FR-069)"
+          example: Олена Коваль
       required:
       - advertId
       - createdAt
@@ -2430,6 +2561,10 @@ components:
         actorEmail:
           type: string
           example: admin@ukma.edu.ua
+        actorName:
+          type: string
+          description: "Ім'я та прізвище того, хто змінив (FR-069)"
+          example: Олена Коваль
         actorUserId:
           type: string
           format: uuid
@@ -2447,6 +2582,10 @@ components:
         targetEmail:
           type: string
           example: head@ukma.edu.ua
+        targetName:
+          type: string
+          description: "Ім'я та прізвище того, кому змінили роль (FR-069)"
+          example: Теодора Гречко
         targetUserId:
           type: string
           format: uuid
@@ -2486,6 +2625,25 @@ components:
       - accessToken
       - expiresIn
       - tokenType
+    UpdateProfileRequest:
+      type: object
+      description: "Ім'я та прізвище, які бачать інші користувачі (FR-069)"
+      properties:
+        firstName:
+          type: string
+          example: Теодора
+          maxLength: 50
+          minLength: 0
+          pattern: "^\\s*\\p{L}[\\p{L}\\p{M}'ʼ’ -]*\\s*$"
+        lastName:
+          type: string
+          example: Гречко
+          maxLength: 50
+          minLength: 0
+          pattern: "^\\s*\\p{L}[\\p{L}\\p{M}'ʼ’ -]*\\s*$"
+      required:
+      - firstName
+      - lastName
     UserResponse:
       type: object
       description: Користувач
@@ -2493,6 +2651,10 @@ components:
         email:
           type: string
           example: student@ukma.edu.ua
+        firstName:
+          type: string
+          description: "Ім'я; null, якщо ще не задано"
+          example: Теодора
         globalAdmin:
           type: boolean
           description: Чи має роль Global Admin
@@ -2505,6 +2667,10 @@ components:
         id:
           type: string
           format: uuid
+        lastName:
+          type: string
+          description: "Прізвище; null, якщо ще не задано"
+          example: Гречко
         status:
           type: string
           enum:
