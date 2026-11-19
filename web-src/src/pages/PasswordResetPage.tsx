@@ -49,7 +49,8 @@ function PasswordResetPage() {
         code.trim(),
         newPassword,
       )
-      navigate('/login', {
+      // navigate у React Router 7 повертає проміс; нам нема чого чекати, але це має бути явно
+      void navigate('/login', {
         replace: true,
         state: { hint: 'Пароль змінено, увійдіть з новим.' },
       })
