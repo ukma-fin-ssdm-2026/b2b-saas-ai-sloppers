@@ -53,7 +53,8 @@ public class OpenApiConfig {
                         new Tag().name("Auth")
                                 .description("Реєстрація з поштою @ukma.edu.ua, вхід, поточний користувач"),
                         new Tag().name("Organizations").description("Каталог студентських організацій"),
-                        new Tag().name("Heads").description("Голови організацій і журнал змін ролей")))
+                        new Tag().name("Heads").description("Голови організацій і журнал змін ролей"),
+                        new Tag().name("Board").description("Дошка оголошень: пошук команди чи компанії, відгуки")))
                 .components(new Components()
                         .addSecuritySchemes(BEARER, new SecurityScheme()
                                 .type(SecurityScheme.Type.HTTP)

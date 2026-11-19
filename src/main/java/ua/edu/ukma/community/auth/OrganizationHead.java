@@ -14,6 +14,10 @@ public record OrganizationHead(
         @Schema(description = "Пошта", example = "head@ukma.edu.ua", requiredMode = Schema.RequiredMode.REQUIRED)
         String email,
 
+        @Schema(description = "Ім'я та прізвище; null, якщо користувач їх ще не задав (FR-069)",
+                example = "Теодора Гречко", nullable = true)
+        String name,
+
         @Schema(description = "Хто призначив; null, якщо цього користувача вже видалено")
         UUID appointedBy,
 

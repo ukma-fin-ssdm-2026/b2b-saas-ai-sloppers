@@ -23,12 +23,38 @@ public final class AuthRequests {
             @Schema(example = "correct-horse-battery", minLength = 8, maxLength = 72)
             @NotBlank(message = "Пароль обов'язковий")
             @Size(min = 8, max = 72, message = "Пароль: від 8 до 72 символів")
-            String password
+            String password,
+
+            @Schema(description = "Ім'я; необов'язкове, можна задати пізніше (FR-069)", example = "Теодора")
+            @Size(max = Names.MAX_LENGTH, message = "Ім'я: не довше 50 символів")
+            @Pattern(regexp = Names.REGEX, message = Names.MESSAGE)
+            String firstName,
+
+            @Schema(description = "Прізвище; необов'язкове, можна задати пізніше (FR-069)", example = "Гречко")
+            @Size(max = Names.MAX_LENGTH, message = "Прізвище: не довше 50 символів")
+            @Pattern(regexp = Names.REGEX, message = Names.MESSAGE)
+            String lastName
     ) {
         @Override
         public String toString() {
             return "Register[email=" + email + "]";
         }
+    }
+
+    @Schema(name = "UpdateProfileRequest", description = "Ім'я та прізвище, які бачать інші користувачі (FR-069)")
+    public record UpdateProfile(
+            @Schema(example = "Теодора", requiredMode = Schema.RequiredMode.REQUIRED)
+            @NotBlank(message = "Ім'я обов'язкове")
+            @Size(max = Names.MAX_LENGTH, message = "Ім'я: не довше 50 символів")
+            @Pattern(regexp = Names.REGEX, message = Names.MESSAGE)
+            String firstName,
+
+            @Schema(example = "Гречко", requiredMode = Schema.RequiredMode.REQUIRED)
+            @NotBlank(message = "Прізвище обов'язкове")
+            @Size(max = Names.MAX_LENGTH, message = "Прізвище: не довше 50 символів")
+            @Pattern(regexp = Names.REGEX, message = Names.MESSAGE)
+            String lastName
+    ) {
     }
 
     @Schema(name = "VerifyRequest", description = "Підтвердження пошти кодом з листа")
@@ -50,6 +76,36 @@ public final class AuthRequests {
             @NotBlank(message = "Пошта обов'язкова")
             String email
     ) {
+    }
+
+    @Schema(name = "PasswordResetRequest", description = "Запит коду для скидання пароля")
+    public record PasswordReset(
+            @Schema(example = "student@ukma.edu.ua")
+            @NotBlank(message = "Пошта обов'язкова")
+            String email
+    ) {
+    }
+
+    @Schema(name = "PasswordResetConfirmRequest", description = "Новий пароль за кодом з листа")
+    public record PasswordResetConfirm(
+            @Schema(example = "student@ukma.edu.ua")
+            @NotBlank(message = "Пошта обов'язкова")
+            String email,
+
+            @Schema(example = "042517")
+            @NotBlank(message = "Код обов'язковий")
+            @Pattern(regexp = "\\s*\\d{6}\\s*", message = "Код: 6 цифр")
+            String code,
+
+            @Schema(example = "new-horse-battery", minLength = 8, maxLength = 72)
+            @NotBlank(message = "Новий пароль обов'язковий")
+            @Size(min = 8, max = 72, message = "Пароль: від 8 до 72 символів")
+            String newPassword
+    ) {
+        @Override
+        public String toString() {
+            return "PasswordResetConfirm[email=" + email + "]";
+        }
     }
 
     @Schema(name = "LoginRequest", description = "Вхід за поштою й паролем")

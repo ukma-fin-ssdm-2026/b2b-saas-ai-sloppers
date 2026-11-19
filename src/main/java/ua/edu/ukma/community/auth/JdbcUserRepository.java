@@ -8,7 +8,10 @@ import org.springframework.stereotype.Repository;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 
@@ -18,7 +21,7 @@ public class JdbcUserRepository implements UserRepository {
 
     private static final String COLUMNS = """
             id, email, password_hash, status, global_admin, verification_code_hash, verification_expires_at, \
-            verification_attempts, verification_sent_at, created_at, updated_at""";
+            verification_attempts, verification_sent_at, created_at, updated_at, first_name, last_name""";
     private static final String UPSERT = "INSERT INTO app_user (" + COLUMNS + ") ";
 
     private final JdbcClient jdbc;
@@ -41,7 +44,9 @@ public class JdbcUserRepository implements UserRepository {
                     rs.getBoolean("global_admin"),
                     code,
                     inZone(rs.getObject("created_at", OffsetDateTime.class), zone),
-                    inZone(rs.getObject("updated_at", OffsetDateTime.class), zone));
+                    inZone(rs.getObject("updated_at", OffsetDateTime.class), zone),
+                    rs.getString("first_name"),
+                    rs.getString("last_name"));
         };
     }
 
@@ -62,11 +67,22 @@ public class JdbcUserRepository implements UserRepository {
     }
 
     @Override
+    public List<User> findAllById(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.sql("SELECT " + COLUMNS + " FROM app_user WHERE id IN (:ids)")
+                .param("ids", Set.copyOf(ids))
+                .query(mapper)
+                .list();
+    }
+
+    @Override
     public User save(User u) {
         VerificationCode code = u.verification();
         jdbc.sql(UPSERT + """
                         VALUES (:id, :email, :passwordHash, :status, :globalAdmin, :codeHash, :codeExpiresAt,
-                                :codeAttempts, :codeSentAt, :createdAt, :updatedAt)
+                                :codeAttempts, :codeSentAt, :createdAt, :updatedAt, :firstName, :lastName)
                         ON CONFLICT (id) DO UPDATE SET
                             email = EXCLUDED.email,
                             password_hash = EXCLUDED.password_hash,
@@ -76,7 +92,9 @@ public class JdbcUserRepository implements UserRepository {
                             verification_expires_at = EXCLUDED.verification_expires_at,
                             verification_attempts = EXCLUDED.verification_attempts,
                             verification_sent_at = EXCLUDED.verification_sent_at,
-                            updated_at = EXCLUDED.updated_at""")
+                            updated_at = EXCLUDED.updated_at,
+                            first_name = EXCLUDED.first_name,
+                            last_name = EXCLUDED.last_name""")
                 .param("id", u.id())
                 .param("email", u.email())
                 .param("passwordHash", u.passwordHash())
@@ -88,6 +106,8 @@ public class JdbcUserRepository implements UserRepository {
                 .param("codeSentAt", code == null ? null : code.sentAt())
                 .param("createdAt", u.createdAt())
                 .param("updatedAt", u.updatedAt())
+                .param("firstName", u.firstName())
+                .param("lastName", u.lastName())
                 .update();
         return u;
     }

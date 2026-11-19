@@ -43,8 +43,11 @@ public class GlobalExceptionHandler {
 
     private static final int REQUEST_ID_HEX_LENGTH = 16;
 
-    /** Поля, значення яких не можна повертати у відповіді (R10): пароль і код підтвердження. */
-    private static final Set<String> SENSITIVE_FIELDS = Set.of("password", "code");
+    /**
+     * Поля, значення яких не можна повертати у відповіді: паролі (зокрема новий) і код підтвердження (R10),
+     * контакт автора оголошення (NFR-009).
+     */
+    private static final Set<String> SENSITIVE_FIELDS = Set.of("password", "newpassword", "code", "contact");
 
     @ExceptionHandler(ApiException.class)
     ResponseEntity<ErrorResponse> handleApi(ApiException ex) {

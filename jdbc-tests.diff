@@ -1,0 +1,774 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index b352b3f..62c0d70 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -9,6 +9,7 @@
+ 
+ ### Added
+ 
++- Тести JDBC-репозиторіїв на вбудованому PostgreSQL 17 (`embedded-postgres`, без Docker, працює в CI): дошка, користувачі, голови; паралельні підтвердження з кількох екземплярів сервісу (TC-034, `FOR UPDATE`)
+ - Модуль «Дошка оголошень» (C-06, FR-043–FR-053): оголошення `TEAM`/`LEISURE`, відгуки з підтвердженням і відхиленням, відкликання відгуку, ручне закриття й видалення
+ - Контакт автора повертається лише автору й підтвердженим відгукувачам; не потрапляє в логи й тіла помилок валідації (NFR-009)
+ - Автозакриття оголошення, коли заповнено всі місця (в одній транзакції з `SELECT ... FOR UPDATE`, NFR-006) і після дедлайну (`BoardScheduler`, раз на 5 хв)
+diff --git a/docs/requirements/rtm.md b/docs/requirements/rtm.md
+index 674032a..ce6ccc6 100644
+--- a/docs/requirements/rtm.md
++++ b/docs/requirements/rtm.md
+@@ -174,7 +174,7 @@
+ | TC-031 | US-012, FR-046 | Повторний відгук і відгук на власне оголошення відхиляються | П-19 ✅ `BoardServiceTest.Replies#oneReplyOnSomeoneElsesAdvert`, `#rejectedCannotReplyAgain` |
+ | TC-032 | US-012, FR-047, FR-048 | Автор бачить відгуки й може підтвердити або відхилити кожен | П-19 ✅ `BoardServiceTest.Replies#onlyAuthorSeesReplies`, `#decisionsByAuthorOnly` |
+ | TC-033 | US-012, FR-049, NFR-009 | Контакт відкривається лише підтвердженому відгукувачу; в логах його немає | П-18 ✅ `BoardServiceTest.Replies#contactOnlyAfterConfirmation`, `AdvertTest#toStringHidesPersonalData`, `BoardFlowIntegrationTest#fullFlowKeepsContactPrivate` |
+-| TC-034 | US-013, FR-050, NFR-006 | Підтверджених відгуків не більше, ніж місць, навіть при паралельних запитах | П-20 🟡 `BoardServiceTest.Closing#closesWhenSlotsFilled`, `#concurrentConfirmationsNeverExceedSlots` (100 потоків, in-memory); `FOR UPDATE` у PostgreSQL — після Testcontainers |
++| TC-034 | US-013, FR-050, NFR-006 | Підтверджених відгуків не більше, ніж місць, навіть при паралельних запитах | П-20 ✅ `BoardServiceTest.Closing#closesWhenSlotsFilled`, `#concurrentConfirmationsNeverExceedSlots` (100 потоків, in-memory), `BoardConcurrencyPostgresTest` (4 «поди», PostgreSQL, `FOR UPDATE`) |
+ | TC-035 | US-013, FR-050 | Після дедлайну оголошення закривається протягом 1 години | П-21 ✅ `BoardServiceTest.Closing#closeExpiredAfterDeadline`, `Listing#expiredShownAsClosed`, `BoardSchedulerTest` |
+ | TC-036 | US-013, FR-052, NFR-009 | Відгук на закрите оголошення відхиляється; підтверджені зберігають контакт | П-21 ✅ `BoardServiceTest.Closing#confirmedKeepContactAfterClose`, `#closeAndDeleteByAuthorOnly`, `BoardFlowIntegrationTest#fullFlowKeepsContactPrivate` |
+ | TC-037 | US-014, FR-056, FR-057 | Скарга створюється; Global Admin бачить її та видаляє контент | поза планом: скарги (FR-056, FR-057) не реалізовано |
+diff --git a/docs/validation/test-plan.md b/docs/validation/test-plan.md
+index cdbc08c..898d5c4 100644
+--- a/docs/validation/test-plan.md
++++ b/docs/validation/test-plan.md
+@@ -25,9 +25,9 @@
+ |---|---|---|
+ | Модульний | JUnit 5, Mockito, AssertJ, in-memory репозиторії, `TestFixtures` (фіксований `Clock`) | CI, job `Build and Test Backend` (`./mvnw test`) |
+ | Інтеграційний (web) | `@WebMvcTest` + `MockMvc` з `spring-boot-starter-test`, сервіси з in-memory репозиторіями; для захищених ендпоінтів — `spring-security-test` | CI, той самий job. Docker не потрібен |
+-| Інтеграційний (БД) | Testcontainers + PostgreSQL, JDBC-репозиторії, паралельні запити | **Поза CI.** Запускається локально перед демо; результат фіксується в PR |
++| Інтеграційний (БД) | Вбудований PostgreSQL 17 (`embedded-postgres`, без Docker) + міграції з `infra/migrations`: JDBC-репозиторії, паралельні запити з кількох «подів» | CI, той самий job (`./mvnw test`). Docker не потрібен |
+ 
+-**Чому БД-рівень поза CI.** Runner self-hosted, і Docker на ньому не гарантований. Testcontainers у `pom.xml` поки немає. Тому в CI йдуть лише модульний і web-рівень. Тести паралельних запитів (рядки 8, 13, 20) потребують справжніх блокувань PostgreSQL, тому живуть на БД-рівні. Перенесемо їх у CI окремим кроком `verify`, коли CI Maintainer підтвердить Docker на runner.
++**БД-рівень у CI без Docker.** Runner self-hosted, і Docker на ньому не гарантований, тому замість Testcontainers — `embedded-postgres`: бінарники PostgreSQL приходять Maven-залежністю, сервер стартує один раз на прогін (`support/TestDatabase`), схема — ті самі міграції, що й у Flyway. Обмеження: процес тестів не може працювати від root (так влаштований PostgreSQL). Тести паралельних запитів, що потребують справжніх блокувань (рядки 8, 13, 20), можна переносити сюди; першим перенесено рядок 20.
+ 
+ ## Критерії входу й виходу
+ 
+@@ -82,7 +82,7 @@
+ | 17 | TC-028, TC-029 | `POST /adverts` | Модульний + Інтеграційний (web) | Позитивний + негативний | Усі поля валідні → `201`. Без контакту, з дедлайном у минулому або `slots < 1` → `400 VALIDATION_ERROR`, оголошення не збережено. Без токена → `401` | Maksim Havrasiienko | FR-043, FR-044, FR-045 | ✅ |
+ | 18 | TC-030, TC-033 | Приватність контакту автора | Модульний + Інтеграційний (web) | Негативний | У списку й деталях `contact` = `null` для всіх, крім автора й відгукувача з `CONFIRMED`. Після підтвердження відгукувач бачить контакт. Контакт не пишеться в логи | Maksim Havrasiienko | FR-045, FR-049, NFR-009 | ✅ |
+ | 19 | TC-031, TC-032 | Відгуки на оголошення | Модульний | Позитивний + негативний | Повторний відгук → `409 ALREADY_REPLIED`, відгук на власне оголошення → `403 OWN_ADVERT`. Автор бачить відгуки, підтверджує або відхиляє → `200`. Не автор → `403` | Maksim Havrasiienko | FR-046, FR-047, FR-048 | ✅ |
+-| 20 | TC-034 | Автозакриття за кількістю місць | Модульний + Інтеграційний (БД) | Негативний | Послідовно: останнє вільне місце підтверджено → статус `CLOSED`. Паралельно: 10 одночасних підтверджень при `slots = 3` → рівно 3 `CONFIRMED`, решта `409` | Maksim Havrasiienko | FR-050, NFR-006 | 🟡 |
++| 20 | TC-034 | Автозакриття за кількістю місць | Модульний + Інтеграційний (БД) | Негативний | Послідовно: останнє вільне місце підтверджено → статус `CLOSED`. Паралельно: 10 одночасних підтверджень при `slots = 3` → рівно 3 `CONFIRMED`, решта `409` | Maksim Havrasiienko | FR-050, NFR-006 | ✅ |
+ | 21 | TC-035, TC-036 | Дедлайн і закрите оголошення | Модульний (фіксований `Clock`) | Негативний | Планувальник закриває оголошення з минулим дедлайном, і воно зникає з активних. Відгук на закрите → `409`. Підтверджені учасники й далі бачать контакт | Maksim Havrasiienko | FR-050, FR-052, NFR-009 | ✅ |
+ | 22 | TC-038, TC-039 | Блокування користувача | Модульний (фіксований `Clock`) | Негативний + позитивний | Заблокований користувач отримує `403` на створення оголошення чи відгуку, його активні оголошення приховано. Після закінчення строку бану дії знову дозволені | Maksim Havrasiienko | FR-054, FR-055 | ⏳ |
+ | 23 | TC-042 | Специфікація OpenAPI | CI (`api-docs.yml`) | Позитивний | Специфікація OpenAPI 3 генерується без помилок, усі помилки описані спільними компонентами | Artem Butyrin | NFR-012 | ✅ |
+diff --git a/pom.xml b/pom.xml
+index fe78124..07226f2 100644
+--- a/pom.xml
++++ b/pom.xml
+@@ -25,8 +25,25 @@
+         <spotbugs-plugin.version>4.8.6.6</spotbugs-plugin.version>
+         <findsecbugs.version>1.13.0</findsecbugs.version>
+         <jacoco.version>0.8.13</jacoco.version>
++        <!-- справжній PostgreSQL у тестах без Docker: JDBC-репозиторії й FOR UPDATE (TC-034) -->
++        <embedded-postgres.version>2.2.2</embedded-postgres.version>
++        <!-- той самий мажор, що й у docker-compose (postgres:17) -->
++        <embedded-postgres-binaries.version>17.12.0</embedded-postgres-binaries.version>
+     </properties>
+ 
++    <dependencyManagement>
++        <dependencies>
++            <!-- піднімає бінарники Postgres з типових 14.x до 17.x для всіх платформ -->
++            <dependency>
++                <groupId>io.zonky.test.postgres</groupId>
++                <artifactId>embedded-postgres-binaries-bom</artifactId>
++                <version>${embedded-postgres-binaries.version}</version>
++                <type>pom</type>
++                <scope>import</scope>
++            </dependency>
++        </dependencies>
++    </dependencyManagement>
++
+     <dependencies>
+         <dependency>
+             <groupId>org.springframework.boot</groupId>
+@@ -78,6 +95,23 @@
+             <artifactId>spring-security-test</artifactId>
+             <scope>test</scope>
+         </dependency>
++        <dependency>
++            <groupId>io.zonky.test</groupId>
++            <artifactId>embedded-postgres</artifactId>
++            <version>${embedded-postgres.version}</version>
++            <scope>test</scope>
++        </dependency>
++        <!-- типово бібліотека тягне лише x86-бінарники; ці два — для Apple Silicon і ARM-Linux -->
++        <dependency>
++            <groupId>io.zonky.test.postgres</groupId>
++            <artifactId>embedded-postgres-binaries-darwin-arm64v8</artifactId>
++            <scope>test</scope>
++        </dependency>
++        <dependency>
++            <groupId>io.zonky.test.postgres</groupId>
++            <artifactId>embedded-postgres-binaries-linux-arm64v8</artifactId>
++            <scope>test</scope>
++        </dependency>
+     </dependencies>
+ 
+     <build>
+diff --git a/src/test/java/ua/edu/ukma/community/auth/JdbcHeadRepositoryTest.java b/src/test/java/ua/edu/ukma/community/auth/JdbcHeadRepositoryTest.java
+new file mode 100644
+index 0000000..839f00f
+--- /dev/null
++++ b/src/test/java/ua/edu/ukma/community/auth/JdbcHeadRepositoryTest.java
+@@ -0,0 +1,91 @@
++package ua.edu.ukma.community.auth;
++
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.jdbc.core.simple.JdbcClient;
++import org.springframework.jdbc.datasource.DataSourceTransactionManager;
++import ua.edu.ukma.community.support.MutableClock;
++import ua.edu.ukma.community.support.TestDatabase;
++
++import javax.sql.DataSource;
++import java.time.OffsetDateTime;
++import java.util.UUID;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++/** SQL голів і журналу ролей на справжньому PostgreSQL; зокрема імена з JOIN (FR-069). */
++@DisplayName("JdbcHeadRepository на PostgreSQL")
++class JdbcHeadRepositoryTest {
++
++    private MutableClock clock;
++    private JdbcClient jdbc;
++    private JdbcUserRepository users;
++    private JdbcHeadRepository heads;
++    private UUID organizationId;
++
++    @BeforeEach
++    void setUp() {
++        TestDatabase.truncateAll();
++        DataSource dataSource = TestDatabase.dataSource();
++        clock = MutableClock.startingAtFixtureNow();
++        jdbc = JdbcClient.create(dataSource);
++        users = new JdbcUserRepository(jdbc, clock);
++        heads = new JdbcHeadRepository(jdbc, new DataSourceTransactionManager(dataSource), clock);
++        organizationId = UUID.randomUUID();
++        jdbc.sql("INSERT INTO organization (id, name, slug) VALUES (?, 'Org', 'org')").param(organizationId).update();
++    }
++
++    private User user(String email, String firstName, String lastName) {
++        OffsetDateTime now = OffsetDateTime.now(clock);
++        return users.save(new User(UUID.randomUUID(), email, "hash", UserStatus.ACTIVE, false, null, now, now,
++                firstName, lastName));
++    }
++
++    @Test
++    @DisplayName("FR-069: у списку голів і журналі ролей — ім'я та прізвище; без імені — null")
++    void namesInHeadsAndLog() {
++        User admin = user("admin@ukma.edu.ua", null, null);
++        User head = user("head@ukma.edu.ua", "Теодора", "Гречко");
++        OffsetDateTime now = OffsetDateTime.now(clock);
++
++        assertThat(heads.appoint(organizationId, head.id(), admin.id(), now)).isTrue();
++        assertThat(heads.appoint(organizationId, head.id(), admin.id(), now)).isFalse();
++
++        assertThat(heads.findHeads(organizationId)).singleElement().satisfies(h -> {
++            assertThat(h.userId()).isEqualTo(head.id());
++            assertThat(h.email()).isEqualTo("head@ukma.edu.ua");
++            assertThat(h.name()).isEqualTo("Теодора Гречко");
++            assertThat(h.appointedBy()).isEqualTo(admin.id());
++        });
++        assertThat(heads.findLog(organizationId)).singleElement().satisfies(r -> {
++            assertThat(r.targetName()).isEqualTo("Теодора Гречко");
++            assertThat(r.actorEmail()).isEqualTo("admin@ukma.edu.ua");
++            assertThat(r.actorName()).isNull();
++            assertThat(r.action()).isEqualTo(RoleChange.RoleAction.APPOINTED);
++        });
++        assertThat(heads.isHead(organizationId, head.id())).isTrue();
++        assertThat(heads.findOrganizationsHeadedBy(head.id())).containsExactly(organizationId);
++    }
++
++    @Test
++    @DisplayName("FR-011: останнього голову не зняти; другого — можна, і це потрапляє в журнал")
++    void lastHeadProtection() {
++        User admin = user("admin@ukma.edu.ua", null, null);
++        User first = user("first@ukma.edu.ua", "Олена", "Коваль");
++        User second = user("second@ukma.edu.ua", null, null);
++        OffsetDateTime now = OffsetDateTime.now(clock);
++        heads.appoint(organizationId, first.id(), admin.id(), now);
++
++        assertThat(heads.remove(organizationId, first.id(), admin.id(), now))
++                .isEqualTo(HeadRepository.RemoveResult.LAST_HEAD);
++        assertThat(heads.remove(organizationId, second.id(), admin.id(), now))
++                .isEqualTo(HeadRepository.RemoveResult.NOT_HEAD);
++
++        heads.appoint(organizationId, second.id(), first.id(), now);
++        assertThat(heads.remove(organizationId, second.id(), first.id(), now))
++                .isEqualTo(HeadRepository.RemoveResult.REMOVED);
++        assertThat(heads.findLog(organizationId)).extracting(RoleChange::actorName)
++                .contains("Олена Коваль");
++    }
++}
+diff --git a/src/test/java/ua/edu/ukma/community/auth/JdbcUserRepositoryTest.java b/src/test/java/ua/edu/ukma/community/auth/JdbcUserRepositoryTest.java
+new file mode 100644
+index 0000000..ec78e6c
+--- /dev/null
++++ b/src/test/java/ua/edu/ukma/community/auth/JdbcUserRepositoryTest.java
+@@ -0,0 +1,80 @@
++package ua.edu.ukma.community.auth;
++
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.jdbc.core.simple.JdbcClient;
++import ua.edu.ukma.community.support.MutableClock;
++import ua.edu.ukma.community.support.TestDatabase;
++
++import java.time.Duration;
++import java.time.OffsetDateTime;
++import java.util.List;
++import java.util.UUID;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++/** SQL користувачів на справжньому PostgreSQL: коди підтвердження, скидання пароля, ім'я та прізвище. */
++@DisplayName("JdbcUserRepository на PostgreSQL")
++class JdbcUserRepositoryTest {
++
++    private MutableClock clock;
++    private JdbcUserRepository users;
++
++    @BeforeEach
++    void setUp() {
++        TestDatabase.truncateAll();
++        clock = MutableClock.startingAtFixtureNow();
++        users = new JdbcUserRepository(JdbcClient.create(TestDatabase.dataSource()), clock);
++    }
++
++    private OffsetDateTime now() {
++        return OffsetDateTime.now(clock);
++    }
++
++    @Test
++    @DisplayName("користувач з кодом і іменем зберігається й читається без втрат — за id і за поштою")
++    void roundTripWithCodeAndName() {
++        VerificationCode code = new VerificationCode("code-hash", now().plusMinutes(15), 5, now());
++        User saved = users.save(new User(UUID.randomUUID(), "student@ukma.edu.ua", "hash", UserStatus.PENDING, false,
++                code, now(), now(), "Теодора", "Гречко"));
++
++        assertThat(users.findById(saved.id())).contains(saved);
++        assertThat(users.findByEmail("student@ukma.edu.ua")).contains(saved);
++        assertThat(users.findById(UUID.randomUUID())).isEmpty();
++    }
++
++    @Test
++    @DisplayName("FR-065, FR-069: зміна пароля, коду й імені тим самим id оновлює рядок, а не створює новий")
++    void upsertUpdatesPasswordCodeAndName() {
++        User user = users.save(new User(UUID.randomUUID(), "student@ukma.edu.ua", "old-hash", UserStatus.PENDING,
++                false, null, now(), now()));
++        assertThat(users.findById(user.id()).orElseThrow().fullName()).isNull();
++
++        clock.advance(Duration.ofMinutes(1));
++        users.save(user.withVerification(new VerificationCode("reset-hash", now().plusMinutes(15), 5, now()), now()));
++        assertThat(users.findById(user.id()).orElseThrow().verification().codeHash()).isEqualTo("reset-hash");
++
++        User updated = users.save(user.withNewPassword("new-hash", now()).withName("Олена", "Коваль", now()));
++
++        User loaded = users.findById(user.id()).orElseThrow();
++        assertThat(loaded).isEqualTo(updated);
++        assertThat(loaded.passwordHash()).isEqualTo("new-hash");
++        assertThat(loaded.status()).isEqualTo(UserStatus.ACTIVE);
++        assertThat(loaded.verification()).isNull();
++        assertThat(loaded.fullName()).isEqualTo("Олена Коваль");
++    }
++
++    @Test
++    @DisplayName("findAllById: порожній список, кілька id, невідомі id пропускаються")
++    void findAllById() {
++        User a = users.save(new User(UUID.randomUUID(), "a@ukma.edu.ua", "hash", UserStatus.ACTIVE, false, null,
++                now(), now(), "Анна", null));
++        User b = users.save(new User(UUID.randomUUID(), "b@ukma.edu.ua", "hash", UserStatus.ACTIVE, false, null,
++                now(), now()));
++
++        assertThat(users.findAllById(List.of())).isEmpty();
++        assertThat(users.findAllById(List.of(a.id(), b.id(), a.id(), UUID.randomUUID())))
++                .containsExactlyInAnyOrder(a, b);
++    }
++}
+diff --git a/src/test/java/ua/edu/ukma/community/auth/MailCodeSenderTest.java b/src/test/java/ua/edu/ukma/community/auth/MailCodeSenderTest.java
+new file mode 100644
+index 0000000..7fcc10b
+--- /dev/null
++++ b/src/test/java/ua/edu/ukma/community/auth/MailCodeSenderTest.java
+@@ -0,0 +1,79 @@
++package ua.edu.ukma.community.auth;
++
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.mockito.ArgumentCaptor;
++import org.springframework.mail.MailSendException;
++import org.springframework.mail.SimpleMailMessage;
++import org.springframework.mail.javamail.JavaMailSender;
++import ua.edu.ukma.community.common.error.ApiException;
++import ua.edu.ukma.community.common.error.ErrorCode;
++
++import java.time.Duration;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.assertj.core.api.Assertions.assertThatNoException;
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
++import static org.mockito.ArgumentMatchers.any;
++import static org.mockito.Mockito.doThrow;
++import static org.mockito.Mockito.mock;
++import static org.mockito.Mockito.verify;
++
++@DisplayName("Листи з кодами: підтвердження пошти й скидання пароля (FR-002, FR-065)")
++class MailCodeSenderTest {
++
++    private final JavaMailSender mail = mock(JavaMailSender.class);
++    private final MailCodeSender sender = new MailCodeSender(mail, "noreply@ukma.edu.ua", Duration.ofMinutes(15));
++
++    private SimpleMailMessage sent() {
++        ArgumentCaptor<SimpleMailMessage> message = ArgumentCaptor.forClass(SimpleMailMessage.class);
++        verify(mail).send(message.capture());
++        return message.getValue();
++    }
++
++    @Test
++    @DisplayName("код підтвердження: адресат, відправник, код і строк у тексті")
++    void verificationCode() {
++        sender.send("student@ukma.edu.ua", "042517");
++
++        SimpleMailMessage message = sent();
++        assertThat(message.getTo()).containsExactly("student@ukma.edu.ua");
++        assertThat(message.getFrom()).isEqualTo("noreply@ukma.edu.ua");
++        assertThat(message.getSubject()).startsWith("Код підтвердження");
++        assertThat(message.getText()).contains("042517", "15 хв", "не реєструвалися");
++    }
++
++    @Test
++    @DisplayName("скидання пароля: окрема тема й текст, без «ви реєструвалися»")
++    void passwordResetCode() {
++        sender.sendPasswordReset("student@ukma.edu.ua", "731904");
++
++        SimpleMailMessage message = sent();
++        assertThat(message.getSubject()).startsWith("Скидання пароля");
++        assertThat(message.getText()).contains("731904", "15 хв", "не просили скинути пароль")
++                .doesNotContain("реєструвалися");
++    }
++
++    @Test
++    @DisplayName("SMTP недоступний → 503 MAIL_UNAVAILABLE, без коду в повідомленні помилки")
++    void mailFailure() {
++        doThrow(new MailSendException("smtp down")).when(mail).send(any(SimpleMailMessage.class));
++
++        assertThatThrownBy(() -> sender.sendPasswordReset("student@ukma.edu.ua", "731904"))
++                .isInstanceOfSatisfying(ApiException.class, e -> {
++                    assertThat(e.code()).isEqualTo(ErrorCode.MAIL_UNAVAILABLE);
++                    assertThat(e.getMessage()).doesNotContain("731904");
++                });
++    }
++
++    @Test
++    @DisplayName("без SMTP коди йдуть у лог — обидва види листів")
++    void logSenderAcceptsBothKinds() {
++        LogCodeSender log = new LogCodeSender();
++
++        assertThatNoException().isThrownBy(() -> {
++            log.send("student@ukma.edu.ua", "042517");
++            log.sendPasswordReset("student@ukma.edu.ua", "731904");
++        });
++    }
++}
+diff --git a/src/test/java/ua/edu/ukma/community/board/BoardConcurrencyPostgresTest.java b/src/test/java/ua/edu/ukma/community/board/BoardConcurrencyPostgresTest.java
+new file mode 100644
+index 0000000..df6d2dc
+--- /dev/null
++++ b/src/test/java/ua/edu/ukma/community/board/BoardConcurrencyPostgresTest.java
+@@ -0,0 +1,98 @@
++package ua.edu.ukma.community.board;
++
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.jdbc.core.simple.JdbcClient;
++import org.springframework.jdbc.datasource.DataSourceTransactionManager;
++import org.springframework.transaction.support.TransactionTemplate;
++import ua.edu.ukma.community.auth.JdbcUserRepository;
++import ua.edu.ukma.community.auth.User;
++import ua.edu.ukma.community.auth.UserStatus;
++import ua.edu.ukma.community.common.error.ApiException;
++import ua.edu.ukma.community.common.error.ErrorCode;
++import ua.edu.ukma.community.support.MutableClock;
++import ua.edu.ukma.community.support.TestDatabase;
++
++import javax.sql.DataSource;
++import java.time.OffsetDateTime;
++import java.util.ArrayList;
++import java.util.List;
++import java.util.UUID;
++import java.util.concurrent.CountDownLatch;
++import java.util.concurrent.ExecutorService;
++import java.util.concurrent.Executors;
++import java.util.concurrent.TimeUnit;
++import java.util.concurrent.atomic.AtomicInteger;
++import java.util.stream.IntStream;
++
++import static org.assertj.core.api.Assertions.assertThat;
++
++/**
++ * TC-034 / NFR-006 на рівні бази: кілька екземплярів {@link BoardService} — як кілька подів у Minikube —
++ * одночасно підтверджують відгуки одного оголошення. {@code synchronized} тут нічого не дає (у кожного
++ * екземпляра свій монітор), тож місця рятує лише {@code SELECT ... FOR UPDATE} у PostgreSQL.
++ */
++@DisplayName("BoardService на PostgreSQL: паралельні підтвердження з кількох подів")
++class BoardConcurrencyPostgresTest {
++
++    private static final int PODS = 4;
++    private static final int SLOTS = 3;
++    private static final int REPLIES = 24;
++
++    @Test
++    @DisplayName("TC-034: 24 одночасні підтвердження з 4 подів на 3 місця — рівно 3 підтверджені, оголошення закрите")
++    void confirmationsNeverExceedSlotsAcrossPods() throws InterruptedException {
++        DataSource dataSource = TestDatabase.dataSource();
++        TestDatabase.truncateAll();
++        JdbcClient jdbc = JdbcClient.create(dataSource);
++        MutableClock clock = MutableClock.startingAtFixtureNow();
++        JdbcUserRepository users = new JdbcUserRepository(jdbc, clock);
++        JdbcAdvertRepository adverts = new JdbcAdvertRepository(jdbc, clock);
++        JdbcReplyRepository replies = new JdbcReplyRepository(jdbc, clock);
++        TransactionTemplate tx = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
++        List<BoardService> pods = IntStream.range(0, PODS)
++                .mapToObj(i -> new BoardService(adverts, replies, tx, clock))
++                .toList();
++
++        OffsetDateTime now = OffsetDateTime.now(clock);
++        User author = users.save(new User(UUID.randomUUID(), "author@ukma.edu.ua", "hash", UserStatus.ACTIVE, false,
++                null, now, now));
++        Advert advert = pods.get(0).create(author, new AdvertCreateRequest(AdvertType.TEAM, "Хакатон", "Шукаю команду",
++                SLOTS, now.plusDays(1), "@team_seeker")).advert();
++        List<Reply> pending = new ArrayList<>();
++        for (int i = 0; i < REPLIES; i++) {
++            User user = users.save(new User(UUID.randomUUID(), "u" + i + "@ukma.edu.ua", "hash", UserStatus.ACTIVE,
++                    false, null, now, now));
++            pending.add(pods.get(i % PODS).reply(user, advert.id(), null));
++        }
++
++        AtomicInteger confirmed = new AtomicInteger();
++        AtomicInteger closed = new AtomicInteger();
++        CountDownLatch start = new CountDownLatch(1);
++        ExecutorService pool = Executors.newFixedThreadPool(REPLIES);
++        for (int i = 0; i < REPLIES; i++) {
++            BoardService pod = pods.get(i % PODS);
++            Reply reply = pending.get(i);
++            pool.submit(() -> {
++                start.await();
++                try {
++                    pod.confirm(author, advert.id(), reply.id());
++                    confirmed.incrementAndGet();
++                } catch (ApiException e) {
++                    if (e.code() == ErrorCode.ADVERT_CLOSED) {
++                        closed.incrementAndGet();
++                    }
++                }
++                return null;
++            });
++        }
++        start.countDown();
++        pool.shutdown();
++        assertThat(pool.awaitTermination(30, TimeUnit.SECONDS)).isTrue();
++
++        assertThat(confirmed.get()).isEqualTo(SLOTS);
++        assertThat(closed.get()).isEqualTo(REPLIES - SLOTS);
++        assertThat(replies.countConfirmed(advert.id())).isEqualTo(SLOTS);
++        assertThat(adverts.findById(advert.id()).orElseThrow().status()).isEqualTo(AdvertStatus.CLOSED);
++    }
++}
+diff --git a/src/test/java/ua/edu/ukma/community/board/JdbcBoardRepositoryTest.java b/src/test/java/ua/edu/ukma/community/board/JdbcBoardRepositoryTest.java
+new file mode 100644
+index 0000000..ee706d2
+--- /dev/null
++++ b/src/test/java/ua/edu/ukma/community/board/JdbcBoardRepositoryTest.java
+@@ -0,0 +1,184 @@
++package ua.edu.ukma.community.board;
++
++import org.junit.jupiter.api.BeforeEach;
++import org.junit.jupiter.api.DisplayName;
++import org.junit.jupiter.api.Test;
++import org.springframework.dao.DataIntegrityViolationException;
++import org.springframework.jdbc.core.simple.JdbcClient;
++import org.springframework.jdbc.datasource.DataSourceTransactionManager;
++import org.springframework.transaction.support.TransactionTemplate;
++import ua.edu.ukma.community.auth.JdbcUserRepository;
++import ua.edu.ukma.community.auth.User;
++import ua.edu.ukma.community.auth.UserStatus;
++import ua.edu.ukma.community.support.MutableClock;
++import ua.edu.ukma.community.support.TestDatabase;
++
++import javax.sql.DataSource;
++import java.time.Duration;
++import java.time.OffsetDateTime;
++import java.util.List;
++import java.util.Optional;
++import java.util.UUID;
++
++import static org.assertj.core.api.Assertions.assertThat;
++import static org.assertj.core.api.Assertions.assertThatThrownBy;
++
++/** SQL дошки на справжньому PostgreSQL з міграціями V1–V7 (див. {@link TestDatabase}). */
++@DisplayName("JdbcAdvertRepository / JdbcReplyRepository на PostgreSQL")
++class JdbcBoardRepositoryTest {
++
++    private DataSource dataSource;
++    private MutableClock clock;
++    private JdbcUserRepository users;
++    private JdbcAdvertRepository adverts;
++    private JdbcReplyRepository replies;
++    private User author;
++    private User alice;
++
++    @BeforeEach
++    void setUp() {
++        dataSource = TestDatabase.dataSource();
++        TestDatabase.truncateAll();
++        JdbcClient jdbc = JdbcClient.create(dataSource);
++        clock = MutableClock.startingAtFixtureNow();
++        users = new JdbcUserRepository(jdbc, clock);
++        adverts = new JdbcAdvertRepository(jdbc, clock);
++        replies = new JdbcReplyRepository(jdbc, clock);
++        author = user("author");
++        alice = user("alice");
++    }
++
++    private OffsetDateTime now() {
++        return OffsetDateTime.now(clock);
++    }
++
++    private User user(String name) {
++        return users.save(new User(UUID.randomUUID(), name + "@ukma.edu.ua", "hash", UserStatus.ACTIVE, false, null,
++                now(), now()));
++    }
++
++    private Advert advert(AdvertType type, OffsetDateTime deadline, AdvertStatus status) {
++        return adverts.save(new Advert(UUID.randomUUID(), author.id(), type, "Шукаю бекендера", "Хакатон", 2, deadline,
++                "@team_seeker", status, now(), now()));
++    }
++
++    private Reply reply(Advert advert, User from) {
++        return replies.save(Reply.create(advert.id(), from.id(), "Привіт", now()));
++    }
++
++    @Test
++    @DisplayName("оголошення зберігається й читається без втрат, час — у зоні годинника")
++    void advertRoundTrip() {
++        Advert saved = advert(AdvertType.TEAM, now().plusDays(2), AdvertStatus.ACTIVE);
++
++        Advert loaded = adverts.findById(saved.id()).orElseThrow();
++
++        assertThat(loaded).isEqualTo(saved);
++        assertThat(loaded.contact()).isEqualTo("@team_seeker");
++        assertThat(adverts.findById(UUID.randomUUID())).isEmpty();
++    }
++
++    @Test
++    @DisplayName("findOpen: лише ACTIVE з дедлайном у майбутньому; фільтр за типом і без нього")
++    void findOpenFiltersInSql() {
++        Advert team = advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.ACTIVE);
++        Advert leisure = advert(AdvertType.LEISURE, now().plusDays(1), AdvertStatus.ACTIVE);
++        advert(AdvertType.TEAM, now().minusMinutes(1), AdvertStatus.ACTIVE);
++        advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.CLOSED);
++        advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.DELETED);
++
++        assertThat(adverts.findOpen(null, now())).extracting(Advert::id)
++                .containsExactlyInAnyOrder(team.id(), leisure.id());
++        assertThat(adverts.findOpen(AdvertType.LEISURE, now())).extracting(Advert::id)
++                .containsExactly(leisure.id());
++    }
++
++    @Test
++    @DisplayName("findByAuthor без видалених; findAllById — порожній список і кілька id")
++    void findByAuthorAndIds() {
++        Advert active = advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.ACTIVE);
++        Advert closed = advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.CLOSED);
++        Advert deleted = advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.DELETED);
++
++        assertThat(adverts.findByAuthor(author.id())).extracting(Advert::id)
++                .containsExactlyInAnyOrder(active.id(), closed.id());
++        assertThat(adverts.findByAuthor(alice.id())).isEmpty();
++        assertThat(adverts.findAllById(List.of())).isEmpty();
++        assertThat(adverts.findAllById(List.of(active.id(), deleted.id(), UUID.randomUUID()))).extracting(Advert::id)
++                .containsExactlyInAnyOrder(active.id(), deleted.id());
++    }
++
++    @Test
++    @DisplayName("save по тому самому id оновлює статус; closeExpired закриває лише прострочені ACTIVE")
++    void updateAndCloseExpired() {
++        Advert advert = advert(AdvertType.TEAM, now().plusMinutes(30), AdvertStatus.ACTIVE);
++        Advert later = advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.ACTIVE);
++        clock.advance(Duration.ofMinutes(1));
++        adverts.save(advert.close(now()));
++        assertThat(adverts.findById(advert.id()).orElseThrow().status()).isEqualTo(AdvertStatus.CLOSED);
++
++        Advert expiring = advert(AdvertType.TEAM, now().plusMinutes(5), AdvertStatus.ACTIVE);
++        clock.advance(Duration.ofMinutes(5));
++
++        assertThat(adverts.closeExpired(now())).isEqualTo(1);
++        assertThat(adverts.closeExpired(now())).isZero();
++        assertThat(adverts.findById(expiring.id()).orElseThrow().status()).isEqualTo(AdvertStatus.CLOSED);
++        assertThat(adverts.findById(later.id()).orElseThrow().status()).isEqualTo(AdvertStatus.ACTIVE);
++    }
++
++    @Test
++    @DisplayName("lock у транзакції повертає оголошення (SELECT ... FOR UPDATE)")
++    void lockInsideTransaction() {
++        Advert advert = advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.ACTIVE);
++        TransactionTemplate tx = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
++
++        Optional<Advert> locked = tx.execute(status -> adverts.lock(advert.id()));
++        Optional<Advert> missing = tx.execute(status -> adverts.lock(UUID.randomUUID()));
++
++        assertThat(locked).contains(advert);
++        assertThat(missing).isEmpty();
++    }
++
++    @Test
++    @DisplayName("відгук: вставка, оновлення тим самим id, пошук за оголошенням, користувачем, парою; лічильник")
++    void replyRoundTrip() {
++        Advert advert = advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.ACTIVE);
++        Reply fromAlice = reply(advert, alice);
++        Reply fromBob = replies.save(Reply.create(advert.id(), user("bob").id(), null, now()));
++
++        assertThat(replies.findById(fromAlice.id())).contains(fromAlice);
++        assertThat(replies.findById(fromBob.id()).orElseThrow().message()).isNull();
++        assertThat(replies.countConfirmed(advert.id())).isZero();
++
++        Reply confirmed = replies.save(fromAlice.confirm(now()));
++
++        assertThat(replies.findById(fromAlice.id())).contains(confirmed);
++        assertThat(replies.countConfirmed(advert.id())).isEqualTo(1);
++        assertThat(replies.findByAdvertAndUser(advert.id(), alice.id())).contains(confirmed);
++        assertThat(replies.findByAdvertAndUser(advert.id(), author.id())).isEmpty();
++        assertThat(replies.findByAdvert(advert.id())).extracting(Reply::id)
++                .containsExactlyInAnyOrder(fromAlice.id(), fromBob.id());
++        assertThat(replies.findByUser(alice.id())).extracting(Reply::id).containsExactly(fromAlice.id());
++    }
++
++    @Test
++    @DisplayName("FR-046: другий рядок відгуку того самого користувача на те саме оголошення база не прийме")
++    void oneReplyPerUserEnforcedByDatabase() {
++        Advert advert = advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.ACTIVE);
++        reply(advert, alice);
++
++        assertThatThrownBy(() -> reply(advert, alice)).isInstanceOf(DataIntegrityViolationException.class);
++    }
++
++    @Test
++    @DisplayName("видалення користувача прибирає його оголошення й відгуки (ON DELETE CASCADE)")
++    void cascadeOnUserDelete() {
++        Advert advert = advert(AdvertType.TEAM, now().plusDays(1), AdvertStatus.ACTIVE);
++        Reply fromAlice = reply(advert, alice);
++
++        JdbcClient.create(dataSource).sql("DELETE FROM app_user WHERE id = ?").param(author.id()).update();
++
++        assertThat(adverts.findById(advert.id())).isEmpty();
++        assertThat(replies.findById(fromAlice.id())).isEmpty();
++    }
++}
+diff --git a/src/test/java/ua/edu/ukma/community/support/TestDatabase.java b/src/test/java/ua/edu/ukma/community/support/TestDatabase.java
+new file mode 100644
+index 0000000..ae04ead
+--- /dev/null
++++ b/src/test/java/ua/edu/ukma/community/support/TestDatabase.java
+@@ -0,0 +1,102 @@
++package ua.edu.ukma.community.support;
++
++import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
++
++import javax.sql.DataSource;
++import java.io.IOException;
++import java.io.UncheckedIOException;
++import java.nio.file.Files;
++import java.nio.file.Path;
++import java.sql.Connection;
++import java.sql.ResultSet;
++import java.sql.SQLException;
++import java.sql.Statement;
++import java.util.ArrayList;
++import java.util.Comparator;
++import java.util.List;
++import java.util.regex.Matcher;
++import java.util.regex.Pattern;
++import java.util.stream.Stream;
++
++/**
++ * Справжній PostgreSQL для тестів JDBC-репозиторіїв, без Docker: бінарники йдуть Maven-залежністю
++ * (embedded-postgres). Один сервер на весь прогін тестів; схема — ті самі міграції {@code infra/migrations},
++ * що накочує Flyway, тож тест бачить рівно продакшн-схему.
++ *
++ * <p>Між тестами — {@link #truncateAll()}: таблиці лишаються, дані зникають.
++ */
++public final class TestDatabase {
++
++    private static final Path MIGRATIONS = Path.of("infra", "migrations");
++    private static final Pattern VERSIONED = Pattern.compile("V(\\d+)__.+\\.sql");
++
++    private static DataSource dataSource;
++
++    private TestDatabase() {
++    }
++
++    public static synchronized DataSource dataSource() {
++        if (dataSource == null) {
++            try {
++                EmbeddedPostgres postgres = EmbeddedPostgres.builder().start();
++                Runtime.getRuntime().addShutdownHook(new Thread(() -> close(postgres)));
++                dataSource = postgres.getPostgresDatabase();
++                migrate(dataSource);
++            } catch (IOException e) {
++                throw new UncheckedIOException("Не вдалося запустити вбудований PostgreSQL", e);
++            }
++        }
++        return dataSource;
++    }
++
++    /** Очищає всі таблиці схеми {@code public}; структура й обмеження лишаються. */
++    public static void truncateAll() {
++        try (Connection c = dataSource().getConnection(); Statement st = c.createStatement()) {
++            List<String> tables = new ArrayList<>();
++            try (ResultSet rs = st.executeQuery(
++                    "SELECT quote_ident(tablename) FROM pg_tables WHERE schemaname = 'public'")) {
++                while (rs.next()) {
++                    tables.add(rs.getString(1));
++                }
++            }
++            if (!tables.isEmpty()) {
++                st.execute("TRUNCATE " + String.join(", ", tables) + " CASCADE");
++            }
++        } catch (SQLException e) {
++            throw new IllegalStateException("Не вдалося очистити тестову базу", e);
++        }
++    }
++
++    /** Міграції по черзі за номером версії (V2 раніше за V10), кожен файл одним запитом, як у Flyway. */
++    private static void migrate(DataSource ds) {
++        try (Stream<Path> files = Files.list(MIGRATIONS);
++             Connection c = ds.getConnection();
++             Statement st = c.createStatement()) {
++            List<Path> ordered = files
++                    .filter(f -> VERSIONED.matcher(f.getFileName().toString()).matches())
++                    .sorted(Comparator.comparingInt(TestDatabase::version))
++                    .toList();
++            for (Path file : ordered) {
++                st.execute(Files.readString(file));
++            }
++        } catch (IOException | SQLException e) {
++            throw new IllegalStateException("Не вдалося накотити міграції з " + MIGRATIONS.toAbsolutePath(), e);
++        }
++    }
++
++    private static int version(Path file) {
++        Matcher m = VERSIONED.matcher(file.getFileName().toString());
++        if (!m.matches()) {
++            throw new IllegalArgumentException(file.toString());
++        }
++        return Integer.parseInt(m.group(1));
++    }
++
++    private static void close(EmbeddedPostgres postgres) {
++        try {
++            postgres.close();
++        } catch (IOException ignored) {
++            // JVM і так завершується
++        }
++    }
++}

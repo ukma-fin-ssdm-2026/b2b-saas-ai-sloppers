@@ -20,11 +20,18 @@ public record RoleChange(
         @Schema(example = "head@ukma.edu.ua", requiredMode = Schema.RequiredMode.REQUIRED)
         String targetEmail,
 
+        @Schema(description = "Ім'я та прізвище того, кому змінили роль (FR-069)", example = "Теодора Гречко",
+                nullable = true)
+        String targetName,
+
         @Schema(description = "Хто змінив; null, якщо цього користувача вже видалено")
         UUID actorUserId,
 
         @Schema(example = "admin@ukma.edu.ua")
         String actorEmail,
+
+        @Schema(description = "Ім'я та прізвище того, хто змінив (FR-069)", example = "Олена Коваль", nullable = true)
+        String actorName,
 
         @Schema(requiredMode = Schema.RequiredMode.REQUIRED)
         RoleAction action,
