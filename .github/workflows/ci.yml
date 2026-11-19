@@ -32,7 +32,7 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # linters run in lint.yml
+      # linters run in sonar.yml (Static Analysis)
       - name: Compile
         run: ./mvnw -B -ntp test-compile
 
