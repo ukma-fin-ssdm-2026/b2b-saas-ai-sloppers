@@ -12,6 +12,8 @@ import AdminOrganizationEventsPage from './pages/admin/AdminOrganizationEventsPa
 import AdminOrganizationsPage from './pages/admin/AdminOrganizationsPage'
 import EventDetailPage from './pages/EventDetailPage'
 import BoardPage from './pages/BoardPage'
+import PasswordResetPage from './pages/PasswordResetPage'
+import ProfilePage from './pages/ProfilePage'
 import EventsPage from './pages/EventsPage'
 import HomePage from './pages/HomePage'
 import LabHomePage from './pages/lab/LabHomePage'
@@ -90,6 +92,15 @@ function App() {
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/verify" element={<VerifyPage />} />
+              <Route path="/password-reset" element={<PasswordResetPage />} />
+              <Route
+                path="/profile"
+                element={
+                  <RequireAuth>
+                    <ProfilePage />
+                  </RequireAuth>
+                }
+              />
 
               <Route
                 path="/admin"

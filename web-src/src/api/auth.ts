@@ -19,8 +19,8 @@ export type UserResponse = {
 }
 
 export type UpdateProfileRequest = {
-  firstName?: string
-  lastName?: string
+  firstName: string
+  lastName: string
 }
 
 export async function loginApi(
@@ -51,6 +51,26 @@ export async function updateProfileApi(
   return apiFetch<UserResponse>('/auth/me', {
     method: 'PATCH',
     body: JSON.stringify(body),
+  })
+}
+
+export async function requestPasswordResetApi(email: string): Promise<void> {
+  await apiFetch<void>('/auth/password-reset', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+    skipAuth: true,
+  })
+}
+
+export async function confirmPasswordResetApi(
+  email: string,
+  code: string,
+  newPassword: string,
+): Promise<void> {
+  await apiFetch<void>('/auth/password-reset/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ email, code, newPassword }),
+    skipAuth: true,
   })
 }
 
