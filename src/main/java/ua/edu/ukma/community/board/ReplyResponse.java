@@ -20,6 +20,10 @@ public record ReplyResponse(
                 requiredMode = Schema.RequiredMode.REQUIRED)
         UUID userId,
 
+        @Schema(description = "Ім'я та прізвище того, хто відгукнувся; null, якщо не задано (FR-069)",
+                example = "Олена Коваль", nullable = true)
+        String userName,
+
         @Schema(description = "Повідомлення автору", example = "Привіт! Пишу на Spring третій рік, готовий.")
         String message,
 
@@ -35,8 +39,8 @@ public record ReplyResponse(
         OffsetDateTime decidedAt
 ) {
 
-    public static ReplyResponse from(Reply reply) {
-        return new ReplyResponse(reply.id(), reply.advertId(), reply.userId(), reply.message(), reply.status(),
-                reply.createdAt(), reply.decidedAt());
+    public static ReplyResponse from(Reply reply, String userName) {
+        return new ReplyResponse(reply.id(), reply.advertId(), reply.userId(), userName, reply.message(),
+                reply.status(), reply.createdAt(), reply.decidedAt());
     }
 }

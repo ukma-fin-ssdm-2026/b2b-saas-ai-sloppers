@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,13 +28,15 @@ public class AuthController {
     private final LoginService logins;
     private final CurrentUser currentUser;
     private final HeadService heads;
+    private final ProfileService profiles;
 
     public AuthController(RegistrationService registration, LoginService login, CurrentUser currentUser,
-                          HeadService heads) {
+                          HeadService heads, ProfileService profiles) {
         this.registration = registration;
         this.logins = login;
         this.currentUser = currentUser;
         this.heads = heads;
+        this.profiles = profiles;
     }
 
     @PostMapping("/register")
@@ -46,7 +49,8 @@ public class AuthController {
     @ApiResponse(responseCode = "409", ref = OpenApiConfig.CONFLICT)
     @ApiResponse(responseCode = "503", ref = OpenApiConfig.MAIL_UNAVAILABLE)
     public UserResponse register(@Valid @RequestBody AuthRequests.Register request) {
-        return UserResponse.from(registration.register(request.email(), request.password()), List.of());
+        return UserResponse.from(registration.register(request.email(), request.password(), request.firstName(),
+                request.lastName()), List.of());
     }
 
     @PostMapping("/verify")
@@ -118,6 +122,19 @@ public class AuthController {
     @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
     public UserResponse me() {
         User user = currentUser.require();
+        return UserResponse.from(user, heads.organizationsHeadedBy(user));
+    }
+
+    @PatchMapping("/me")
+    @SecurityRequirement(name = OpenApiConfig.BEARER)
+    @Operation(operationId = "updateMe", summary = "Змінити ім'я та прізвище",
+            description = "FR-069: інші користувачі бачать ім'я та прізвище замість ідентифікатора — в оголошеннях, "
+                    + "відгуках, списку голів і журналі ролей.")
+    @ApiResponse(responseCode = "200", description = "Оновлений користувач")
+    @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
+    @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
+    public UserResponse updateMe(@Valid @RequestBody AuthRequests.UpdateProfile request) {
+        User user = profiles.updateName(currentUser.require(), request.firstName(), request.lastName());
         return UserResponse.from(user, heads.organizationsHeadedBy(user));
     }
 }

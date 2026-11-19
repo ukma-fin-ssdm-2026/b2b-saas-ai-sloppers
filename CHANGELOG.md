@@ -14,6 +14,7 @@
 - Автозакриття оголошення, коли заповнено всі місця (в одній транзакції з `SELECT ... FOR UPDATE`, NFR-006) і після дедлайну (`BoardScheduler`, раз на 5 хв)
 - Міграція `V6__create_board.sql`: таблиці `advert`, `advert_response`
 - Коди помилок `ADVERT_NOT_FOUND`, `REPLY_NOT_FOUND`, `OWN_ADVERT`, `ALREADY_REPLIED`, `ADVERT_CLOSED`
+- Ім'я та прізвище користувача (FR-069): необов'язкові поля при реєстрації, `PATCH /auth/me` для зміни; показуються замість ідентифікатора в оголошеннях (`authorName`), відгуках (`userName`), списку голів (`name`) і журналі ролей (`targetName`, `actorName`). Міграція `V7__add_user_names.sql`
 - Скидання пароля (FR-065): `POST /auth/password-reset` надсилає код на пошту, `POST /auth/password-reset/confirm` задає новий пароль. Код з тими самими обмеженнями, що й при реєстрації (15 хв, 5 спроб, раз на хвилину); невідома пошта не розкривається
 - `newPassword` не повертається в тілі помилки валідації (як `password` і `code`)
 

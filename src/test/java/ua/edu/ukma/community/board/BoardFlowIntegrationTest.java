@@ -67,9 +67,14 @@ class BoardFlowIntegrationTest {
     private final List<String> strangerResponses = new ArrayList<>();
 
     private String tokenFor(String name) {
+        return tokenFor(name, null, null);
+    }
+
+    private String tokenFor(String name, String firstName, String lastName) {
         OffsetDateTime now = OffsetDateTime.now();
         String email = name + "-" + UUID.randomUUID().toString().substring(0, 8) + "@ukma.edu.ua";
-        User user = users.save(new User(UUID.randomUUID(), email, "hash", UserStatus.ACTIVE, false, null, now, now));
+        User user = users.save(new User(UUID.randomUUID(), email, "hash", UserStatus.ACTIVE, false, null, now, now,
+                firstName, lastName));
         return tokens.issue(user).accessToken();
     }
 
@@ -266,5 +271,30 @@ class BoardFlowIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error.code").value("ADVERT_NOT_FOUND"));
         perform(get(ADVERTS + "/mine"), author).andExpect(jsonPath("$.data.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("FR-069: в оголошенні видно ім'я автора, у відгуках — ім'я відгукувача; без імені — null")
+    void namesInsteadOfIds() throws Exception {
+        String author = tokenFor("author", "Теодора", "Гречко");
+        String alice = tokenFor("alice", "Олена", "Коваль");
+        String anonymous = tokenFor("anon");
+        String advertId = createAdvert(author, uniqueContact(), 3);
+        String advert = ADVERTS + "/" + advertId;
+
+        perform(get(advert), alice)
+                .andExpect(jsonPath("$.authorName").value("Теодора Гречко"));
+        perform(get(ADVERTS), alice)
+                .andExpect(jsonPath("$.data[?(@.id == '" + advertId + "')].authorName").value(
+                        org.hamcrest.Matchers.contains("Теодора Гречко")));
+
+        postJson(advert + "/replies", alice, "{}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.userName").value("Олена Коваль"));
+        postJson(advert + "/replies", anonymous, "{}").andExpect(status().isCreated());
+
+        perform(get(advert + "/replies"), author)
+                .andExpect(jsonPath("$[*].userName").value(
+                        org.hamcrest.Matchers.containsInAnyOrder("Олена Коваль", (String) null)));
     }
 }

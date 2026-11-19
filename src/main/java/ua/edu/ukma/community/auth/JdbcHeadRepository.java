@@ -30,7 +30,7 @@ public class JdbcHeadRepository implements HeadRepository {
     @Override
     public List<OrganizationHead> findHeads(UUID organizationId) {
         return jdbc.sql("""
-                        SELECT h.user_id, u.email, h.appointed_by, h.appointed_at
+                        SELECT h.user_id, u.email, u.first_name, u.last_name, h.appointed_by, h.appointed_at
                         FROM organization_head h JOIN app_user u ON u.id = h.user_id
                         WHERE h.organization_id = ?
                         ORDER BY h.appointed_at, u.email""")
@@ -38,6 +38,7 @@ public class JdbcHeadRepository implements HeadRepository {
                 .query((rs, n) -> new OrganizationHead(
                         rs.getObject("user_id", UUID.class),
                         rs.getString("email"),
+                        Names.full(rs.getString("first_name"), rs.getString("last_name")),
                         rs.getObject("appointed_by", UUID.class),
                         inZone(rs.getObject("appointed_at", OffsetDateTime.class))))
                 .list();
@@ -102,7 +103,10 @@ public class JdbcHeadRepository implements HeadRepository {
     public List<RoleChange> findLog(UUID organizationId) {
         return jdbc.sql("""
                         SELECT r.id, r.organization_id, r.target_user_id, t.email AS target_email,
-                               r.actor_user_id, a.email AS actor_email, r.action, r.created_at
+                               t.first_name AS target_first_name, t.last_name AS target_last_name,
+                               r.actor_user_id, a.email AS actor_email,
+                               a.first_name AS actor_first_name, a.last_name AS actor_last_name,
+                               r.action, r.created_at
                         FROM role_change r
                         JOIN app_user t ON t.id = r.target_user_id
                         LEFT JOIN app_user a ON a.id = r.actor_user_id
@@ -115,8 +119,10 @@ public class JdbcHeadRepository implements HeadRepository {
                         rs.getObject("organization_id", UUID.class),
                         rs.getObject("target_user_id", UUID.class),
                         rs.getString("target_email"),
+                        Names.full(rs.getString("target_first_name"), rs.getString("target_last_name")),
                         rs.getObject("actor_user_id", UUID.class),
                         rs.getString("actor_email"),
+                        Names.full(rs.getString("actor_first_name"), rs.getString("actor_last_name")),
                         RoleChange.RoleAction.valueOf(rs.getString("action")),
                         inZone(rs.getObject("created_at", OffsetDateTime.class))))
                 .list();

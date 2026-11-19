@@ -58,6 +58,7 @@
 | ------------------------------ | ----------------------------------------- | -------------------- |
 | FR-001 – FR-004                | US-001                                    | ✅                   |
 | FR-065                         | US-001 (доповнення: відновлення доступу)  | ✅                   |
+| FR-069                         | наскрізна: US-011, US-012, US-001         | ✅                   |
 | FR-005, FR-006                 | наскрізні: US-005, US-006, US-007, US-009 | ✅                   |
 | FR-007                         | US-002                                    | ✅                   |
 | FR-008                         | US-005                                    | ✅                   |
@@ -188,6 +189,7 @@
 | TC-046 | NFR-008 | У базі зберігається хеш пароля; у логах і відповідях API пароля немає | П-3 ⏳ |
 | TC-047 | NFR-010 | HTTPS із TLS ≥ 1.2, токен діє ≤ 60 хв, секрети відсутні в репозиторії | поза планом: після деплою в Minikube |
 | TC-048 | FR-065, FR-003 | Скидання пароля: код на пошту, новий пароль діє, старий ні; невідома пошта не розкривається; строк і спроби коду | ✅ `RegistrationServiceTest#resetsPasswordWithCode`, `#resetForUnknownOrBlockedEmail`, `#resetCodeHasAttemptsAndTtl`, `#resetRequestCooldown`, `#resetActivatesPendingAccount`, `AuthFlowIntegrationTest#passwordReset` |
+| TC-049 | FR-069 | Ім'я та прізвище: задаються при реєстрації чи через `PATCH /auth/me`, валідуються; інші бачать їх в оголошенні, відгуках, списку голів і журналі ролей | ✅ `NamesTest`, `RegistrationServiceTest#registersWithOptionalNames`, `AuthFlowIntegrationTest#namesAreVisibleToOthers`, `BoardFlowIntegrationTest#namesInsteadOfIds` |
 
 ---
 

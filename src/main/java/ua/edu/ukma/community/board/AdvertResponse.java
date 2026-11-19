@@ -43,6 +43,11 @@ public record AdvertResponse(
         @Schema(description = "Чи ви автор оголошення", example = "false", requiredMode = Schema.RequiredMode.REQUIRED)
         boolean own,
 
+        @Schema(description = "Ім'я та прізвище автора; null, якщо автор їх не задав (FR-069)",
+                example = "Теодора Гречко", nullable = true)
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        String authorName,
+
         @Schema(description = "Статус вашого відгуку на це оголошення; null, якщо ви не відгукувалися",
                 example = "PENDING", nullable = true)
         @JsonInclude(JsonInclude.Include.ALWAYS)
@@ -53,9 +58,9 @@ public record AdvertResponse(
         OffsetDateTime createdAt
 ) {
 
-    public static AdvertResponse from(AdvertView view) {
+    public static AdvertResponse from(AdvertView view, String authorName) {
         Advert a = view.advert();
         return new AdvertResponse(a.id(), a.type(), a.title(), a.description(), a.slots(), a.deadline(),
-                view.status(), view.visibleContact(), view.own(), view.myReplyStatus(), a.createdAt());
+                view.status(), view.visibleContact(), view.own(), authorName, view.myReplyStatus(), a.createdAt());
     }
 }

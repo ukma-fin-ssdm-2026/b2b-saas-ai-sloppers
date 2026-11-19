@@ -76,6 +76,7 @@ src/main/java/ua/edu/ukma/community/
 | `POST` | `/api/v1/auth/password-reset` | забули пароль: код на пошту; для невідомої пошти теж `204` | FR-065 |
 | `POST` | `/api/v1/auth/password-reset/confirm` | новий пароль за кодом | FR-065 |
 | `GET` | `/api/v1/auth/me` | свій профіль, ознака адміна, перелік організацій, де користувач голова | FR-005 |
+| `PATCH` | `/api/v1/auth/me` | змінити ім'я та прізвище | FR-069 |
 | `GET` | `/api/v1/organizations` | каталог: пошук, пагінація | FR-017, FR-018 |
 | `GET` | `/api/v1/organizations/{id}` | профіль організації | FR-020 |
 | `POST` | `/api/v1/organizations` | створення | FR-014 |
@@ -113,7 +114,7 @@ src/main/java/ua/edu/ukma/community/
 | `POST` | `/api/v1/adverts/{id}/replies/{replyId}/withdraw` | відкликати свій відгук до рішення автора | FR-053 |
 | `GET` | `/actuator/health` | перевірка стану для probes у Minikube | ADR-004 |
 
-Разом 42 кінцевих точки API плюс `/actuator/health`.
+Разом 43 кінцеві точки API плюс `/actuator/health`.
 
 Коди помилок, що з'явилися разом із модулями: `EVENT_NOT_FOUND` (`404`), `INVALID_STATE_TRANSITION` (`409`, наприклад для повторного зняття з публікації), `UNAUTHORIZED` (`401`), `FORBIDDEN` (`403`), `ACCOUNT_NOT_VERIFIED` (`403`), `USER_NOT_FOUND` (`404`), `LAST_HEAD` (`409`); дошка: `ADVERT_NOT_FOUND`, `REPLY_NOT_FOUND` (`404`), `OWN_ADVERT` (`403`), `ALREADY_REPLIED`, `ADVERT_CLOSED` (`409`).
 

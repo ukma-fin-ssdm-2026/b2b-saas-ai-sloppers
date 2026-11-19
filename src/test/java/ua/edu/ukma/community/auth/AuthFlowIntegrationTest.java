@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -47,6 +48,12 @@ class AuthFlowIntegrationTest {
 
     @MockitoBean
     CodeSender codeSender;
+
+    @Autowired
+    UserRepository users;
+
+    @Autowired
+    TokenService tokens;
 
     private static String uniqueEmail(String prefix) {
         return prefix + "-" + UUID.randomUUID().toString().substring(0, 8) + "@ukma.edu.ua";
@@ -212,5 +219,44 @@ class AuthFlowIntegrationTest {
         postJson(API + "/auth/login", null, "{\"email\":\"" + email + "\",\"password\":\"new-password-456\"}")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.accessToken").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("FR-069: PATCH /auth/me задає ім'я; інші бачать його в списку голів і журналі ролей")
+    void namesAreVisibleToOthers() throws Exception {
+        // окремий адмін: admin@ukma.edu.ua уже зареєстровано в іншому тесті цього контексту
+        OffsetDateTime now = OffsetDateTime.now();
+        User admin = users.save(new User(UUID.randomUUID(), uniqueEmail("admin"), "hash", UserStatus.ACTIVE, true,
+                null, now, now));
+        String adminToken = tokens.issue(admin).accessToken();
+        String headEmail = uniqueEmail("named-head");
+        String headToken = registerVerifyLogin(headEmail);
+
+        mvc.perform(withToken(patch(API + "/auth/me"), headToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstName\":\"R2-D2\",\"lastName\":\"Гречко\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.details[0].field").value("firstName"));
+        mvc.perform(withToken(patch(API + "/auth/me"), headToken).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstName\":\"  Теодора \",\"lastName\":\"Гречко\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.firstName").value("Теодора"))
+                .andExpect(jsonPath("$.lastName").value("Гречко"));
+        mvc.perform(withToken(get(API + "/auth/me"), headToken))
+                .andExpect(jsonPath("$.firstName").value("Теодора"));
+        mvc.perform(patch(API + "/auth/me").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"firstName\":\"Хтось\",\"lastName\":\"Інший\"}"))
+                .andExpect(status().isUnauthorized());
+
+        String slug = "org-" + UUID.randomUUID().toString().substring(0, 8);
+        String orgId = body(postJson(API + "/organizations", adminToken, "{\"name\":\"Named org\",\"slug\":\""
+                + slug + "\",\"headEmail\":\"" + headEmail + "\"}")
+                .andExpect(status().isCreated())).get("id").asText();
+
+        mvc.perform(withToken(get(API + "/organizations/" + orgId + "/heads"), headToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Теодора Гречко"));
+        mvc.perform(withToken(get(API + "/organizations/" + orgId + "/role-log"), headToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].targetName").value("Теодора Гречко"));
     }
 }

@@ -14,6 +14,12 @@ public record UserResponse(
         @Schema(example = "student@ukma.edu.ua", requiredMode = Schema.RequiredMode.REQUIRED)
         String email,
 
+        @Schema(description = "Ім'я; null, якщо ще не задано", example = "Теодора", nullable = true)
+        String firstName,
+
+        @Schema(description = "Прізвище; null, якщо ще не задано", example = "Гречко", nullable = true)
+        String lastName,
+
         @Schema(example = "ACTIVE", requiredMode = Schema.RequiredMode.REQUIRED)
         UserStatus status,
 
@@ -25,6 +31,7 @@ public record UserResponse(
 ) {
 
     public static UserResponse from(User user, List<UUID> headOf) {
-        return new UserResponse(user.id(), user.email(), user.status(), user.globalAdmin(), headOf);
+        return new UserResponse(user.id(), user.email(), user.firstName(), user.lastName(), user.status(),
+                user.globalAdmin(), headOf);
     }
 }

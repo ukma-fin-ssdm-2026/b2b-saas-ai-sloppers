@@ -15,10 +15,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ua.edu.ukma.community.auth.CurrentUser;
+import ua.edu.ukma.community.auth.UserDirectory;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.config.OpenApiConfig;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /** Відгуки на оголошення (FR-046–FR-048, FR-053). */
@@ -32,10 +34,12 @@ public class AdvertReplyController {
 
     private final BoardService board;
     private final CurrentUser currentUser;
+    private final UserDirectory directory;
 
-    public AdvertReplyController(BoardService board, CurrentUser currentUser) {
+    public AdvertReplyController(BoardService board, CurrentUser currentUser, UserDirectory directory) {
         this.board = board;
         this.currentUser = currentUser;
+        this.directory = directory;
     }
 
     @GetMapping
@@ -49,7 +53,9 @@ public class AdvertReplyController {
     public List<ReplyResponse> listAdvertReplies(
             @Parameter(description = "Ідентифікатор оголошення (UUID)", example = AdvertController.ADVERT_ID_EXAMPLE)
             @PathVariable("advertId") UUID advertId) {
-        return board.listReplies(currentUser.require(), advertId).stream().map(ReplyResponse::from).toList();
+        List<Reply> replies = board.listReplies(currentUser.require(), advertId);
+        Map<UUID, String> names = directory.fullNames(replies.stream().map(Reply::userId).toList());
+        return replies.stream().map(r -> ReplyResponse.from(r, names.get(r.userId()))).toList();
     }
 
     @PostMapping
@@ -67,7 +73,7 @@ public class AdvertReplyController {
             @Parameter(description = "Ідентифікатор оголошення (UUID)", example = AdvertController.ADVERT_ID_EXAMPLE)
             @PathVariable("advertId") UUID advertId,
             @Valid @RequestBody ReplyCreateRequest request) {
-        return ReplyResponse.from(board.reply(currentUser.require(), advertId, request.message()));
+        return toResponse(board.reply(currentUser.require(), advertId, request.message()));
     }
 
     @PostMapping("/{replyId}/confirm")
@@ -85,7 +91,7 @@ public class AdvertReplyController {
             @PathVariable("advertId") UUID advertId,
             @Parameter(description = "Ідентифікатор відгуку (UUID)", example = REPLY_ID_EXAMPLE)
             @PathVariable("replyId") UUID replyId) {
-        return ReplyResponse.from(board.confirm(currentUser.require(), advertId, replyId));
+        return toResponse(board.confirm(currentUser.require(), advertId, replyId));
     }
 
     @PostMapping("/{replyId}/reject")
@@ -101,7 +107,7 @@ public class AdvertReplyController {
             @PathVariable("advertId") UUID advertId,
             @Parameter(description = "Ідентифікатор відгуку (UUID)", example = REPLY_ID_EXAMPLE)
             @PathVariable("replyId") UUID replyId) {
-        return ReplyResponse.from(board.reject(currentUser.require(), advertId, replyId));
+        return toResponse(board.reject(currentUser.require(), advertId, replyId));
     }
 
     @PostMapping("/{replyId}/withdraw")
@@ -118,6 +124,10 @@ public class AdvertReplyController {
             @PathVariable("advertId") UUID advertId,
             @Parameter(description = "Ідентифікатор відгуку (UUID)", example = REPLY_ID_EXAMPLE)
             @PathVariable("replyId") UUID replyId) {
-        return ReplyResponse.from(board.withdraw(currentUser.require(), advertId, replyId));
+        return toResponse(board.withdraw(currentUser.require(), advertId, replyId));
+    }
+
+    private ReplyResponse toResponse(Reply reply) {
+        return ReplyResponse.from(reply, directory.fullName(reply.userId()));
     }
 }

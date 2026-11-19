@@ -25,6 +25,8 @@ entity "app_user" as app_user {
   * password_hash : varchar <<sensitive>>
   * status : enum(PENDING, ACTIVE, BLOCKED)
   * global_admin : boolean
+  first_name : varchar(50) <<PII>>
+  last_name : varchar(50) <<PII>>
   verification_code_hash : varchar <<sensitive>>
   verification_expires_at : timestamptz
   verification_attempts : int

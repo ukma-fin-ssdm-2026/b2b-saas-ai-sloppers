@@ -319,4 +319,15 @@ class RegistrationServiceTest {
         assertThat(users.findByEmail(EMAIL).orElseThrow().status()).isEqualTo(UserStatus.ACTIVE);
         assertThat(FAST_BCRYPT.matches("new-password-456", passwordHash())).isTrue();
     }
+
+    @Test
+    @DisplayName("FR-069: ім'я та прізвище при реєстрації необов'язкові й зберігаються обрізаними")
+    void registersWithOptionalNames() {
+        User named = service.register(EMAIL, "password123", "  Теодора ", " Гречко ");
+        User anonymous = service.register("other@ukma.edu.ua", "password123");
+
+        assertThat(named.fullName()).isEqualTo("Теодора Гречко");
+        assertThat(anonymous.firstName()).isNull();
+        assertThat(anonymous.fullName()).isNull();
+    }
 }

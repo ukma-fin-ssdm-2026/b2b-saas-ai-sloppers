@@ -30,7 +30,8 @@ public class InMemoryHeadRepository implements HeadRepository {
     @Override
     public synchronized List<OrganizationHead> findHeads(UUID organizationId) {
         return heads.getOrDefault(organizationId, Map.of()).values().stream()
-                .map(e -> new OrganizationHead(e.userId(), email(e.userId()), e.appointedBy(), e.appointedAt()))
+                .map(e -> new OrganizationHead(e.userId(), email(e.userId()), name(e.userId()), e.appointedBy(),
+                        e.appointedAt()))
                 .toList();
     }
 
@@ -89,13 +90,25 @@ public class InMemoryHeadRepository implements HeadRepository {
         return log.stream()
                 .filter(r -> r.organizationId().equals(organizationId))
                 .sorted(Comparator.comparing(RoleChange::createdAt).reversed())
+                .map(this::withCurrentNames)
                 .toList();
     }
 
     private void record(UUID organizationId, UUID userId, UUID actorId, RoleChange.RoleAction action,
                         OffsetDateTime at) {
-        log.add(new RoleChange(UUID.randomUUID(), organizationId, userId, email(userId), actorId,
-                actorId == null ? null : email(actorId), action, at));
+        log.add(new RoleChange(UUID.randomUUID(), organizationId, userId, email(userId), null, actorId,
+                actorId == null ? null : email(actorId), null, action, at));
+    }
+
+    /** Імена — поточні, як у JOIN JDBC-реалізації: користувач міг задати ім'я вже після зміни ролі. */
+    private RoleChange withCurrentNames(RoleChange r) {
+        return new RoleChange(r.id(), r.organizationId(), r.targetUserId(), r.targetEmail(), name(r.targetUserId()),
+                r.actorUserId(), r.actorEmail(), r.actorUserId() == null ? null : name(r.actorUserId()), r.action(),
+                r.createdAt());
+    }
+
+    private String name(UUID userId) {
+        return users.findById(userId).map(User::fullName).orElse(null);
     }
 
     private String email(UUID userId) {

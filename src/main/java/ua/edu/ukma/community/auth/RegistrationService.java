@@ -36,7 +36,12 @@ public class RegistrationService {
     }
 
 
-    public synchronized User register(String rawEmail, String password) {
+    public User register(String rawEmail, String password) {
+        return register(rawEmail, password, null, null);
+    }
+
+    /** FR-001, FR-002; ім'я та прізвище необов'язкові (FR-069), їх можна задати й пізніше. */
+    public synchronized User register(String rawEmail, String password, String firstName, String lastName) {
         String email = Emails.normalize(rawEmail);
         if (!Emails.hasDomain(email, properties.allowedDomain())) {
             throw new ApiException(ErrorCode.VALIDATION_ERROR, "Запит містить невалідні поля",
@@ -50,7 +55,8 @@ public class RegistrationService {
         OffsetDateTime now = OffsetDateTime.now(clock);
         String code = newCode();
         User user = new User(UUID.randomUUID(), email, passwords.encode(password), UserStatus.PENDING,
-                properties.isAdminEmail(email), verification(code, now), now, now);
+                properties.isAdminEmail(email), verification(code, now), now, now,
+                Names.normalize(firstName), Names.normalize(lastName));
         codeSender.send(email, code);
         return users.save(user);
     }
