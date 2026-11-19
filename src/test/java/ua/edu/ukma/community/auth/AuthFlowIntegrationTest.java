@@ -15,7 +15,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.eq;
@@ -32,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Наскрізно через HTTP: Spring Security, JWT, ролі на реальних контролерах (профіль inmemory, без бази).
  */
-@SpringBootTest(properties = "auth.admin-emails=admin@ukma.edu.ua")
+@SpringBootTest(properties = "auth.admin-emails=admin@ukma.edu.ua,names-admin@ukma.edu.ua")
 @AutoConfigureMockMvc
 @ActiveProfiles("inmemory")
 @DisplayName("Auth наскрізно: реєстрація → вхід → ролі на ендпоінтах")
@@ -48,12 +47,6 @@ class AuthFlowIntegrationTest {
 
     @MockitoBean
     CodeSender codeSender;
-
-    @Autowired
-    UserRepository users;
-
-    @Autowired
-    TokenService tokens;
 
     private static String uniqueEmail(String prefix) {
         return prefix + "-" + UUID.randomUUID().toString().substring(0, 8) + "@ukma.edu.ua";
@@ -160,11 +153,14 @@ class AuthFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content(patchBody))
                 .andExpect(status().isForbidden());
 
-        // події: лише голова; адмін без призначення себе головою — ні (FR-006)
+        // події: голова або Global Admin (requireHeadOrAdmin); FR-006 — адмін не стає головою сам
         String eventBody = "{\"title\":\"Open meeting\",\"startsAt\":\"2030-01-15T18:00:00+02:00\"}";
-        postJson(API + "/organizations/" + orgId + "/events", adminToken, eventBody)
+        postJson(API + "/organizations/" + orgId + "/events", studentToken, eventBody)
                 .andExpect(status().isForbidden());
-        postJson(API + "/organizations/" + orgId + "/events", headToken, eventBody)
+        postJson(API + "/organizations/" + orgId + "/events", adminToken, eventBody)
+                .andExpect(status().isCreated());
+        postJson(API + "/organizations/" + orgId + "/events", headToken,
+                "{\"title\":\"Head meeting\",\"startsAt\":\"2030-02-15T18:00:00+02:00\"}")
                 .andExpect(status().isCreated());
 
         // останнього голову зняти не можна (FR-011)
@@ -224,11 +220,8 @@ class AuthFlowIntegrationTest {
     @Test
     @DisplayName("FR-069: PATCH /auth/me задає ім'я; інші бачать його в списку голів і журналі ролей")
     void namesAreVisibleToOthers() throws Exception {
-        // окремий адмін: admin@ukma.edu.ua уже зареєстровано в іншому тесті цього контексту
-        OffsetDateTime now = OffsetDateTime.now();
-        User admin = users.save(new User(UUID.randomUUID(), uniqueEmail("admin"), "hash", UserStatus.ACTIVE, true,
-                null, now, now));
-        String adminToken = tokens.issue(admin).accessToken();
+        // окремий адмін з allow-list (admin@ukma.edu.ua уже зайнятий fullScenario у спільному контексті)
+        String adminToken = registerVerifyLogin("names-admin@ukma.edu.ua");
         String headEmail = uniqueEmail("named-head");
         String headToken = registerVerifyLogin(headEmail);
 

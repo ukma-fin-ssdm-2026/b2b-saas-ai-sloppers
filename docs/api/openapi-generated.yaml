@@ -758,8 +758,8 @@ paths:
       tags:
       - Events
     patch:
-      description: "Голова організації-власника. Можна редагувати до і після публі\
-        кації (FR-034), крім відхилених подій."
+      description: "Голова організації-власника або Global Admin. Можна редагувати\
+        \ до і після публікації (FR-034), крім відхилених подій."
       operationId: updateEvent
       parameters:
       - description: Ідентифікатор події (UUID)
@@ -800,8 +800,9 @@ paths:
       - Events
   /api/v1/events/{eventId}/approve:
     post:
-      description: Голова організації. PENDING або UNPUBLISHED → PUBLISHED (FR-035);
-        для неперевіреної автоопублікованої події позначає її переглянутою (FR-032).
+      description: Голова організації або Global Admin. PENDING або UNPUBLISHED →
+        PUBLISHED (FR-035); для неперевіреної автоопублікованої події позначає її
+        переглянутою (FR-032).
       operationId: approveEvent
       parameters:
       - description: Ідентифікатор події (UUID)
@@ -892,8 +893,8 @@ paths:
       - Calendar
   /api/v1/events/{eventId}/image:
     delete:
-      description: "Голова організації-власника. Якщо картинки немає, нічого не зм\
-        інюється."
+      description: "Голова організації-власника або Global Admin. Якщо картинки не\
+        має, нічого не змінюється."
       operationId: deleteEventImage
       parameters:
       - description: Ідентифікатор події (UUID)
@@ -923,9 +924,9 @@ paths:
       tags:
       - Events
     put:
-      description: "Голова організації-власника. JPEG, PNG або WebP до 5 МБ, поле\
-        \ форми `file`. Відхилену подію змінити не можна (409). Попередня картинка\
-        \ видаляється зі сховища."
+      description: "Голова організації-власника або Global Admin. JPEG, PNG або WebP\
+        \ до 5 МБ, поле форми `file`. Відхилену подію змінити не можна (409). Попе\
+        редня картинка видаляється зі сховища."
       operationId: uploadEventImage
       parameters:
       - description: Ідентифікатор події (UUID)
@@ -978,8 +979,8 @@ paths:
       - Events
   /api/v1/events/{eventId}/reject:
     post:
-      description: "Голова організації. Лише з черги модерації: PENDING → REJECTED\
-        \ (FR-035)."
+      description: "Голова організації або Global Admin. Лише з черги модерації: PENDING\
+        \ → REJECTED (FR-035)."
       operationId: rejectEvent
       parameters:
       - description: Ідентифікатор події (UUID)
@@ -1014,7 +1015,7 @@ paths:
       - Events
   /api/v1/events/{eventId}/unpublish:
     post:
-      description: Голова організації. PUBLISHED → UNPUBLISHED (FR-036).
+      description: Голова організації або Global Admin. PUBLISHED → UNPUBLISHED (FR-036).
       operationId: unpublishEvent
       parameters:
       - description: Ідентифікатор події (UUID)
@@ -1225,8 +1226,9 @@ paths:
       - Organizations
   /api/v1/organizations/{organizationId}/events:
     get:
-      description: "Голова організації. Усі статуси; status=PENDING — черга модера\
-        ції (FR-033), verified=false — автоопубліковані, ще не переглянуті (FR-032)."
+      description: "Голова організації або Global Admin. Усі статуси; status=PENDING\
+        \ — черга модерації (FR-033), verified=false — автоопубліковані, ще не пер\
+        еглянуті (FR-032)."
       operationId: listOrganizationEvents
       parameters:
       - description: Ідентифікатор організації (UUID)
@@ -1288,11 +1290,12 @@ paths:
           $ref: "#/components/responses/NotFound"
       security:
       - bearerAuth: []
-      summary: Події організації для голови
+      summary: Події організації для голови/адміна
       tags:
       - Events
     post:
-      description: Голова організації (FR-037). Подія публікується одразу.
+      description: Голова організації або Global Admin (FR-037). Подія публікується
+        одразу.
       operationId: createEvent
       parameters:
       - description: Ідентифікатор організації (UUID)
@@ -1869,6 +1872,12 @@ components:
           format: uuid
           description: Ідентифікатор
           example: b1000000-0000-4000-8000-000000000001
+        myReplyId:
+          type: string
+          format: uuid
+          description: "Ідентифікатор вашого відгуку; null, якщо ви не відгукували\
+            ся"
+          example: c1000000-0000-4000-8000-000000000001
         myReplyStatus:
           type: string
           description: "Статус вашого відгуку на це оголошення; null, якщо ви не в\
