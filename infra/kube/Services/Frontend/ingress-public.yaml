@@ -1,0 +1,32 @@
+# Public domain of the server deployment. Separate from ingress.yaml so that cert-manager
+# only requests a Let's Encrypt certificate for this host (it would fail for community.local).
+# Needs cert-manager and the ClusterIssuer letsencrypt-prod; without them (Minikube)
+# the annotation is ignored and the rule still routes traffic.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-public
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: community
+  annotations:
+    # default is 1m; image uploads allow up to 6MB (spring.servlet.multipart.max-request-size)
+    nginx.ingress.kubernetes.io/proxy-body-size: "6m"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - b2b-saas-naukma.duckdns.org
+      secretName: b2b-saas-tls
+  rules:
+    - host: b2b-saas-naukma.duckdns.org
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  name: http
