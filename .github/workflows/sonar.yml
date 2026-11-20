@@ -73,5 +73,6 @@ jobs:
           -Dsonar.tests=src/test,web-src/src
           -Dsonar.test.inclusions=src/test/**,web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**
           -Dsonar.exclusions=web-src/src/**/*.test.ts,web-src/src/**/*.test.tsx,web-src/src/test/**,**/*.d.ts
+          -Dsonar.coverage.exclusions=**/Grainient.tsx,**/Grainient.css
           -Dsonar.javascript.lcov.reportPaths=web-src/coverage/lcov.info
           -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml

@@ -33,7 +33,7 @@ function RegisterPage() {
         firstName: firstName.trim() || undefined,
         lastName: lastName.trim() || undefined,
       })
-      navigate('/verify', {
+      void navigate('/verify', {
         replace: true,
         state: {
           email: trimmed,

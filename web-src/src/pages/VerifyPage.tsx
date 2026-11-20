@@ -33,7 +33,7 @@ function VerifyPage() {
     const trimmed = email.trim().toLowerCase()
     try {
       await verifyApi(trimmed, code.trim())
-      navigate('/login', {
+      void navigate('/login', {
         replace: true,
         state: { verifiedEmail: trimmed },
       })

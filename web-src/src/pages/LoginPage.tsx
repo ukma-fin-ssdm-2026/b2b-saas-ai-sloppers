@@ -36,7 +36,7 @@ function LoginPage() {
         return
       }
       const target = from.startsWith('/') ? from : '/board'
-      navigate(target, { replace: true })
+      void navigate(target, { replace: true })
     } finally {
       setSubmitting(false)
     }
