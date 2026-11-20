@@ -1,4 +1,5 @@
 import type { OffsetPage } from './pagination'
+import type { RatingSummary } from './rating'
 
 export interface Organization {
   id: string
@@ -11,6 +12,8 @@ export interface Organization {
   contactEmail?: string
   instagramHandle?: string
   logoUrl?: string
+  /** рейтинг у каталозі й профілі (FR-064); немає у відповідях створення й редагування */
+  rating?: RatingSummary
 }
 
 export type OffsetPageOrganization = OffsetPage<Organization>

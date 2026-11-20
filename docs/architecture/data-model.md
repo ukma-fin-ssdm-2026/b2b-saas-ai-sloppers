@@ -17,7 +17,7 @@
 | `tag`, `organization_tag` | заплановано | — |
 | `advert`, `advert_response` | реалізовано | V6 |
 | `ban`, `complaint`, `banned_word`, `filter_rejection` | реалізовано (модерація) | V8 (заодно `REMOVED` в `advert_response.status`) |
-| `author_rating`, `organization_rating` | заплановано, пріоритет Низький | — |
+| `author_rating`, `organization_rating` | реалізовано (рейтинги) | V9 |
 
 На діаграмі заплановані сутності позначені стереотипом `<<план>>`, а заплановані поля реалізованих таблиць — коментарем `(план)`.
 
@@ -79,11 +79,13 @@
 
 **filter_rejection** — журнал відмов автофільтра: хто, що (оголошення чи відгук), яке слово і коли. Самого відхиленого тексту не зберігаємо — рядки потрібні лише для «3 відхилені повідомлення за добу» (FR-060).
 
-### Рейтинги *(план, пріоритет Низький)*
+### Рейтинги
 
-**author_rating** — оцінка автора учасником закритого оголошення (FR-061). Середній рейтинг обчислюється запитом (FR-062).
+**author_rating** — оцінка автора підтвердженим учасником закритого оголошення (FR-061), один раз за оголошення (`UNIQUE (rater_id, advert_id)`). `author_id` дублює `advert.author_id`, щоб середнє автора (FR-062) рахувалося без join до `advert`. Повторна спроба — `INSERT … ON CONFLICT DO NOTHING`: перевірка й запис атомарні, подвійний клік не дає ні дубля, ні 500.
 
-**organization_rating** — оцінка організації користувачем, яку можна змінити (FR-063). Рейтинги зберігаються окремими записами, а не агрегованим полем, бо потрібно знати, хто вже оцінив (обмеження «один раз») і яку оцінку змінити.
+**organization_rating** — оцінка організації користувачем, яку можна змінити (FR-063). Первинний ключ `(user_id, organization_id)` — одна оцінка на пару; зміна — `ON CONFLICT … DO UPDATE` того самого рядка, `created_at` першої оцінки зберігається.
+
+Рейтинги зберігаються окремими записами, а не агрегованим полем, бо потрібно знати, хто вже оцінив (обмеження «один раз») і яку оцінку змінити. Середнє рахується запитом і округлюється до десятих.
 
 ## Обмеження цілісності
 
@@ -107,15 +109,15 @@
 | частковий `UNIQUE (user_id) WHERE lifted_at IS NULL` — один незнятий бан на людину | `ban` | FR-054 |
 | `UNIQUE(word)` | `banned_word` | FR-058 |
 | `CHECK(status IN (..., 'REMOVED'))` | `advert_response` | FR-057 |
+| `UNIQUE(rater_id, advert_id)`, `CHECK(rater_id <> author_id)` | `author_rating` | FR-061 |
+| `PRIMARY KEY(user_id, organization_id)` — одна оцінка на пару | `organization_rating` | FR-063 |
+| `CHECK(score BETWEEN 1 AND 5)` | `author_rating`, `organization_rating` | FR-061, FR-063 |
 
 Заплановані (разом із відповідними таблицями):
 
 | Обмеження | Сутність | Вимога |
 |---|---|---|
 | FK `event.source_id` → `scraper_source` з `ON DELETE SET NULL` — видалення джерела не видаляє події | `event` | FR-022 |
-| `UNIQUE(rater_id, advert_id)` | `author_rating` | FR-061 |
-| `UNIQUE(user_id, organization_id)` | `organization_rating` | FR-063 |
-| `CHECK(score BETWEEN 1 AND 5)` | `author_rating`, `organization_rating` | FR-061, FR-063 |
 
 Інваріанти, які схемою не виражаються і забезпечуються транзакціями з блокуванням рядків (NFR-006):
 

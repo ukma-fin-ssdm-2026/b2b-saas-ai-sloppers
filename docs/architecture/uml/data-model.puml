@@ -190,9 +190,9 @@ entity "filter_rejection" as filter_rejection {
   * created_at : timestamptz
 }
 
-' ===== Рейтинги (пріоритет Низький) =====
+' ===== Рейтинги =====
 
-entity "author_rating" as author_rating <<план>> {
+entity "author_rating" as author_rating {
   * id : uuid <<PK>>
   --
   * rater_id : uuid <<FK>>
@@ -202,12 +202,12 @@ entity "author_rating" as author_rating <<план>> {
   * created_at : timestamptz
 }
 
-entity "organization_rating" as organization_rating <<план>> {
-  * id : uuid <<PK>>
+entity "organization_rating" as organization_rating {
+  * user_id : uuid <<PK, FK>>
+  * organization_id : uuid <<PK, FK>>
   --
-  * user_id : uuid <<FK>>
-  * organization_id : uuid <<FK>>
   * score : smallint
+  * created_at : timestamptz
   * updated_at : timestamptz
 }
 

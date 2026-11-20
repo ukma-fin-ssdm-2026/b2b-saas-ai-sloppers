@@ -29,8 +29,11 @@ import ua.edu.ukma.community.auth.OrgRolePolicy;
 import ua.edu.ukma.community.common.ApiPaths;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.config.OpenApiConfig;
+import ua.edu.ukma.community.rating.RatingService;
+import ua.edu.ukma.community.rating.RatingSummary;
 
 import java.net.URI;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -44,21 +47,24 @@ public class OrganizationController {
     private final OrganizationCreationService creation;
     private final CurrentUser currentUser;
     private final OrgRolePolicy policy;
+    private final RatingService ratings;
 
     public OrganizationController(OrganizationService organizations, OrganizationCreationService creation,
-                                  CurrentUser currentUser, OrgRolePolicy policy) {
+                                  CurrentUser currentUser, OrgRolePolicy policy, RatingService ratings) {
         this.organizations = organizations;
         this.creation = creation;
         this.currentUser = currentUser;
         this.policy = policy;
+        this.ratings = ratings;
     }
 
     @GetMapping
     @Operation(operationId = "listOrganizations", summary = "Список організацій",
-            description = "Публічна (доступна гостям). Пагінація зі зсувом, сортування за назвою.")
+            description = "Публічна (доступна гостям). Пагінація зі зсувом, сортування за назвою. "
+                    + "Кожна організація — з рейтингом (FR-064).")
     @ApiResponse(responseCode = "200", description = "Сторінка організацій")
     @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
-    public OffsetPage<Organization> listOrganizations(
+    public OffsetPage<OrganizationResponse> listOrganizations(
             @Parameter(description = "Пошук за назвою або slug, без урахування регістру", example = "клуб")
             @RequestParam(name = "q", required = false)
             @Size(max = 100, message = "Пошуковий запит: не довше 100 символів") String q,
@@ -73,19 +79,23 @@ public class OrganizationController {
                     schema = @Schema(defaultValue = "0", minimum = "0"))
             @RequestParam(name = "offset", defaultValue = "0")
             @Min(value = 0, message = "offset має бути ≥ 0") int offset) {
-        return organizations.list(q, limit, offset);
+        OffsetPage<Organization> page = organizations.list(q, limit, offset);
+        Map<UUID, RatingSummary> rated = ratings.organizationSummaries(
+                page.data().stream().map(Organization::id).toList());
+        return page.map(o -> new OrganizationResponse(o, rated.get(o.id())));
     }
 
     @GetMapping("/{organizationId}")
     @Operation(operationId = "getOrganization", summary = "Організація за ідентифікатором",
-            description = "Публічна (доступна гостям).")
+            description = "Публічна (доступна гостям). З рейтингом (FR-064).")
     @ApiResponse(responseCode = "200", description = "Організацію знайдено")
     @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
     @ApiResponse(responseCode = "404", ref = OpenApiConfig.NOT_FOUND)
-    public Organization getOrganization(
+    public OrganizationResponse getOrganization(
             @Parameter(description = "Ідентифікатор організації (UUID)", example = ORG_ID_EXAMPLE)
             @PathVariable("organizationId") UUID organizationId) {
-        return organizations.get(organizationId);
+        Organization organization = organizations.get(organizationId);
+        return new OrganizationResponse(organization, ratings.organizationSummary(organizationId));
     }
 
     @PostMapping

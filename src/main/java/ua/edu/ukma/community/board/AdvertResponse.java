@@ -2,6 +2,7 @@ package ua.edu.ukma.community.board;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
+import ua.edu.ukma.community.rating.RatingSummary;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -55,12 +56,23 @@ public record AdvertResponse(
 
         @Schema(description = "Час створення (ISO 8601)", example = "2026-11-16T12:00:00+02:00",
                 requiredMode = Schema.RequiredMode.REQUIRED)
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+
+        @Schema(description = "Рейтинг автора за оцінками учасників його закритих оголошень (FR-062)",
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        RatingSummary authorRating,
+
+        @Schema(description = "Ваша оцінка автора за це оголошення; null, якщо ви ще не оцінювали (FR-061)",
+                example = "5", nullable = true)
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        Integer myRating
 ) {
 
-    public static AdvertResponse from(AdvertView view, String authorName) {
+    public static AdvertResponse from(AdvertView view, String authorName, RatingSummary authorRating,
+                                      Integer myRating) {
         Advert a = view.advert();
         return new AdvertResponse(a.id(), a.type(), a.title(), a.description(), a.slots(), a.deadline(),
-                view.status(), view.visibleContact(), view.own(), authorName, view.myReplyStatus(), a.createdAt());
+                view.status(), view.visibleContact(), view.own(), authorName, view.myReplyStatus(), a.createdAt(),
+                authorRating, myRating);
     }
 }
