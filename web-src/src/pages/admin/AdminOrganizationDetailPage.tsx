@@ -7,6 +7,7 @@ import {
   updateOrganization,
   uploadOrganizationLogo,
 } from '../../api/organizations'
+import OrganizationHeadsPanel from '../../components/OrganizationHeadsPanel'
 import type { Organization } from '../../types/organization'
 import { apiErrorMessage } from '../../utils/apiErrorMessage'
 
@@ -146,10 +147,7 @@ function AdminOrganizationDetailPage() {
       </p>
       <h2 className="panel-row__title">{org.name}</h2>
       <div className="panel-actions" style={{ marginBottom: '1.25rem' }}>
-        <Link
-          className="orgs-btn"
-          to={`/admin/organizations/${org.id}/events`}
-        >
+        <Link className="orgs-btn" to={`/admin/organizations/${org.id}/events`}>
           Кабінет подій
         </Link>
         <Link className="orgs-btn" to={`/organizations/${org.id}`}>
@@ -271,6 +269,8 @@ function AdminOrganizationDetailPage() {
           <p className="panel-hint">PNG / JPEG / WebP, до ~5&nbsp;MB.</p>
         </div>
       </div>
+
+      <OrganizationHeadsPanel organizationId={org.id} />
     </section>
   )
 }

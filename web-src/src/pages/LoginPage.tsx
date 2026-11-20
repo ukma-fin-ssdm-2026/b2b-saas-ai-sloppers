@@ -1,5 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  Link,
+  Navigate,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import './OrganizationsPage.css'
 import './panel.css'
@@ -10,7 +16,10 @@ function LoginPage() {
   const location = useLocation()
   const [searchParams] = useSearchParams()
 
-  const fromState = (location.state as { from?: string; verifiedEmail?: string } | null)
+  const fromState = location.state as {
+    from?: string
+    verifiedEmail?: string
+  } | null
   const fromQuery = searchParams.get('from')
   const from = fromState?.from ?? fromQuery ?? '/admin'
   const verifiedEmail = fromState?.verifiedEmail
@@ -99,6 +108,9 @@ function LoginPage() {
             </Link>
             <Link to="/verify" className="orgs-btn">
               Підтвердити код
+            </Link>
+            <Link to="/password-reset" className="orgs-btn">
+              Забули пароль
             </Link>
             <Link to="/" className="orgs-btn">
               На сайт
