@@ -116,11 +116,10 @@ jobs:
 
   # Lab 10 bonus 3: slow set (@Tag("integration"), Failsafe) — full Spring context + PostgreSQL
   # in a Testcontainers container. The fast set runs in "Build and Test Backend" on every PR;
-  # this job runs only after the merge, on push to main.
-  # TEMPORARY: also on the PR branch lab10-bonuses-3-5 to check Docker/Testcontainers on the runners.
+  # this job runs only after the merge, on push to main (CI has no other push trigger).
   integration:
     name: Integration Tests
-    if: github.event_name == 'push' || github.head_ref == 'lab10-bonuses-3-5'
+    if: github.event_name == 'push'
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
 

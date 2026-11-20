@@ -14,10 +14,6 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
-  # TEMPORARY: lets the PR branch check build, login and tags before the merge; remove before merging
-  push:
-    branches: [lab10-bonuses-3-5]
-    paths: [.github/workflows/publish-images.yml]
 
 permissions:
   contents: read
@@ -30,15 +26,15 @@ concurrency:
 
 env:
   REGISTRY_PATH: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers
-  SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+  SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
 
 jobs:
   publish:
     name: Build and push images
-    # only green CI runs of pushes to main (not cancelled/failed runs, not PRs); TEMPORARY: or the branch push
+    # only green CI runs of pushes to main (not cancelled/failed runs, not PRs)
     if: >-
-      github.event_name == 'push' ||
-      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push'
     runs-on: [self-hosted, linux]
     timeout-minutes: 30
 
