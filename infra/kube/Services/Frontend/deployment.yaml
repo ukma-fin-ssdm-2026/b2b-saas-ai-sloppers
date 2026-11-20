@@ -28,7 +28,7 @@ spec:
       containers:
         - name: frontend
           # CI replaces :local with @sha256 in the deploy branch
-          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/frontend@sha256:ded11d7a6395e962186c92c2f06d551bd096375b48e54f739398da1a54366ef4
+          image: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/frontend@sha256:4d5f3b743516039fd77b9c020e6230806f1465d274803fbddfcf5c9cb3cb92fa
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
