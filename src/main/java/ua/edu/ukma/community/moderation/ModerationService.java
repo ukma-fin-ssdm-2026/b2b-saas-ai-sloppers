@@ -2,6 +2,7 @@ package ua.edu.ukma.community.moderation;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionOperations;
 import ua.edu.ukma.community.auth.OrgRolePolicy;
@@ -21,6 +22,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Модерація користувачів і контенту (FR-054–FR-060).
@@ -80,8 +82,9 @@ public class ModerationService implements ModerationGate {
         }
         OffsetDateTime now = now();
         String text = comment == null || comment.isBlank() ? null : comment.trim();
-        Complaint saved = transactions.execute(tx -> moderation.saveComplaint(
-                Complaint.open(reporter.id(), authorId, targetType, targetId, category, text, now)));
+        Complaint saved = onDuplicate(() -> transactions.execute(tx -> moderation.saveComplaint(
+                        Complaint.open(reporter.id(), authorId, targetType, targetId, category, text, now))),
+                ErrorCode.ALREADY_COMPLAINED, "Ви вже скаржилися на цей контент");
         autoBanOnComplaints(authorId, now);
         return saved;
     }
@@ -140,7 +143,8 @@ public class ModerationService implements ModerationGate {
         if (expiresAt != null && !expiresAt.isAfter(now)) {
             throw ApiException.validation("expiresAt", "Строк блокування має бути в майбутньому", expiresAt);
         }
-        return transactions.execute(tx -> block(userId, admin.id(), reason.trim(), expiresAt, now));
+        return onDuplicate(() -> transactions.execute(tx -> block(userId, admin.id(), reason.trim(), expiresAt,
+                now)), ErrorCode.ALREADY_BANNED, "Користувач уже заблокований");
     }
 
     /** Знімає блокування достроково (FR-054). */
@@ -190,7 +194,8 @@ public class ModerationService implements ModerationGate {
         if (moderation.findBannedWords().stream().anyMatch(w -> w.word().equals(normalized))) {
             throw new ApiException(ErrorCode.BANNED_WORD_EXISTS, "Слово «" + normalized + "» вже у списку");
         }
-        return moderation.saveBannedWord(BannedWord.of(normalized, admin.id(), now()));
+        return onDuplicate(() -> moderation.saveBannedWord(BannedWord.of(normalized, admin.id(), now())),
+                ErrorCode.BANNED_WORD_EXISTS, "Слово «" + normalized + "» вже у списку");
     }
 
     public void removeBannedWord(User admin, UUID wordId) {
@@ -231,6 +236,19 @@ public class ModerationService implements ModerationGate {
     }
 
     // ---- допоміжне ----
+
+    /**
+     * Перевірка «вже є» і запис — два окремі кроки, тож два паралельні запити (подвійний клік) можуть
+     * обидва пройти перевірку. Тоді другий упирається в унікальний індекс бази, і відповідаємо йому так
+     * само, як відповіли б при послідовних запитах: 409, а не 500.
+     */
+    private static <T> T onDuplicate(Supplier<T> write, ErrorCode code, String message) {
+        try {
+            return write.get();
+        } catch (DuplicateKeyException e) {
+            throw new ApiException(code, message);
+        }
+    }
 
     private static void requireUnderLimit(long used, int allowed, Duration window, String what) {
         if (allowed > 0 && used >= allowed) {
@@ -294,7 +312,12 @@ public class ModerationService implements ModerationGate {
         }
         OffsetDateTime until = now.plus(properties.autoBan().duration());
         String reason = "Автоматичне блокування: " + why;
-        transactions.execute(tx -> block(userId, null, reason, until, now));
+        try {
+            transactions.execute(tx -> block(userId, null, reason, until, now));
+        } catch (DuplicateKeyException e) {
+            // паралельний запит заблокував людину першим — результат той самий
+            return;
+        }
         LOG.info("Auto-banned user {} until {}: {}", userId, until, LogSafe.of(why));
     }
 
