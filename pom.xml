@@ -25,24 +25,11 @@
         <spotbugs-plugin.version>4.8.6.6</spotbugs-plugin.version>
         <findsecbugs.version>1.13.0</findsecbugs.version>
         <jacoco.version>0.8.13</jacoco.version>
-        <!-- справжній PostgreSQL у тестах без Docker: JDBC-репозиторії й FOR UPDATE (TC-034) -->
-        <embedded-postgres.version>2.2.2</embedded-postgres.version>
-        <!-- той самий мажор, що й у docker-compose (postgres:17) -->
-        <embedded-postgres-binaries.version>17.12.0</embedded-postgres-binaries.version>
+        <!-- Spring Boot 3.5.6 приносить 1.21.3, який не працює з Docker Engine 29+ (мінімальний API 1.44) -->
+        <testcontainers.version>1.21.4</testcontainers.version>
+        <!-- порожнє за замовчуванням: JaCoCo дописує сюди агент; потрібне, коли -Djacoco.skip=true -->
+        <argLine/>
     </properties>
-
-    <dependencyManagement>
-        <dependencies>
-            <!-- піднімає бінарники Postgres з типових 14.x до 17.x для всіх платформ -->
-            <dependency>
-                <groupId>io.zonky.test.postgres</groupId>
-                <artifactId>embedded-postgres-binaries-bom</artifactId>
-                <version>${embedded-postgres-binaries.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -95,21 +82,11 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- справжній PostgreSQL у контейнері для повільного набору (@Tag("integration")):
+             JDBC-репозиторії й FOR UPDATE (TC-034). Версію керує Spring Boot BOM. Потрібен Docker. -->
         <dependency>
-            <groupId>io.zonky.test</groupId>
-            <artifactId>embedded-postgres</artifactId>
-            <version>${embedded-postgres.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <!-- типово бібліотека тягне лише x86-бінарники; ці два — для Apple Silicon і ARM-Linux -->
-        <dependency>
-            <groupId>io.zonky.test.postgres</groupId>
-            <artifactId>embedded-postgres-binaries-darwin-arm64v8</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.zonky.test.postgres</groupId>
-            <artifactId>embedded-postgres-binaries-linux-arm64v8</artifactId>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -119,6 +96,39 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- Два набори тестів (Lab 10, бонус 3):
+                 швидкий — ./mvnw test (Surefire, усе без тегу integration), на кожному PR, без Docker;
+                 повільний — ./mvnw verify (Failsafe, лише @Tag("integration")): повний Spring-контекст
+                 і PostgreSQL у контейнері; у CI тільки після злиття в main. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <excludedGroups>integration</excludedGroups>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <groups>integration</groups>
+                    <!-- драйвер передає в PostgreSQL часову зону JVM; застарілу назву на кшталт
+                         Europe/Kiev новий tzdata в образі postgres:17 не знає. UTC — як на раннерах. -->
+                    <argLine>@{argLine} -Duser.timezone=UTC</argLine>
+                    <includes>
+                        <include>**/*Test.java</include>
+                    </includes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <!-- Покриття тестами: ./mvnw test → target/site/jacoco/index.html -->

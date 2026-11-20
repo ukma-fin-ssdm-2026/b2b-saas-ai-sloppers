@@ -11,7 +11,8 @@
 ## Запуск
 
 ```bash
-./mvnw test                           # усі тести + звіт JaCoCo
+./mvnw test                           # швидкий набір (без @Tag("integration")) + звіт JaCoCo, Docker не потрібен
+./mvnw verify                         # + повільний набір (Failsafe): Spring-контекст і PostgreSQL у контейнері, потрібен Docker
 open target/site/jacoco/index.html    # переглянути звіт локально
 
 cd web-src && npm test                # модульні тести фронту
@@ -39,6 +40,20 @@ Job **Build and Test Backend** у [`.github/workflows/ci.yml`](../../.github/wor
 - **Summary запуску** — кількість тестів (усього, failures, errors, skipped), загальне покриття рядків і
   таблиця покриття по класах (рядки й гілки, найменш покриті зверху);
 - **артефакт `test-reports`** (завжди, 7 днів) — звіти Surefire і HTML-звіт JaCoCo з підсвіткою рядків.
+
+### Швидкий і повільний набори (Lab 10, бонус 3)
+
+| Набір | Що входить | Чим запускається | Де в CI |
+|---|---|---|---|
+| Швидкий | усі тести без тегу `integration` | Surefire, `./mvnw test` | job **Build and Test Backend** на кожному PR і push у `main` |
+| Повільний | `@Tag("integration")`: `*FlowIntegrationTest` (повний Spring-контекст + MockMvc) і тести на PostgreSQL (`Jdbc*RepositoryTest`, `BoardConcurrencyPostgresTest`) | Failsafe, `./mvnw verify` | job **Integration Tests** лише на push у `main` |
+
+PostgreSQL для повільного набору піднімає Testcontainers ([`support/TestDatabase`](../../src/test/java/ua/edu/ukma/community/support/TestDatabase.java)):
+контейнер `postgres:17` через Docker раннера, один на прогін, схема — міграції з `infra/migrations`. Failsafe
+запускає JVM з `-Duser.timezone=UTC`, бо драйвер передає в базу часову зону JVM, а застарілу назву
+`Europe/Kiev` новий tzdata в образі не знає.
+
+Новий тест, якому потрібна база чи повний Spring-контекст, позначайте `@Tag("integration")`.
 
 
 ### Оновити закомічений звіт

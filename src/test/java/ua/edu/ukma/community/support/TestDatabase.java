@@ -1,10 +1,10 @@
 package ua.edu.ukma.community.support;
 
-import io.zonky.test.db.postgres.embedded.EmbeddedPostgres;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.testcontainers.containers.PostgreSQLContainer;
 
 import javax.sql.DataSource;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -19,14 +19,19 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
- * Справжній PostgreSQL для тестів JDBC-репозиторіїв, без Docker: бінарники йдуть Maven-залежністю
- * (embedded-postgres). Один сервер на весь прогін тестів; схема — ті самі міграції {@code infra/migrations},
- * що накочує Flyway, тож тест бачить рівно продакшн-схему.
+ * Справжній PostgreSQL для тестів JDBC-репозиторіїв: Testcontainers через Docker піднімає контейнер
+ * {@code postgres:17} (той самий мажор, що CloudNativePG у кластері). Один контейнер на весь прогін тестів,
+ * після JVM його прибирає Ryuk. Схема — ті самі міграції {@code infra/migrations}, що накочує Flyway,
+ * тож тест бачить рівно продакшн-схему.
+ *
+ * <p>Тести, що його використовують, позначені {@code @Tag("integration")} і входять у повільний набір
+ * ({@code ./mvnw verify}); швидкий набір ({@code ./mvnw test}) Docker не потребує.
  *
  * <p>Між тестами — {@link #truncateAll()}: таблиці лишаються, дані зникають.
  */
 public final class TestDatabase {
 
+    private static final String IMAGE = "postgres:17";
     private static final Path MIGRATIONS = Path.of("infra", "migrations");
     private static final Pattern VERSIONED = Pattern.compile("V(\\d+)__.+\\.sql");
 
@@ -37,14 +42,10 @@ public final class TestDatabase {
 
     public static synchronized DataSource dataSource() {
         if (dataSource == null) {
-            try {
-                EmbeddedPostgres postgres = EmbeddedPostgres.builder().start();
-                Runtime.getRuntime().addShutdownHook(new Thread(() -> close(postgres)));
-                dataSource = postgres.getPostgresDatabase();
-                migrate(dataSource);
-            } catch (IOException e) {
-                throw new UncheckedIOException("Не вдалося запустити вбудований PostgreSQL", e);
-            }
+            PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(IMAGE);
+            postgres.start();
+            dataSource = new DriverManagerDataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
+            migrate(dataSource);
         }
         return dataSource;
     }
@@ -90,13 +91,5 @@ public final class TestDatabase {
             throw new IllegalArgumentException(file.toString());
         }
         return Integer.parseInt(m.group(1));
-    }
-
-    private static void close(EmbeddedPostgres postgres) {
-        try {
-            postgres.close();
-        } catch (IOException ignored) {
-            // JVM і так завершується
-        }
     }
 }

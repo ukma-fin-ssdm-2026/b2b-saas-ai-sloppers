@@ -2,6 +2,7 @@ package ua.edu.ukma.community.auth;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -16,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** SQL голів і журналу ролей на справжньому PostgreSQL; зокрема імена з JOIN (FR-069). */
 @DisplayName("JdbcHeadRepository на PostgreSQL")
+@Tag("integration")
 class JdbcHeadRepositoryTest {
 
     private MutableClock clock;

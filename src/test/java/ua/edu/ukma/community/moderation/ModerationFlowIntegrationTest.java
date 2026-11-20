@@ -3,6 +3,7 @@ package ua.edu.ukma.community.moderation;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -38,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("inmemory")
 @DisplayName("Модерація наскрізно: скарга → рішення адміністратора, бан → 403, автофільтр → 400")
+@Tag("integration")
 class ModerationFlowIntegrationTest {
 
     static final String ADVERTS = "/api/v1/adverts";

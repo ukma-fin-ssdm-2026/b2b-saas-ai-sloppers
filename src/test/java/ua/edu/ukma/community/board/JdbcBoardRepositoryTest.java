@@ -2,6 +2,7 @@ package ua.edu.ukma.community.board;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** SQL дошки на справжньому PostgreSQL з міграціями V1–V7 (див. {@link TestDatabase}). */
 @DisplayName("JdbcAdvertRepository / JdbcReplyRepository на PostgreSQL")
+@Tag("integration")
 class JdbcBoardRepositoryTest {
 
     private DataSource dataSource;

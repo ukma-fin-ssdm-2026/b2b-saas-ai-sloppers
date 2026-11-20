@@ -25,9 +25,9 @@
 |---|---|---|
 | Модульний | JUnit 5, Mockito, AssertJ, in-memory репозиторії, `TestFixtures` (фіксований `Clock`) | CI, job `Build and Test Backend` (`./mvnw test`) |
 | Інтеграційний (web) | `@WebMvcTest` + `MockMvc` з `spring-boot-starter-test`, сервіси з in-memory репозиторіями; для захищених ендпоінтів — `spring-security-test` | CI, той самий job. Docker не потрібен |
-| Інтеграційний (БД) | Вбудований PostgreSQL 17 (`embedded-postgres`, без Docker) + міграції з `infra/migrations`: JDBC-репозиторії, паралельні запити з кількох «подів» | CI, той самий job (`./mvnw test`). Docker не потрібен |
+| Інтеграційний (БД) | PostgreSQL 17 у контейнері (Testcontainers) + міграції з `infra/migrations`: JDBC-репозиторії, паралельні запити з кількох «подів» | Повільний набір (`@Tag("integration")`, `./mvnw verify`): CI, job `Integration Tests` лише на push у `main` |
 
-**БД-рівень у CI без Docker.** Runner self-hosted, і Docker на ньому не гарантований, тому замість Testcontainers — `embedded-postgres`: бінарники PostgreSQL приходять Maven-залежністю, сервер стартує один раз на прогін (`support/TestDatabase`), схема — ті самі міграції, що й у Flyway. Обмеження: процес тестів не може працювати від root (так влаштований PostgreSQL). Тести паралельних запитів, що потребують справжніх блокувань (рядки 8, 13, 20), можна переносити сюди; першим перенесено рядок 20.
+**БД-рівень у CI в контейнері.** Спершу тут був `embedded-postgres` (бінарники PostgreSQL Maven-залежністю), бо Docker на self-hosted раннерах не був гарантований. У Lab 10 (бонус 3) Docker на раннерах підтверджено (на ньому ж збирає образи Build and Deploy), тож `support/TestDatabase` піднімає `postgres:17` через Testcontainers — один контейнер на прогін, схема — ті самі міграції, що й у Flyway. Ці тести входять у повільний набір: на PR не запускаються, лише після злиття в `main`. Тести паралельних запитів, що потребують справжніх блокувань (рядки 8, 13, 20), можна переносити сюди; першим перенесено рядок 20.
 
 ## Критерії входу й виходу
 

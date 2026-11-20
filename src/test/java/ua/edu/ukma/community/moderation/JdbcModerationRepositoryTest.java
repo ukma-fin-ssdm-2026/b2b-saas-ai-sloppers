@@ -2,6 +2,7 @@ package ua.edu.ukma.community.moderation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.DuplicateKeyException;
@@ -32,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * унікальні індекси, {@code CHECK} і розширений у V8 статус відгуку.
  */
 @DisplayName("JdbcModerationRepository на PostgreSQL")
+@Tag("integration")
 class JdbcModerationRepositoryTest {
 
     private MutableClock clock;

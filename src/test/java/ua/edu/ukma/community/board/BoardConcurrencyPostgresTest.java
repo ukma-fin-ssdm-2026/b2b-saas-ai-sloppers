@@ -1,6 +1,7 @@
 package ua.edu.ukma.community.board;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
@@ -34,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * екземпляра свій монітор), тож місця рятує лише {@code SELECT ... FOR UPDATE} у PostgreSQL.
  */
 @DisplayName("BoardService на PostgreSQL: паралельні підтвердження з кількох подів")
+@Tag("integration")
 class BoardConcurrencyPostgresTest {
 
     private static final int PODS = 4;

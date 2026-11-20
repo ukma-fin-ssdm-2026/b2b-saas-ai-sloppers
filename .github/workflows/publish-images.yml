@@ -1,0 +1,111 @@
+name: Publish Images
+
+# Lab 10 bonus 5: a release artifact from every green CI run on main.
+# After CI succeeds for a push to main, build the backend, frontend and migrations images
+# and push them to GHCR tagged with the commit SHA that CI checked.
+# Publishing only: nothing is deployed. Rollout to the cluster stays manual (build-and-deploy.yml),
+# which reuses the same build cache.
+#
+# workflow_run fires only from the workflow file on the default branch, and github.sha there is the
+# latest main commit, not the one CI checked. So the checkout and the tag use workflow_run.head_sha.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # TEMPORARY: lets the PR branch check build, login and tags before the merge; remove before merging
+  push:
+    branches: [lab10-bonuses-3-5]
+    paths: [.github/workflows/publish-images.yml]
+
+permissions:
+  contents: read
+  packages: write # push to GHCR
+
+# one at a time, never cancel a half-pushed set of images
+concurrency:
+  group: publish-images
+  cancel-in-progress: false
+
+env:
+  REGISTRY_PATH: ghcr.io/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers
+  SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  publish:
+    name: Build and push images
+    # only green CI runs of pushes to main (not cancelled/failed runs, not PRs); TEMPORARY: or the branch push
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout the commit CI checked
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+
+      # multi-arch images, as in build-and-deploy.yml: the cluster runs on arm64 and amd64 machines
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build backend
+        id: backend
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: src/main/docker/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY_PATH }}/backend:${{ env.SOURCE_SHA }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+
+      - name: Build frontend
+        id: frontend
+        uses: docker/build-push-action@v7
+        with:
+          context: web-src
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY_PATH }}/frontend:${{ env.SOURCE_SHA }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+      - name: Build migrations
+        id: migrations
+        uses: docker/build-push-action@v7
+        with:
+          context: infra/migrations
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY_PATH }}/migrations:${{ env.SOURCE_SHA }}
+
+      - name: Summary
+        env:
+          CI_RUN: ${{ github.event.workflow_run.html_url }}
+          BACKEND_DIGEST: ${{ steps.backend.outputs.digest }}
+          FRONTEND_DIGEST: ${{ steps.frontend.outputs.digest }}
+          MIGRATIONS_DIGEST: ${{ steps.migrations.outputs.digest }}
+        run: |
+          {
+            echo "## Published images"
+            echo "Commit: \`$SOURCE_SHA\`"
+            if [ -n "$CI_RUN" ]; then echo "Triggered by green CI run: $CI_RUN"; fi
+            echo
+            echo "| Image | Tag | Digest |"
+            echo "|---|---|---|"
+            echo "| backend | \`$SOURCE_SHA\` | \`$BACKEND_DIGEST\` |"
+            echo "| frontend | \`$SOURCE_SHA\` | \`$FRONTEND_DIGEST\` |"
+            echo "| migrations | \`$SOURCE_SHA\` | \`$MIGRATIONS_DIGEST\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

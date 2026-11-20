@@ -3,6 +3,7 @@ package ua.edu.ukma.community.auth;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("inmemory")
 @DisplayName("Auth наскрізно: реєстрація → вхід → ролі на ендпоінтах")
+@Tag("integration")
 class AuthFlowIntegrationTest {
 
     static final String API = "/api/v1";
