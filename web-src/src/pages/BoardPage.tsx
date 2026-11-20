@@ -8,6 +8,7 @@ import {
 import type { Advert, AdvertType, ReplyStatus } from '../types/advert'
 import { formatEventDateTime } from '../utils/datetime'
 import { apiErrorMessage } from '../utils/apiErrorMessage'
+import './panel.css'
 
 const TYPE_LABEL: Record<AdvertType, string> = {
   TEAM: 'Команда',
@@ -122,174 +123,181 @@ function BoardPage() {
   }
 
   return (
-    <section className="orgs-page">
-      <h2 className="panel-row__title">Дошка оголошень</h2>
-      <p className="panel-hint">
-        Пошук команди на хакатон чи компанії для дозвілля. Контакт автора видно
-        лише тому, чий відгук автор підтвердив.
-      </p>
-
-      <div className="panel-actions">
-        <label className="panel-field">
-          <span>Тип</span>
-          <select
-            aria-label="Тип оголошення"
-            value={type}
-            onChange={(e) => setType(e.target.value as AdvertType | '')}
-          >
-            <option value="">Усі</option>
-            <option value="TEAM">Команда</option>
-            <option value="LEISURE">Дозвілля</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          className="orgs-btn"
-          onClick={() => setFormOpen((open) => !open)}
-        >
-          {formOpen ? 'Скасувати' : 'Нове оголошення'}
-        </button>
-      </div>
-
-      {message ? <p className="panel-ok">{message}</p> : null}
-      {error ? <p className="panel-error">{error}</p> : null}
-
-      {formOpen ? (
-        <form className="panel-form" onSubmit={(e) => void onCreate(e)}>
-          <div className="panel-grid">
-            <div className="panel-field">
-              <label htmlFor="advert-type">Тип</label>
-              <select
-                id="advert-type"
-                value={newType}
-                onChange={(e) => setNewType(e.target.value as AdvertType)}
-              >
-                <option value="TEAM">Команда</option>
-                <option value="LEISURE">Дозвілля</option>
-              </select>
-            </div>
-            <div className="panel-field">
-              <label htmlFor="advert-slots">Місць</label>
-              <input
-                id="advert-slots"
-                type="number"
-                min={1}
-                max={50}
-                value={slots}
-                onChange={(e) => setSlots(e.target.value)}
-                required
-              />
-            </div>
-          </div>
-          <div className="panel-field">
-            <label htmlFor="advert-title">Заголовок</label>
-            <input
-              id="advert-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              minLength={3}
-              maxLength={200}
-              required
-            />
-          </div>
-          <div className="panel-field">
-            <label htmlFor="advert-description">Опис</label>
-            <textarea
-              id="advert-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={2000}
-              required
-            />
-          </div>
-          <div className="panel-grid">
-            <div className="panel-field">
-              <label htmlFor="advert-deadline">Дедлайн</label>
-              <input
-                id="advert-deadline"
-                type="datetime-local"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                required
-              />
-            </div>
-            <div className="panel-field">
-              <label htmlFor="advert-contact">Контакт</label>
-              <input
-                id="advert-contact"
-                value={contact}
-                onChange={(e) => setContact(e.target.value)}
-                placeholder="@telegram, телефон або email"
-                required
-              />
-            </div>
-          </div>
-          <div className="panel-actions">
-            <button type="submit" className="orgs-btn" disabled={busy}>
-              {busy ? 'Публікація…' : 'Опублікувати'}
-            </button>
-          </div>
-        </form>
-      ) : null}
-
-      {loading ? <p className="panel-hint">Завантаження…</p> : null}
-
-      {!loading && adverts.length === 0 ? (
-        <p className="panel-hint">Активних оголошень немає</p>
-      ) : null}
-
-      <ul className="panel-list">
-        {adverts.map((advert) => (
-          <li className="panel-row" key={advert.id}>
-            <div>
-              <h3 className="panel-row__title">{advert.title}</h3>
-              <p>{advert.description}</p>
-              <p className="panel-hint">
-                <span className="panel-badge">{TYPE_LABEL[advert.type]}</span>{' '}
-                місць: {advert.slots} · до{' '}
-                {formatEventDateTime(advert.deadline)} ·{' '}
-                {advert.authorName ?? 'автор без імені'}
-                {advert.status === 'CLOSED' ? ' · закрито' : ''}
-                {advert.myReplyStatus
-                  ? ` · ${REPLY_LABEL[advert.myReplyStatus]}`
-                  : ''}
-              </p>
-              {advert.contact ? (
-                <p className="panel-ok">Контакт: {advert.contact}</p>
-              ) : null}
-            </div>
-            {advert.own ? (
-              <div className="panel-actions">
-                {advert.status === 'ACTIVE' ? (
-                  <button
-                    type="button"
-                    className="orgs-btn"
-                    disabled={busy}
-                    onClick={() => void onClose(advert)}
-                  >
-                    Закрити
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="orgs-btn"
-                  disabled={busy}
-                  onClick={() => void onDelete(advert)}
-                >
-                  Видалити
-                </button>
-              </div>
-            ) : null}
-          </li>
-        ))}
-      </ul>
-
-      {total > adverts.length ? (
-        <p className="panel-hint">
-          Показано {adverts.length} з {total}
+    <main className="panel-page">
+      <div className="panel-page__inner panel-page__inner--wide">
+        <p className="panel-page__eyebrow">Дошка</p>
+        <h1 className="panel-page__title">Дошка оголошень</h1>
+        <p className="panel-page__lead">
+          Пошук команди на хакатон чи компанії для дозвілля. Контакт автора
+          видно лише тому, чий відгук автор підтвердив.
         </p>
-      ) : null}
-    </section>
+
+        <div className="panel-actions">
+          <label className="panel-field">
+            <span>Тип</span>
+            <select
+              aria-label="Тип оголошення"
+              value={type}
+              onChange={(e) => setType(e.target.value as AdvertType | '')}
+            >
+              <option value="">Усі</option>
+              <option value="TEAM">Команда</option>
+              <option value="LEISURE">Дозвілля</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="orgs-btn"
+            onClick={() => setFormOpen((open) => !open)}
+          >
+            {formOpen ? 'Скасувати' : 'Нове оголошення'}
+          </button>
+        </div>
+
+        {message ? <p className="panel-ok">{message}</p> : null}
+        {error ? <p className="panel-error">{error}</p> : null}
+
+        {formOpen ? (
+          <form className="panel-form" onSubmit={(e) => void onCreate(e)}>
+            <div className="panel-grid">
+              <div className="panel-field">
+                <label htmlFor="advert-type">Тип</label>
+                <select
+                  id="advert-type"
+                  value={newType}
+                  onChange={(e) => setNewType(e.target.value as AdvertType)}
+                >
+                  <option value="TEAM">Команда</option>
+                  <option value="LEISURE">Дозвілля</option>
+                </select>
+              </div>
+              <div className="panel-field">
+                <label htmlFor="advert-slots">Місць</label>
+                <input
+                  id="advert-slots"
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={slots}
+                  onChange={(e) => setSlots(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+            <div className="panel-field">
+              <label htmlFor="advert-title">Заголовок</label>
+              <input
+                id="advert-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                minLength={3}
+                maxLength={200}
+                required
+              />
+            </div>
+            <div className="panel-field">
+              <label htmlFor="advert-description">Опис</label>
+              <textarea
+                id="advert-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={2000}
+                required
+              />
+            </div>
+            <div className="panel-grid">
+              <div className="panel-field">
+                <label htmlFor="advert-deadline">Дедлайн</label>
+                <input
+                  id="advert-deadline"
+                  type="datetime-local"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="panel-field">
+                <label htmlFor="advert-contact">Контакт</label>
+                <input
+                  id="advert-contact"
+                  value={contact}
+                  onChange={(e) => setContact(e.target.value)}
+                  placeholder="@telegram, телефон або email"
+                  required
+                />
+              </div>
+            </div>
+            <div className="panel-actions">
+              <button type="submit" className="orgs-btn" disabled={busy}>
+                {busy ? 'Публікація…' : 'Опублікувати'}
+              </button>
+            </div>
+          </form>
+        ) : null}
+
+        {loading ? <p className="panel-hint">Завантаження…</p> : null}
+
+        {!loading && adverts.length === 0 ? (
+          <p className="panel-hint">Активних оголошень немає</p>
+        ) : null}
+
+        <ul className="panel-list">
+          {adverts.map((advert) => (
+            <li key={advert.id}>
+              <div className="panel-row">
+                <div className="panel-row__main">
+                  <h3 className="panel-row__title">{advert.title}</h3>
+                  <p>{advert.description}</p>
+                  <p className="panel-hint">
+                    <span className="panel-badge">
+                      {TYPE_LABEL[advert.type]}
+                    </span>{' '}
+                    місць: {advert.slots} · до{' '}
+                    {formatEventDateTime(advert.deadline)} ·{' '}
+                    {advert.authorName ?? 'автор без імені'}
+                    {advert.status === 'CLOSED' ? ' · закрито' : ''}
+                    {advert.myReplyStatus
+                      ? ` · ${REPLY_LABEL[advert.myReplyStatus]}`
+                      : ''}
+                  </p>
+                  {advert.contact ? (
+                    <p className="panel-ok">Контакт: {advert.contact}</p>
+                  ) : null}
+                </div>
+                {advert.own ? (
+                  <div className="panel-row__actions">
+                    {advert.status === 'ACTIVE' ? (
+                      <button
+                        type="button"
+                        className="orgs-btn"
+                        disabled={busy}
+                        onClick={() => void onClose(advert)}
+                      >
+                        Закрити
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="orgs-btn"
+                      disabled={busy}
+                      onClick={() => void onDelete(advert)}
+                    >
+                      Видалити
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        {total > adverts.length ? (
+          <p className="panel-hint">
+            Показано {adverts.length} з {total}
+          </p>
+        ) : null}
+      </div>
+    </main>
   )
 }
 
