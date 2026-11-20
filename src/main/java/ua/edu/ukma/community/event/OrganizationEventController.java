@@ -42,9 +42,9 @@ public class OrganizationEventController {
 
     @GetMapping
     @SecurityRequirement(name = OpenApiConfig.BEARER)
-    @Operation(operationId = "listOrganizationEvents", summary = "Події організації для голови",
-            description = "Голова організації. Усі статуси; status=PENDING — черга модерації (FR-033), "
-                    + "verified=false — автоопубліковані, ще не переглянуті (FR-032).")
+    @Operation(operationId = "listOrganizationEvents", summary = "Події організації для голови/адміна",
+            description = "Голова організації або Global Admin. Усі статуси; status=PENDING — черга модерації "
+                    + "(FR-033), verified=false — автоопубліковані, ще не переглянуті (FR-032).")
     @ApiResponse(responseCode = "200", description = "Сторінка подій організації")
     @ApiResponse(responseCode = "400", ref = OpenApiConfig.BAD_REQUEST)
     @ApiResponse(responseCode = "401", ref = OpenApiConfig.UNAUTHORIZED)
@@ -70,14 +70,14 @@ public class OrganizationEventController {
                     schema = @Schema(defaultValue = "0", minimum = "0"))
             @RequestParam(name = "offset", defaultValue = "0")
             @Min(value = 0, message = "offset має бути ≥ 0") int offset) {
-        policy.requireHead(currentUser.require(), organizationId);
+        policy.requireHeadOrAdmin(currentUser.require(), organizationId);
         return events.listForOrganization(organizationId, status, verified, limit, offset).map(EventResponse::from);
     }
 
     @PostMapping
     @SecurityRequirement(name = OpenApiConfig.BEARER)
     @Operation(operationId = "createEvent", summary = "Створити подію вручну",
-            description = "Голова організації (FR-037). Подія публікується одразу.")
+            description = "Голова організації або Global Admin (FR-037). Подія публікується одразу.")
     @ApiResponse(responseCode = "201", description = "Подію створено",
             headers = @Header(name = "Location", description = "URL нової події",
                     schema = @Schema(type = "string", format = "uri")))
@@ -89,7 +89,7 @@ public class OrganizationEventController {
             @Parameter(description = "Ідентифікатор організації (UUID)", example = ORG_ID_EXAMPLE)
             @PathVariable("organizationId") UUID organizationId,
             @Valid @RequestBody EventCreateRequest request) {
-        policy.requireHead(currentUser.require(), organizationId);
+        policy.requireHeadOrAdmin(currentUser.require(), organizationId);
         Event created = events.create(organizationId, request);
         URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
                 .path(ApiPaths.V1 + "/events/{id}").buildAndExpand(created.id()).toUri();

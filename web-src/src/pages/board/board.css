@@ -1,0 +1,103 @@
+.board-section-title {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 400;
+}
+
+.board-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.board-filters__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--theme-muted, #8e8e8e);
+}
+
+.board-filters__field select {
+  min-width: 10rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--theme-border, #2f2f2f);
+  background: var(--theme-input-bg, #121212);
+  color: var(--theme-fg, #f2f2f2);
+  font-size: 0.95rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.board-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.board-card {
+  display: block;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--theme-border, #2a2a2a);
+  background: var(--theme-surface, #121212);
+  color: inherit;
+  text-decoration: none;
+  border-radius: 5px;
+  transition: border-color 0.15s ease;
+}
+
+.board-card:hover {
+  border-color: var(--theme-muted, #8e8e8e);
+}
+
+.board-card__top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.55rem;
+}
+
+.board-card__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 400;
+  color: var(--theme-fg, #f2f2f2);
+}
+
+.board-card__meta {
+  margin: 0 0 0.55rem;
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.8rem;
+  color: var(--theme-muted, #8e8e8e);
+}
+
+.board-card__desc {
+  margin: 0;
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.9rem;
+  color: var(--theme-muted, #b0b0b0);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.board-detail__body {
+  margin: 0 0 1rem;
+  font-family: system-ui, 'Segoe UI', sans-serif;
+  font-size: 0.98rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.board-replies {
+  margin-top: 2rem;
+}
+
+.board-detail .panel-page__eyebrow a {
+  color: inherit;
+}

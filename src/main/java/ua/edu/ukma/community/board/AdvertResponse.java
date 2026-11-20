@@ -53,6 +53,11 @@ public record AdvertResponse(
         @JsonInclude(JsonInclude.Include.ALWAYS)
         ReplyStatus myReplyStatus,
 
+        @Schema(description = "Ідентифікатор вашого відгуку; null, якщо ви не відгукувалися",
+                example = "c1000000-0000-4000-8000-000000000001", nullable = true)
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        UUID myReplyId,
+
         @Schema(description = "Час створення (ISO 8601)", example = "2026-11-16T12:00:00+02:00",
                 requiredMode = Schema.RequiredMode.REQUIRED)
         OffsetDateTime createdAt
@@ -61,6 +66,7 @@ public record AdvertResponse(
     public static AdvertResponse from(AdvertView view, String authorName) {
         Advert a = view.advert();
         return new AdvertResponse(a.id(), a.type(), a.title(), a.description(), a.slots(), a.deadline(),
-                view.status(), view.visibleContact(), view.own(), authorName, view.myReplyStatus(), a.createdAt());
+                view.status(), view.visibleContact(), view.own(), authorName, view.myReplyStatus(),
+                view.myReplyId(), a.createdAt());
     }
 }

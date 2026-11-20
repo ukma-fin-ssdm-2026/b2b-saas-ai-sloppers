@@ -12,7 +12,7 @@ function LoginPage() {
 
   const fromState = (location.state as { from?: string; verifiedEmail?: string } | null)
   const fromQuery = searchParams.get('from')
-  const from = fromState?.from ?? fromQuery ?? '/admin'
+  const from = fromState?.from ?? fromQuery ?? '/board'
   const verifiedEmail = fromState?.verifiedEmail
 
   const [username, setUsername] = useState(verifiedEmail ?? '')
@@ -22,7 +22,7 @@ function LoginPage() {
   const [submitting, setSubmitting] = useState(false)
 
   if (isAuthenticated) {
-    return <Navigate to={from.startsWith('/') ? from : '/admin'} replace />
+    return <Navigate to={from.startsWith('/') ? from : '/board'} replace />
   }
 
   const onSubmit = async (event: FormEvent) => {
@@ -35,8 +35,8 @@ function LoginPage() {
         setError(result.error)
         return
       }
-      const target = from.startsWith('/') ? from : '/admin'
-      navigate(target, { replace: true })
+      const target = from.startsWith('/') ? from : '/board'
+      void navigate(target, { replace: true })
     } finally {
       setSubmitting(false)
     }
@@ -96,6 +96,9 @@ function LoginPage() {
             </button>
             <Link to="/register" className="orgs-btn">
               Реєстрація
+            </Link>
+            <Link to="/password-reset" className="orgs-btn">
+              Забули пароль
             </Link>
             <Link to="/verify" className="orgs-btn">
               Підтвердити код

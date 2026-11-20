@@ -1,25 +1,13 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { useAuth } from '../../auth/AuthContext'
-import { confirmLogout } from '../../auth/confirmLogout'
 import '../OrganizationsPage.css'
 import '../panel.css'
 
 function AdminLayout() {
-  const { session, logout } = useAuth()
-
-  const onLogout = () => {
-    if (confirmLogout()) logout()
-  }
-
   return (
     <main className="panel-page">
       <div className="panel-page__inner panel-page__inner--wide">
-        <p className="panel-page__eyebrow">Адмін · {session?.username}</p>
+        <p className="panel-page__eyebrow">Адмін</p>
         <h1 className="panel-page__title">Панель керування</h1>
-        <p className="panel-banner">
-          Створюй організації й події з фото — вони зʼявляться на головній
-          («Події») та в каруселі «Організації».
-        </p>
         <nav className="panel-nav" aria-label="Адмін навігація">
           <NavLink to="/admin" end>
             Огляд
@@ -28,9 +16,6 @@ function AdminLayout() {
           <NavLink to="/admin/events">Усі події</NavLink>
           <NavLink to="/admin/moderation">Модерація</NavLink>
           <NavLink to="/">Сайт →</NavLink>
-          <button type="button" className="orgs-btn" onClick={onLogout}>
-            Вийти
-          </button>
         </nav>
         <Outlet />
       </div>

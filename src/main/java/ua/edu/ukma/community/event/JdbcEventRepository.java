@@ -66,12 +66,16 @@ public class JdbcEventRepository implements EventRepository {
      */
     @Override
     public List<Event> findPublishedBetween(UUID organizationId, OffsetDateTime from, OffsetDateTime to) {
-        return jdbc.sql("SELECT " + COLUMNS + """
-                         FROM event
-                         WHERE status = 'PUBLISHED'
-                           AND starts_at >= :from
-                           AND (CAST(:to AS timestamptz) IS NULL OR starts_at < :to)
-                           AND (CAST(:organizationId AS uuid) IS NULL OR organization_id = :organizationId)""")
+        // Text blocks discard the newline after """, so concatenate an explicit
+        // space — otherwise COLUMNS + "FROM" becomes "updated_atFROM".
+        return jdbc.sql("""
+                SELECT %s
+                FROM event
+                WHERE status = 'PUBLISHED'
+                  AND starts_at >= :from
+                  AND (CAST(:to AS timestamptz) IS NULL OR starts_at < :to)
+                  AND (CAST(:organizationId AS uuid) IS NULL OR organization_id = :organizationId)
+                """.formatted(COLUMNS))
                 .param("from", from)
                 .param("to", to)
                 .param("organizationId", organizationId)

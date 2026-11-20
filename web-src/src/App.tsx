@@ -4,6 +4,9 @@ import { AuthProvider } from './auth/AuthContext'
 import RequireAuth from './auth/RequireAuth'
 import AppHeader from './components/AppHeader'
 import IntroOverlay from './components/IntroOverlay'
+import ThemeBackground from './components/ThemeBackground'
+import { ThemeProvider } from './theme/ThemeContext'
+import './theme/themes.css'
 import AdminEventsPage from './pages/admin/AdminEventsPage'
 import AdminHomePage from './pages/admin/AdminHomePage'
 import AdminLayout from './pages/admin/AdminLayout'
@@ -14,14 +17,17 @@ import AdminOrganizationsPage from './pages/admin/AdminOrganizationsPage'
 import EventDetailPage from './pages/EventDetailPage'
 import EventsPage from './pages/EventsPage'
 import HomePage from './pages/HomePage'
-import LabHomePage from './pages/lab/LabHomePage'
-import LabLayout from './pages/lab/LabLayout'
-import LabPlaygroundPage from './pages/lab/LabPlaygroundPage'
 import LoginPage from './pages/LoginPage'
 import OrganizationDetailPage from './pages/OrganizationDetailPage'
 import OrganizationsPage from './pages/OrganizationsPage'
 import RegisterPage from './pages/RegisterPage'
 import VerifyPage from './pages/VerifyPage'
+import BoardLayout from './pages/board/BoardLayout'
+import BoardListPage from './pages/board/BoardListPage'
+import AdvertCreatePage from './pages/board/AdvertCreatePage'
+import AdvertDetailPage from './pages/board/AdvertDetailPage'
+import ProfilePage from './pages/ProfilePage'
+import PasswordResetPage from './pages/PasswordResetPage'
 import './App.css'
 
 const INTRO_SEEN_KEY = 'community-intro-seen'
@@ -57,74 +63,92 @@ function App() {
 
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <div className="app-shell">
-          {showIntro && (
-            <IntroOverlay
-              onFadeStart={handleIntroFadeStart}
-              onComplete={handleIntroComplete}
-            />
-          )}
-          <div
-            className={`app-main${mainVisible ? ' app-main--visible' : ''}`}
-            aria-hidden={showIntro ? !mainVisible : false}
-          >
-            <AppHeader />
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/organizations" element={<OrganizationsPage />} />
-              <Route
-                path="/organizations/:organizationId"
-                element={<OrganizationDetailPage />}
+      <ThemeProvider>
+        <BrowserRouter>
+          <ThemeBackground />
+          <div className="app-shell">
+            {showIntro && (
+              <IntroOverlay
+                onFadeStart={handleIntroFadeStart}
+                onComplete={handleIntroComplete}
               />
-              <Route path="/events" element={<EventsPage />} />
-              <Route path="/events/:eventId" element={<EventDetailPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/verify" element={<VerifyPage />} />
-
-              <Route
-                path="/admin"
-                element={
-                  <RequireAuth>
-                    <AdminLayout />
-                  </RequireAuth>
-                }
-              >
-                <Route index element={<AdminHomePage />} />
+            )}
+            <div
+              className={`app-main${mainVisible ? ' app-main--visible' : ''}`}
+              aria-hidden={showIntro ? !mainVisible : false}
+            >
+              <AppHeader />
+              <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/organizations" element={<OrganizationsPage />} />
                 <Route
-                  path="organizations"
-                  element={<AdminOrganizationsPage />}
+                  path="/organizations/:organizationId"
+                  element={<OrganizationDetailPage />}
                 />
+                <Route path="/events" element={<EventsPage />} />
+                <Route path="/events/:eventId" element={<EventDetailPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/verify" element={<VerifyPage />} />
+                <Route path="/password-reset" element={<PasswordResetPage />} />
                 <Route
-                  path="organizations/:organizationId"
-                  element={<AdminOrganizationDetailPage />}
+                  path="/profile"
+                  element={
+                    <RequireAuth>
+                      <ProfilePage />
+                    </RequireAuth>
+                  }
                 />
+
                 <Route
-                  path="organizations/:organizationId/events"
-                  element={<AdminOrganizationEventsPage />}
-                />
-                <Route path="events" element={<AdminEventsPage />} />
-                <Route path="moderation" element={<AdminModerationPage />} />
-              </Route>
+                  path="/board"
+                  element={
+                    <RequireAuth>
+                      <BoardLayout />
+                    </RequireAuth>
+                  }
+                >
+                  <Route index element={<BoardListPage scope="open" />} />
+                  <Route path="mine" element={<BoardListPage scope="mine" />} />
+                  <Route
+                    path="replied"
+                    element={<BoardListPage scope="replied" />}
+                  />
+                  <Route path="new" element={<AdvertCreatePage />} />
+                  <Route path=":advertId" element={<AdvertDetailPage />} />
+                </Route>
 
-              <Route
-                path="/lab"
-                element={
-                  <RequireAuth>
-                    <LabLayout />
-                  </RequireAuth>
-                }
-              >
-                <Route index element={<LabHomePage />} />
-                <Route path="playground" element={<LabPlaygroundPage />} />
-              </Route>
+                <Route
+                  path="/admin"
+                  element={
+                    <RequireAuth>
+                      <AdminLayout />
+                    </RequireAuth>
+                  }
+                >
+                  <Route index element={<AdminHomePage />} />
+                  <Route
+                    path="organizations"
+                    element={<AdminOrganizationsPage />}
+                  />
+                  <Route
+                    path="organizations/:organizationId"
+                    element={<AdminOrganizationDetailPage />}
+                  />
+                  <Route
+                    path="organizations/:organizationId/events"
+                    element={<AdminOrganizationEventsPage />}
+                  />
+                  <Route path="events" element={<AdminEventsPage />} />
+                  <Route path="moderation" element={<AdminModerationPage />} />
+                </Route>
 
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
           </div>
-        </div>
-      </BrowserRouter>
+        </BrowserRouter>
+      </ThemeProvider>
     </AuthProvider>
   )
 }

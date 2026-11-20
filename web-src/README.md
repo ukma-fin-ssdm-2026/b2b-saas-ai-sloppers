@@ -33,7 +33,7 @@ Vite проксує `/api` -> `http://localhost:8080`, тож у коді вик
 | `npm run test:coverage` | тести + покриття (поріг рядків 5%)        |
 | `npm run lint`       | лінтер                                       |
 
-Тести лежать поруч із кодом (`*.test.ts(x)`): `auth`, `mock/store`, `api/client`, `utils/datetime`. Фікстури — `src/test/support/testFixtures.ts` (аналог бекенд `TestFixtures`).
+Тести лежать поруч із кодом (`*.test.ts(x)`): `auth`, `api/client`, `utils/datetime`. Фікстури — `src/test/support/testFixtures.ts` (аналог бекенд `TestFixtures`).
 
 ## Маршрути
 
@@ -44,7 +44,9 @@ Vite проксує `/api` -> `http://localhost:8080`, тож у коді вик
 | `/login` | Вхід через @ukma.edu.ua (JWT) |
 | `/register`, `/verify` | Реєстрація + код підтвердження |
 | `/admin/*` | Адмін: org CRUD/logo + кабінет подій |
-| `/lab/*` | Моки в пам’яті браузера (потрібен логін) |
+| `/board/*` | Дошка оголошень (лише JWT): список, створення, відгуки |
+| `/profile` | Ім’я / прізвище |
+| `/password-reset` | Скидання пароля |
 
 Вхід — лише зареєстрований `@ukma.edu.ua` з JWT від бекенду. При `401` з API — сесія скидається й редірект на `/login`.
 
@@ -55,9 +57,8 @@ web-src/
 ├── src/
 │   ├── api/              # HTTP-клієнт + org/events/calendar
 │   ├── auth/             # JWT-сесія, RequireAuth
-│   ├── mock/             # in-memory store для /lab
 │   ├── components/
-│   ├── pages/            # public + admin/ + lab/
+│   ├── pages/            # public
 │   ├── types/
 │   ├── App.tsx
 │   └── main.tsx

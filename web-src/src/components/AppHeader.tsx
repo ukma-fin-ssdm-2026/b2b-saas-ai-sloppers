@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { confirmLogout } from '../auth/confirmLogout'
+import ThemeSwitcher from './ThemeSwitcher'
 import './AppHeader.css'
 
 function AppHeader() {
@@ -37,6 +38,14 @@ function AppHeader() {
           {isAuthenticated ? (
             <>
               <NavLink
+                to="/board"
+                className={({ isActive }) =>
+                  `app-header__link${isActive ? ' app-header__link--active' : ''}`
+                }
+              >
+                Дошка
+              </NavLink>
+              <NavLink
                 to="/admin"
                 className={({ isActive }) =>
                   `app-header__link${isActive ? ' app-header__link--active' : ''}`
@@ -45,12 +54,12 @@ function AppHeader() {
                 Адмін
               </NavLink>
               <NavLink
-                to="/lab"
+                to="/profile"
                 className={({ isActive }) =>
                   `app-header__link${isActive ? ' app-header__link--active' : ''}`
                 }
               >
-                Lab
+                Профіль
               </NavLink>
               <button
                 type="button"
@@ -70,6 +79,7 @@ function AppHeader() {
               Вхід
             </NavLink>
           )}
+          <ThemeSwitcher />
         </nav>
       </div>
     </header>

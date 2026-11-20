@@ -196,6 +196,7 @@ class BoardFlowIntegrationTest {
         // до підтвердження контакт закритий і для відгукувача
         asStranger(get(advert), alice)
                 .andExpect(jsonPath("$.myReplyStatus").value("PENDING"))
+                .andExpect(jsonPath("$.myReplyId").value(aliceReply))
                 .andExpect(jsonPath("$.contact").value(nullValue()));
         asStranger(get(ADVERTS + "/replied"), alice).andExpect(status().isOk());
 

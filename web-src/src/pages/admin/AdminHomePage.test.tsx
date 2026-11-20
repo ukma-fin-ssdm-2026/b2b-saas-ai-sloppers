@@ -1,8 +1,6 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AuthProvider } from '../../auth/AuthContext'
-import { clearSession, createSession, writeSession } from '../../auth/session'
 import AdminHomePage from './AdminHomePage'
 
 vi.mock('../../api/organizations', async () => {
@@ -24,13 +22,11 @@ const { listEvents } = await import('../../api/events')
 
 afterEach(() => {
   cleanup()
-  clearSession()
   vi.resetAllMocks()
 })
 
 describe('AdminHomePage', () => {
-  it('показує email Global Admin з JWT-сесії', async () => {
-    writeSession(createSession('a.butyrin@ukma.edu.ua', 'admin', 'jwt'))
+  it('показує лічильники і дії без інструкцій', async () => {
     vi.mocked(listOrganizations).mockResolvedValue({
       data: [],
       pagination: { offset: 0, limit: 1, total: 2, hasMore: true },
@@ -41,16 +37,16 @@ describe('AdminHomePage', () => {
     })
 
     render(
-      <AuthProvider>
-        <MemoryRouter>
-          <AdminHomePage />
-        </MemoryRouter>
-      </AuthProvider>,
+      <MemoryRouter>
+        <AdminHomePage />
+      </MemoryRouter>,
     )
 
-    expect(
-      screen.getByText(/Увійди акаунтом Global Admin \(a\.butyrin@ukma\.edu\.ua\)/),
-    ).toBeInTheDocument()
+    expect(screen.queryByText(/Швидкий стенд/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Увійди акаунтом Global Admin/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Організації' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Усі події' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Публічний сайт' })).toBeInTheDocument()
 
     await waitFor(() => {
       expect(screen.getByText('2')).toBeInTheDocument()

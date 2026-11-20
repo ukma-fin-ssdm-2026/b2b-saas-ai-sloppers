@@ -154,7 +154,7 @@
   transform: translateX(-50%);
   max-width: var(--cc-card-w, 220px);
   padding: 0 0.25rem;
-  color: #f2f2f2;
+  color: var(--theme-fg, #f2f2f2);
   font-family: Georgia, 'Times New Roman', serif;
   font-size: clamp(0.85rem, 1.4vw, 1.05rem);
   font-weight: 400;
@@ -167,6 +167,21 @@
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.65);
   pointer-events: none;
   backface-visibility: hidden;
+}
+
+html[data-theme='white'] .circular-carousel__card-name {
+  color: #141414;
+  text-shadow:
+    0 0 1px rgba(244, 242, 238, 0.95),
+    0 1px 10px rgba(244, 242, 238, 0.85);
+}
+
+:is(
+  html[data-theme='grainient'],
+  html[data-theme='grainient-teal'],
+  html[data-theme='grainient-mono']
+) .circular-carousel__card-name {
+  text-shadow: none;
 }
 
 .circular-carousel__caption {

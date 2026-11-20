@@ -10,12 +10,30 @@ import java.util.UUID;
  *
  * @param own           чи переглядач — автор
  * @param myReplyStatus статус відгуку переглядача на це оголошення, або {@code null}
+ * @param myReplyId     ідентифікатор відгуку переглядача, або {@code null}
  * @param status        статус з урахуванням дедлайну ({@link Advert#effectiveStatus})
  */
-public record AdvertView(Advert advert, boolean own, ReplyStatus myReplyStatus, AdvertStatus status) {
+public record AdvertView(
+        Advert advert,
+        boolean own,
+        ReplyStatus myReplyStatus,
+        UUID myReplyId,
+        AdvertStatus status
+) {
 
-    public static AdvertView of(Advert advert, UUID viewerId, ReplyStatus myReplyStatus, OffsetDateTime now) {
-        return new AdvertView(advert, advert.isAuthor(viewerId), myReplyStatus, advert.effectiveStatus(now));
+    public static AdvertView of(
+            Advert advert,
+            UUID viewerId,
+            ReplyStatus myReplyStatus,
+            UUID myReplyId,
+            OffsetDateTime now
+    ) {
+        return new AdvertView(
+                advert,
+                advert.isAuthor(viewerId),
+                myReplyStatus,
+                myReplyId,
+                advert.effectiveStatus(now));
     }
 
     public boolean contactVisible() {
