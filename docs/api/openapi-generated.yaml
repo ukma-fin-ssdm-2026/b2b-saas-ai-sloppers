@@ -671,6 +671,40 @@ paths:
       summary: Підтвердити пошту кодом
       tags:
       - Auth
+  /api/v1/complaints:
+    post:
+      description: "FR-056: скарга на оголошення або відгук із причиною (спам, обр\
+        ази, інше). Одна скарга на один об'єкт від одного користувача; на власний\
+        \ контент скаржитися не можна. Заблокований акаунт скарг не подає (FR-055)."
+      operationId: createComplaint
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintCreateRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ComplaintResponse"
+          description: Скаргу прийнято
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Поскаржитися на контент
+      tags:
+      - Moderation
   /api/v1/events:
     get:
       description: "Публічна (доступна гостям). Лише опубліковані майбутні події,\
@@ -1048,6 +1082,324 @@ paths:
       summary: Зняти подію з публікації
       tags:
       - Events
+  /api/v1/moderation/banned-words:
+    get:
+      description: "FR-058: слова, за якими автофільтр відхиляє оголошення й відгу\
+        ки."
+      operationId: listBannedWords
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BannedWordResponse"
+          description: Список слів
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      security:
+      - bearerAuth: []
+      summary: Список заборонених слів
+      tags:
+      - Moderation
+    post:
+      description: "FR-058: одне слово, регістр не має значення. Фільтр порівнює с\
+        лова цілком, тому «кіт» не блокує «Нікіту»."
+      operationId: addBannedWord
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BannedWordRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BannedWordResponse"
+          description: Слово додано
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Додати заборонене слово
+      tags:
+      - Moderation
+  /api/v1/moderation/banned-words/{wordId}:
+    delete:
+      description: FR-058.
+      operationId: removeBannedWord
+      parameters:
+      - description: Ідентифікатор слова
+        example: c1000000-0000-4000-8000-000000000001
+        in: path
+        name: wordId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "204":
+          description: Слово прибрано
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Прибрати слово зі списку
+      tags:
+      - Moderation
+  /api/v1/moderation/complaints:
+    get:
+      description: "FR-057: скарги, найновіші спершу, з фільтром за станом. Лише Global\
+        \ Admin."
+      operationId: listComplaints
+      parameters:
+      - description: Лише скарги в цьому стані
+        example: OPEN
+        in: query
+        name: status
+        required: false
+        schema:
+          type: string
+          enum:
+          - OPEN
+          - RESOLVED
+          - DISMISSED
+      - description: "Розмір сторінки, 1–100"
+        in: query
+        name: limit
+        required: false
+        schema:
+          type: string
+          maximum: 100
+          minimum: 1
+      - description: Скільки елементів пропустити
+        in: query
+        name: offset
+        required: false
+        schema:
+          type: string
+          minimum: 0
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OffsetPageComplaintResponse"
+          description: Сторінка скарг
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      security:
+      - bearerAuth: []
+      summary: Черга скарг
+      tags:
+      - Moderation
+  /api/v1/moderation/complaints/{complaintId}/dismiss:
+    post:
+      description: "FR-057: контент лишається, скарга закривається і більше не рах\
+        ується в автоматичному блокуванні (FR-060)."
+      operationId: dismissComplaint
+      parameters:
+      - description: Ідентифікатор скарги
+        example: c1000000-0000-4000-8000-000000000001
+        in: path
+        name: complaintId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintDecisionRequest"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ComplaintResponse"
+          description: Скаргу відхилено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Відхилити скаргу
+      tags:
+      - Moderation
+  /api/v1/moderation/complaints/{complaintId}/resolve:
+    post:
+      description: "FR-057: оголошення переходить у DELETED, відгук — у REMOVED. І\
+        нші відкриті скарги на цей самий об'єкт закриваються тим самим рішенням."
+      operationId: resolveComplaint
+      parameters:
+      - description: Ідентифікатор скарги
+        example: c1000000-0000-4000-8000-000000000001
+        in: path
+        name: complaintId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ComplaintDecisionRequest"
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ComplaintResponse"
+          description: "Скаргу підтверджено, контент прибрано"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Підтвердити скаргу і прибрати контент
+      tags:
+      - Moderation
+  /api/v1/moderation/users/{userId}/ban:
+    delete:
+      description: "FR-054: знімає блокування достроково і повертає акаунту статус\
+        , який був до бану."
+      operationId: unbanUser
+      parameters:
+      - description: Ідентифікатор користувача
+        example: a1000000-0000-4000-8000-000000000001
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BanResponse"
+          description: Користувача розблоковано
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Розблокувати користувача
+      tags:
+      - Moderation
+    post:
+      description: "FR-054: на строк або безстроково, із причиною. Заблокований не\
+        \ входить у захищені маршрути, а його активні оголошення зникають із дошки\
+        \ (FR-055)."
+      operationId: banUser
+      parameters:
+      - description: Ідентифікатор користувача
+        example: a1000000-0000-4000-8000-000000000001
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BanRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BanResponse"
+          description: Користувача заблоковано
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Заблокувати користувача
+      tags:
+      - Moderation
+  /api/v1/moderation/users/{userId}/bans:
+    get:
+      description: "FR-054: журнал блокувань, найновіші спершу; рядки не видаляють\
+        ся."
+      operationId: listBans
+      parameters:
+      - description: Ідентифікатор користувача
+        example: a1000000-0000-4000-8000-000000000001
+        in: path
+        name: userId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BanResponse"
+          description: Історія блокувань
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+      security:
+      - bearerAuth: []
+      summary: Історія блокувань користувача
+      tags:
+      - Moderation
   /api/v1/organizations:
     get:
       description: "Публічна (доступна гостям). Пагінація зі зсувом, сортування за\
@@ -1887,6 +2239,7 @@ components:
           - CONFIRMED
           - REJECTED
           - WITHDRAWN
+          - REMOVED
           example: PENDING
         own:
           type: boolean
@@ -1937,6 +2290,7 @@ components:
           - VALIDATION_ERROR
           - INVALID_PARAMETER
           - MALFORMED_REQUEST
+          - CONTENT_REJECTED
           - INVALID_VERIFICATION_CODE
           - VERIFICATION_CODE_EXPIRED
           - UNAUTHORIZED
@@ -1951,6 +2305,8 @@ components:
           - REPLY_NOT_FOUND
           - USER_NOT_FOUND
           - HEAD_NOT_FOUND
+          - COMPLAINT_NOT_FOUND
+          - BANNED_WORD_NOT_FOUND
           - ROUTE_NOT_FOUND
           - METHOD_NOT_ALLOWED
           - SLUG_ALREADY_EXISTS
@@ -1961,6 +2317,10 @@ components:
           - LAST_HEAD
           - ALREADY_REPLIED
           - ADVERT_CLOSED
+          - ALREADY_COMPLAINED
+          - ALREADY_BANNED
+          - NOT_BANNED
+          - BANNED_WORD_EXISTS
           - TOO_MANY_REQUESTS
           - PAYLOAD_TOO_LARGE
           - UNSUPPORTED_MEDIA_TYPE
@@ -2007,6 +2367,183 @@ components:
             (лише Global Admin)
       required:
       - email
+    BanRequest:
+      type: object
+      description: Блокування користувача
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          description: Коли блокування спадає саме; порожнє — безстроково
+          example: 2026-12-31T23:59:00+02:00
+        reason:
+          type: string
+          description: "Причина, яку побачить журнал модерації"
+          example: Спам на дошці оголошень
+          maxLength: 500
+          minLength: 0
+      required:
+      - reason
+    BanResponse:
+      type: object
+      description: Блокування
+      properties:
+        active:
+          type: boolean
+          description: Чи діє блокування зараз
+        automatic:
+          type: boolean
+          description: Чи заблокувала система автоматично
+        bannedBy:
+          type: string
+          format: uuid
+          description: Хто заблокував; порожнє — автоматичне блокування (FR-060)
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          description: Коли спадає; порожнє — безстроково
+        id:
+          type: string
+          format: uuid
+        liftedAt:
+          type: string
+          format: date-time
+        liftedBy:
+          type: string
+          format: uuid
+          description: Хто зняв; порожнє — строк вийшов
+        reason:
+          type: string
+        userId:
+          type: string
+          format: uuid
+    BannedWordRequest:
+      type: object
+      description: Заборонене слово
+      properties:
+        word:
+          type: string
+          description: Одне слово; регістр не має значення
+          example: спам
+          maxLength: 100
+          minLength: 2
+      required:
+      - word
+    BannedWordResponse:
+      type: object
+      description: Заборонене слово
+      properties:
+        addedBy:
+          type: string
+          format: uuid
+          description: Хто додав
+        createdAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        word:
+          type: string
+    ComplaintCreateRequest:
+      type: object
+      description: Скарга на контент
+      properties:
+        category:
+          type: string
+          description: Причина
+          enum:
+          - SPAM
+          - ABUSE
+          - OTHER
+          example: SPAM
+        comment:
+          type: string
+          description: "Деталі, якщо потрібні"
+          example: "Рекламує курси, не має стосунку до НаУКМА"
+          maxLength: 500
+          minLength: 0
+        targetId:
+          type: string
+          format: uuid
+          description: Ідентифікатор оголошення або відгуку
+          example: b1000000-0000-4000-8000-000000000001
+        targetType:
+          type: string
+          description: На що скарга
+          enum:
+          - ADVERT
+          - REPLY
+          example: ADVERT
+      required:
+      - category
+      - targetId
+      - targetType
+    ComplaintDecisionRequest:
+      type: object
+      description: Рішення щодо скарги
+      properties:
+        resolution:
+          type: string
+          description: Коментар модератора для журналу
+          example: "Реклама, оголошення прибрано"
+          maxLength: 500
+          minLength: 0
+    ComplaintResponse:
+      type: object
+      description: Скарга
+      properties:
+        authorId:
+          type: string
+          format: uuid
+          description: Автор оскарженого контенту
+        authorName:
+          type: string
+          description: "Ім'я автора контенту, якщо задане"
+        category:
+          type: string
+          enum:
+          - SPAM
+          - ABUSE
+          - OTHER
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        reporterId:
+          type: string
+          format: uuid
+          description: Хто поскаржився
+        resolution:
+          type: string
+        resolvedAt:
+          type: string
+          format: date-time
+        resolvedBy:
+          type: string
+          format: uuid
+          description: Хто розглянув
+        status:
+          type: string
+          enum:
+          - OPEN
+          - RESOLVED
+          - DISMISSED
+        targetId:
+          type: string
+          format: uuid
+        targetType:
+          type: string
+          enum:
+          - ADVERT
+          - REPLY
     ErrorResponse:
       description: Єдина обгортка для всіх помилок API
       properties:
@@ -2214,6 +2751,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AdvertResponse"
+        pagination:
+          $ref: "#/components/schemas/OffsetPagination"
+    OffsetPageComplaintResponse:
+      type: object
+      description: "Сторінка результатів, пагінація зі зсувом (offset)"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ComplaintResponse"
         pagination:
           $ref: "#/components/schemas/OffsetPagination"
     OffsetPageEventResponse:
@@ -2531,6 +3078,7 @@ components:
           - CONFIRMED
           - REJECTED
           - WITHDRAWN
+          - REMOVED
           example: PENDING
         userId:
           type: string

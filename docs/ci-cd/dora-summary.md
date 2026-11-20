@@ -2,11 +2,13 @@
 
 Дані: [`metrics-raw.md`](metrics-raw.md), 20 запусків workflow **CI** на `main` за період **22.10.2026 22:27 — 12.11.2026 16:36** (UTC+2), тобто 20,8 доби або 2,97 тижня.
 
+Докази: [`evidence/`](evidence/README.md) — експорт запусків із jobs ([`runs-jobs.json`](evidence/runs-jobs.json)), перші коміти PR ([`prs.txt`](evidence/prs.txt)) і вивід `gh pr view <n> --json commits` для кожного PR із таблиці ([`evidence/pr-commits/`](evidence/pr-commits/)).
+
 ## Що вважається розгортанням
 
 **Розгортання** означає зелений запуск workflow CI (`.github/workflows/ci.yml`, jobs `Build and Test Backend` і `Build and Test Frontend`) на `main`.
 
-Lint, SonarQube Cloud, API Docs, Deploy API Docs і ручний Build and Deploy не враховано; причини наведено в `metrics-raw.md`.
+Lint, SonarQube Cloud, API Docs, Deploy API Docs і ручний Build and Deploy не враховано; причини наведено в [`metrics-raw.md`](metrics-raw.md).
 
 DORA визначає розгортання як викладку в робоче середовище, а ми рахуємо зелений CI. Тому всі результати нижче є **наближенням**.
 
@@ -25,7 +27,7 @@ DORA визначає розгортання як викладку в робоч
 
 **Час виконання змін.**
 - Для трьох PR зі скасованим запуском (#77, #79, #102) кінцем інтервалу взято наступний зелений запуск, який уже містить їхні зміни.
-- Чотири PR без власного запуску CI (#86, #89, #90, #91) не враховано: у `metrics-raw.md` немає часу їхнього першого коміту. Їхні зміни доставив зелений запуск №14.
+- Чотири PR без власного запуску CI (#86, #89, #90, #91) не враховано: у [`metrics-raw.md`](metrics-raw.md) немає часу їхнього першого коміту (тепер він є в [`evidence/pr-commits/`](evidence/pr-commits/)). Їхні зміни доставив зелений запуск №14.
 - Розкид великий: від 1,0 год (#93) до 142,8 год (#69). Тому основним значенням беремо медіану.
 
 **Частота збоїв змін.** Знаменник — 20 завершених запусків, тобто скасовані теж включено. Якщо скасовані не рахувати, виходить 0 / 17, і результат той самий.
@@ -90,3 +92,42 @@ DORA визначає розгортання як викладку в робоч
     - розгортанням вважаємо зелений CI, а не викладку в робоче середовище;
     - вибірка невелика (20 запусків за 3 тижні);
     - чотири PR без власного запуску CI не увійшли в час виконання змін.
+
+## Бонуси
+
+### Бонус 2. Покращення з виміряним ефектом: один job статичного аналізу замість трьох
+
+**Проблема.** На кожен пуш у `main` (і на кожен PR) ішли три jobs статичного аналізу на спільних self-hosted раннерах курсу: `Lint Backend`, `Lint Frontend` (`lint.yml`) і `SonarQube Cloud Analysis` (`sonar.yml`). Sonar уже робив checkout, ставив JDK і Node, виконував `npm ci` і компілював та тестував бекенд. Lint повторював усю цю підготовку ще двічі тільки для того, щоб запустити Checkstyle, SpotBugs, ESLint, Prettier і `npm audit`. Черга на раннери — єдиний помітний внесок CI в час виконання змін (178 хв 01.11, див. розділ 3), тому кожен зайвий job на коміт — це місце в черзі, яке забирають і в нас, і в інших команд.
+
+**Дія.** Лінтери перенесено в job Sonar (`.github/workflows/sonar.yml`, тепер workflow **Static Analysis**), `lint.yml` видалено:
+- бекенд: `./mvnw verify sonar:sonar` замість `./mvnw test sonar:sonar -Dcheckstyle.skip`. Checkstyle (фаза `validate`) і SpotBugs (`verify`) працюють у тому самому запуску Maven, що й тести та аналіз, без окремої компіляції;
+- фронтенд: ESLint, Prettier і `npm audit` використовують `node_modules`, який Sonar і так встановлює;
+- лінтери, як і раніше, лише звітують (`failOnViolation=false`, `continue-on-error`), підсумок і звіти — у тому ж job. Обов'язкові перевірки (`Build and Test Backend/Frontend`) не змінено.
+
+**Метрика.** Сумарні хвилини раннера на коміт у `main` у змінених workflow (Lint + SonarQube Cloud до, Static Analysis після): сума `completedAt − startedAt` усіх jobs. Дані зібрано так само, як `evidence/runs-jobs.json`:
+
+```bash
+gh run list --workflow lint.yml  --branch main --event push --json databaseId,headSha,workflowName,conclusion,attempt,createdAt,updatedAt
+gh run list --workflow sonar.yml --branch main --event push --json databaseId,headSha,workflowName,conclusion,attempt,createdAt,updatedAt
+gh run view <databaseId> --json jobs   # startedAt / completedAt кожного job
+```
+
+Враховано тільки коміти злитих PR зі змінами коду, тестів або конфігурації, для яких були обидва workflow (Sonar з'явився в #98) і жоден запуск не скасовано. Не враховано: `4f51c2f` (#103, ще без Sonar), `1290e36` (#102) і `38b9af4` (#106) — скасовано через `concurrency`, `96bf273` (#113) — лише документація.
+
+**До** ([сирі дані](evidence/bonus2/before-runs-jobs.json)):
+
+| Коміт | PR | Lint Backend, хв | Lint Frontend, хв | Sonar, хв | Jobs | Хвилин раннера |
+|---|---|---:|---:|---:|---:|---:|
+| `eb24b1f` | #98 | 1,38 | 1,32 | 3,02 | 3 | 5,72 |
+| `45da4cb` | #105 | 1,53 | 1,20 | 2,65 | 3 | 5,38 |
+| `166527c` | #107 | 1,35 | 1,12 | 3,30 | 3 | 5,77 |
+| `0a11eae` | #110 | 0,90 | 1,10 | 3,45 | 3 | 5,45 |
+| `94f8854` | #108 | 1,28 | 1,20 | 3,72 | 3 | 6,20 |
+| `63fae84` | #111 | 1,22 | 1,98 | 5,52 | 3 | 8,72 |
+| | | | | | **3** | **середнє 6,21 / медіана 5,75** |
+
+**Після:** _заповнюється після ≥3 злитих PR зі змінами коду або конфігурації (бонуси 1, 3, 4, 5)._
+
+| Коміт | PR | Static Analysis, хв | Jobs | Хвилин раннера |
+|---|---|---:|---:|---:|
+| | | | | |

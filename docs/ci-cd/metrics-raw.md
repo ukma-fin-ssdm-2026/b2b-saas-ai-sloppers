@@ -23,6 +23,7 @@
 - **Виконання** — від `started_at` першого job до `completed_at` останнього job. Сюди входить простій між job-ами, якщо раннер між ними віддали іншому workflow.
 - **Перший коміт PR** — `authoredDate` найраннішого коміту pull request (не час squash-злиття).
 - Час у таблиці — **UTC+2**.
+- Джерела: [`evidence/runs-jobs.json`](evidence/runs-jobs.json) (`gh run list` + `gh run view <id> --json jobs`), перші коміти PR — [`evidence/pr-commits/pr-<n>.json`](evidence/pr-commits/) (`gh pr view <n> --json commits`), зведено в [`evidence/prs.txt`](evidence/prs.txt).
 
 Статуси: зелений запуск, червоний запуск (таких немає), скасований запуск. Скасування дає `concurrency.cancel-in-progress: true` на групі `ci-${{ github.ref }}`: новий пуш у `main` обриває попередній запуск. Це не червона збірка і не розгортання.
 

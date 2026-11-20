@@ -10,6 +10,7 @@ import './theme/themes.css'
 import AdminEventsPage from './pages/admin/AdminEventsPage'
 import AdminHomePage from './pages/admin/AdminHomePage'
 import AdminLayout from './pages/admin/AdminLayout'
+import AdminModerationPage from './pages/admin/AdminModerationPage'
 import AdminOrganizationDetailPage from './pages/admin/AdminOrganizationDetailPage'
 import AdminOrganizationEventsPage from './pages/admin/AdminOrganizationEventsPage'
 import AdminOrganizationsPage from './pages/admin/AdminOrganizationsPage'
@@ -139,6 +140,7 @@ function App() {
                     element={<AdminOrganizationEventsPage />}
                   />
                   <Route path="events" element={<AdminEventsPage />} />
+                  <Route path="moderation" element={<AdminModerationPage />} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

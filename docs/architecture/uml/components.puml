@@ -26,6 +26,7 @@ rectangle "Семестр (клієнт–сервер)" {
     component "Organizations Module" as Orgs <<semester>>
     component "Events & Moderation" as Events <<semester>>
     component "Bulletin Board" as Board <<semester>>
+    component "User Moderation\nскарги, бани, автофільтр" as Mod <<semester>>
     component "Scraper Worker\n(cron)" as Scraper <<semester>>
     component "Calendar Export\n.ics / Google link" as Cal <<semester>>
   }
@@ -51,17 +52,21 @@ Api --> Auth : IAuth
 Api --> Orgs : IOrganizations
 Api --> Events : IEvents
 Api --> Board : IBoard
+Api --> Mod : IModeration
 Api --> Cal : ICalendar
 
 Auth --> DB : SQL
 Orgs --> DB : SQL
 Events --> DB : SQL
 Board --> DB : SQL
+Mod --> DB : SQL
 Scraper --> DB : SQL
 
 Scraper --> Social : HTTP scrape
 Events ..> Scraper : створює\nчернетки подій
 Cal --> GCal : deep link / .ics
+Board ..> Mod : ModerationGate
+Mod ..> Board : ModeratedContent
 
 Account ..> Auth : майбутня\nзаміна AuthZ
 UICtor ..> Client : майбутній\nрендер UI

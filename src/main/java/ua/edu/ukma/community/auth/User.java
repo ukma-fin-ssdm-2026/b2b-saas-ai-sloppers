@@ -59,6 +59,12 @@ public record User(
                 firstName, lastName);
     }
 
+    /** Блокування й розблокування модератором (FR-054); код підтвердження при цьому не чіпаємо. */
+    public User withStatus(UserStatus newStatus, OffsetDateTime now) {
+        return new User(id, email, passwordHash, newStatus, globalAdmin, verification, createdAt, now,
+                firstName, lastName);
+    }
+
     public User withName(String newFirstName, String newLastName, OffsetDateTime now) {
         return new User(id, email, passwordHash, status, globalAdmin, verification, createdAt, now,
                 newFirstName, newLastName);

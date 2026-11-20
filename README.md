@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/ci.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/ci.yml)
 [![API Docs](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/api-docs.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/api-docs.yml)
-[![Lint](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/lint.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/lint.yml)
+[![Static Analysis](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/sonar.yml/badge.svg)](https://github.com/ukma-fin-ssdm-2026/b2b-saas-ai-sloppers/actions/workflows/sonar.yml)
 
 **Платформа для студентських організацій**: єдиний каталог організацій і подій,
 автоматичний збір анонсів з Instagram організацій з подальшою модерацією головою організації,
@@ -31,7 +31,7 @@
 
 - [TeamCharter.md](TeamCharter.md) — ролі, процес, політика якості, розділ «Використання ШІ»
 - [docs/issue-workflow.md](docs/issue-workflow.md) — робочий процес задач і мітки
-- [.github/workflows/](.github/workflows/) — CI: `ci.yml` (збірка й тести), `lint.yml` (статичний аналіз), `api-docs.yml` / `deploy-api-docs.yml` (OpenAPI), `build-and-deploy.yml` (образи й GitOps-деплой)
+- [.github/workflows/](.github/workflows/) — CI: `ci.yml` (збірка й тести), `sonar.yml` (статичний аналіз: SonarQube Cloud, Checkstyle, SpotBugs, ESLint), `api-docs.yml` / `deploy-api-docs.yml` (OpenAPI), `build-and-deploy.yml` (образи й GitOps-деплой)
 
 ## Артефакти вимог (Lab 2)
 

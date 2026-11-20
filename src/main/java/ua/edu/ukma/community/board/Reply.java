@@ -37,6 +37,10 @@ public record Reply(
         return status == ReplyStatus.CONFIRMED;
     }
 
+    public boolean isRemoved() {
+        return status == ReplyStatus.REMOVED;
+    }
+
     public Reply confirm(OffsetDateTime now) {
         return decide(ReplyStatus.CONFIRMED, "підтвердити", now);
     }
@@ -48,6 +52,17 @@ public record Reply(
     /** FR-053: лише поки автор не ухвалив рішення. */
     public Reply withdraw(OffsetDateTime now) {
         return decide(ReplyStatus.WITHDRAWN, "відкликати", now);
+    }
+
+    /**
+     * Модератор прибирає відгук за підтвердженою скаргою (FR-057). Можливо з будь-якого статусу:
+     * образливим може бути й уже підтверджений відгук.
+     */
+    public Reply remove(OffsetDateTime now) {
+        if (status == ReplyStatus.REMOVED) {
+            throw transitionNotAllowed("прибрати");
+        }
+        return new Reply(id, advertId, userId, message, ReplyStatus.REMOVED, createdAt, now);
     }
 
     /** Повторний відгук після відкликання: знову {@code PENDING}, з новим повідомленням і часом. */

@@ -1,9 +1,17 @@
-name: SonarQube Cloud
+name: Static Analysis
 
-# CI-based analysis: Sonar gets compiled classes, dependency jars and coverage reports.
+# One job for all static analysis: SonarQube Cloud + the linters that used to live in lint.yml.
+# Lab 10 bonus 2: lint.yml checked out the repo, set up JDK and Node, compiled the backend and
+# ran npm ci once more on its own two runners, although this job already does all of that.
+# Merging them frees two jobs on the shared self-hosted runners for every push and PR.
+#
 # Backend tests run here too (besides ci.yml), because the quality gate checks
 # "Coverage on New Code": without the JaCoCo report Sonar counts new Java code as 0% covered.
-# Kept separate from ci.yml so that Sonar problems never affect the required CI checks.
+# Kept separate from ci.yml so that Sonar and lint problems never affect the required CI checks.
+# Linters are report-only for now: findings are shown in the run summary but never fail the build.
+# To make them blocking:
+#   backend  - remove failOnViolation / failOnError=false from pom.xml (after the style cleanup)
+#   frontend - remove continue-on-error from the check steps below
 # Requires Automatic Analysis to be OFF in SonarQube Cloud (Administration -> Analysis Method)
 # and a SONAR_TOKEN repository secret.
 
@@ -23,8 +31,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  sonar:
-    name: SonarQube Cloud Analysis
+  analysis:
+    name: Static Analysis (Sonar, Checkstyle, SpotBugs, ESLint)
     runs-on: [self-hosted, linux]
     timeout-minutes: 15
 
@@ -48,24 +56,47 @@ jobs:
           cache: npm
           cache-dependency-path: web-src/package-lock.json
 
-      # no frontend build or tests: node_modules only gives the TypeScript analyzer the library types
+      # node_modules is used by the linters below and gives the Sonar TypeScript analyzer the library types
       - name: Install frontend dependencies
         working-directory: web-src
         run: npm ci
+
+      - name: ESLint (incl. eslint-plugin-security)
+        id: eslint
+        continue-on-error: true # TODO: remove to make blocking
+        working-directory: web-src
+        run: npm run lint
+
+      - name: Prettier
+        id: prettier
+        continue-on-error: true # TODO: remove to make blocking
+        working-directory: web-src
+        run: npm run format:check
+
+      - name: npm audit (production dependencies)
+        id: audit
+        continue-on-error: true # TODO: remove to make blocking
+        working-directory: web-src
+        run: npm run audit
 
       - name: Frontend tests with coverage
         working-directory: web-src
         run: npm run test:coverage
 
-      # test-compile gives Sonar the bytecode (main + test); the plugin passes dependency jars itself.
+      # One Maven run for everything that needs compiled code:
+      #   validate - Checkstyle (bound in pom.xml)
+      #   test     - unit tests + JaCoCo report for Sonar coverage
+      #   verify   - SpotBugs with find-sec-bugs (bound in pom.xml)
+      #   sonar    - analysis; the plugin passes bytecode and dependency jars itself
+      # The jar itself is not needed here, so Spring Boot repackaging is skipped.
       # Only the listed sources are analyzed, so generated/committed artifacts
       # (docs/**, web-src/coverage/**, dist, target, node_modules) stay out of the analysis.
-      - name: Compile and analyze
+      - name: Lint, test and analyze backend
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
-          ./mvnw -B -ntp test org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
-          -Dcheckstyle.skip
+          ./mvnw -B -ntp verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
+          -Dspring-boot.repackage.skip
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=ukma-fin-ssdm-2026
           -Dsonar.projectKey=ukma-fin-ssdm-2026_b2b-saas-ai-sloppers
@@ -76,3 +107,35 @@ jobs:
           -Dsonar.coverage.exclusions=**/Grainient.tsx,**/Grainient.css
           -Dsonar.javascript.lcov.reportPaths=web-src/coverage/lcov.info
           -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+      - name: Summary
+        if: always()
+        run: |
+          count() {
+            if [ -f "$2" ]; then { grep -o "$1" "$2" || true; } | wc -l | tr -d ' '; else echo "n/a"; fi
+          }
+          {
+            echo "### Backend static analysis"
+            echo "| Check | Findings |"
+            echo "| --- | --- |"
+            echo "| Checkstyle | $(count '<error ' target/checkstyle-result.xml) |"
+            echo "| SpotBugs (all) | $(count '<BugInstance ' target/spotbugsXml.xml) |"
+            echo "| SpotBugs (SECURITY) | $(count "<BugInstance [^>]*category='SECURITY'" target/spotbugsXml.xml) |"
+            echo
+            echo "### Frontend static analysis"
+            echo "| Check | Result |"
+            echo "| --- | --- |"
+            echo "| ESLint | ${{ steps.eslint.outcome }} |"
+            echo "| Prettier | ${{ steps.prettier.outcome }} |"
+            echo "| npm audit | ${{ steps.audit.outcome }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-lint-reports
+          path: |
+            target/checkstyle-result.xml
+            target/spotbugsXml.xml
+          if-no-files-found: ignore

@@ -53,8 +53,9 @@
     * `contact` (string, ≤ 200): Telegram (`@нік`, `t.me/нік`), телефон або email. **Повертається лише автору й відгукувачам з підтвердженим відгуком, решті — `null`** (FR-049, NFR-009); у тілі помилки валідації не повертається
     * `status` (`ACTIVE` | `CLOSED`): оголошення з дедлайном, що минув, віддається як `CLOSED` ще до того, як планувальник змінить статус у базі
     * `own` (bool), `myReplyStatus` (статус відгуку поточного користувача або `null`), `createdAt`
-- **Атрибути відгуку:** `id`, `advertId`, `userId`, `message` (≤ 500), `status` (`PENDING` | `CONFIRMED` | `REJECTED` | `WITHDRAWN`), `createdAt`, `decidedAt`
+- **Атрибути відгуку:** `id`, `advertId`, `userId`, `message` (≤ 500), `status` (`PENDING` | `CONFIRMED` | `REJECTED` | `WITHDRAWN` | `REMOVED`), `createdAt`, `decidedAt`. `REMOVED` — відгук прибрав модератор (FR-057); такі відгуки не показуються ні автору оголошення, ні в `/adverts/replied`
 - **Правила:** один відгук на оголошення; відкликаний можна подати знову, відхилений — ні. Коли підтверджених стає стільки, скільки місць, оголошення закривається в тій самій транзакції (FR-050, NFR-006). Прострочені оголошення закриває `BoardScheduler` (раз на 5 хв, налаштовується `board.close-expired.interval`)
+- **Модерація на дошці:** перед створенням оголошення чи відгуку діють ліміт частоти (`429 TOO_MANY_REQUESTS`, FR-059) і автофільтр (`400 CONTENT_REJECTED`, FR-058). Оголошення заблокованого автора зникають зі списку й за прямим посиланням (`404`), крім самого автора й тих, хто вже відгукнувся (FR-055)
 
 | Метод | Шлях | Хто може | Успіх | Помилки |
 |---|---|---|---|---|
@@ -70,6 +71,32 @@
 | POST | `/adverts/{advertId}/replies/{replyId}/confirm` | автор | 200 | 400, 401, 403, 404, 409 |
 | POST | `/adverts/{advertId}/replies/{replyId}/reject` | автор | 200 | 400, 401, 403, 404, 409 |
 | POST | `/adverts/{advertId}/replies/{replyId}/withdraw` | автор відгуку | 200 | 400, 401, 403, 404, 409 |
+
+### Ресурс Moderation (скарги, блокування, автофільтр)
+
+- **Кінцеві точки:** `/complaints` — скарги користувачів, `/moderation/...` — інструменти Global Admin; FR-054–FR-060
+- **Атрибути скарги:** `id`, `reporterId`, `authorId` (автор оскарженого контенту), `authorName`, `targetType` (`ADVERT` | `REPLY`), `targetId`, `category` (`SPAM` | `ABUSE` | `OTHER`), `comment` (≤ 500), `status` (`OPEN` | `RESOLVED` | `DISMISSED`), `resolvedBy`, `resolution` (≤ 500), `createdAt`, `resolvedAt`
+- **Атрибути блокування:** `id`, `userId`, `bannedBy` (`null` — заблокувала система, FR-060), `automatic`, `reason` (≤ 500), `expiresAt` (`null` — безстроково), `active`, `createdAt`, `liftedAt`, `liftedBy` (`null` — строк вийшов)
+- **Правила:**
+    * одна скарга від користувача на той самий об'єкт; на власний контент скаржитися не можна
+    * `resolve` прибирає контент (оголошення → `DELETED`, відгук → `REMOVED`) і закриває інші відкриті скарги на нього; рішення щодо скарги остаточне (`409 INVALID_STATE_TRANSITION`)
+    * заблокований користувач отримує `403 ACCOUNT_BLOCKED` на будь-якому захищеному маршруті (FR-055); розблокування повертає статус, що був до бану. Global Admin не блокується ні вручну, ні автоматично
+    * автофільтр порівнює слова цілком, а не підрядки: «кіт» у списку не блокує «Нікіту»
+    * автоматичне тимчасове блокування (FR-060): скарги від 3 різних користувачів на контент однієї людини (відхилені не рахуються) або 3 відмови автофільтра за добу
+    * ліміти й пороги задаються в `moderation.*` (`application.properties`); прострочені бани знімає `ModerationScheduler` (раз на 5 хв, `moderation.lift-expired.interval`)
+
+| Метод | Шлях | Хто може | Успіх | Помилки |
+|---|---|---|---|---|
+| POST | `/complaints` | будь-який користувач | 201 | 400, 401, 403, 404, 409 |
+| GET | `/moderation/complaints?status=&limit=&offset=` | Global Admin | 200 | 400, 401, 403 |
+| POST | `/moderation/complaints/{complaintId}/resolve` | Global Admin | 200 | 400, 401, 403, 404, 409 |
+| POST | `/moderation/complaints/{complaintId}/dismiss` | Global Admin | 200 | 400, 401, 403, 404, 409 |
+| POST | `/moderation/users/{userId}/ban` | Global Admin | 200 | 400, 401, 403, 404, 409 |
+| DELETE | `/moderation/users/{userId}/ban` | Global Admin | 200 | 401, 403, 409 |
+| GET | `/moderation/users/{userId}/bans` | Global Admin | 200 | 401, 403 |
+| GET | `/moderation/banned-words` | Global Admin | 200 | 401, 403 |
+| POST | `/moderation/banned-words` | Global Admin | 201 | 400, 401, 403, 409 |
+| DELETE | `/moderation/banned-words/{wordId}` | Global Admin | 204 | 401, 403, 404 |
 
 
 
@@ -104,17 +131,20 @@
 | `VERIFICATION_CODE_EXPIRED` | 400 | код прострочений або вичерпано 5 спроб; треба запросити новий |
 | `INVALID_PARAMETER` | 400 | параметр не того типу (напр. не UUID) або відсутній |
 | `MALFORMED_REQUEST` | 400 | тіло відсутнє або не є коректним JSON |
+| `CONTENT_REJECTED` | 400 | текст оголошення чи відгуку містить слово зі списку автофільтра (FR-058) |
 | `UNAUTHORIZED` | 401 | немає або недійсний JWT |
 | `INVALID_CREDENTIALS` | 401 | неправильна пошта або пароль |
 | `FORBIDDEN` | 403 | роль не дозволяє дію |
 | `ACCOUNT_NOT_VERIFIED` | 403 | пошту ще не підтверджено кодом |
-| `ACCOUNT_BLOCKED` | 403 | акаунт заблоковано |
+| `ACCOUNT_BLOCKED` | 403 | акаунт заблоковано (FR-054, FR-055) |
 | `OWN_ADVERT` | 403 | спроба відгукнутися на власне оголошення |
 | `ORGANIZATION_NOT_FOUND` | 404 | організації з таким `id` немає |
 | `USER_NOT_FOUND` | 404 | користувача з такою поштою немає або він не підтвердив пошту |
 | `HEAD_NOT_FOUND` | 404 | користувач не є головою цієї організації |
 | `ADVERT_NOT_FOUND` | 404 | оголошення немає або його видалено |
 | `REPLY_NOT_FOUND` | 404 | відгуку з таким `id` на це оголошення немає |
+| `COMPLAINT_NOT_FOUND` | 404 | скарги з таким `id` немає |
+| `BANNED_WORD_NOT_FOUND` | 404 | слова з таким `id` у списку автофільтра немає |
 | `ROUTE_NOT_FOUND` | 404 | такої кінцевої точки немає |
 | `METHOD_NOT_ALLOWED` | 405 | метод не підтримується ресурсом |
 | `SLUG_ALREADY_EXISTS` | 409 | slug організації зайнятий |
@@ -124,7 +154,11 @@
 | `LAST_HEAD` | 409 | не можна зняти останнього голову (FR-011) |
 | `ALREADY_REPLIED` | 409 | користувач уже відгукнувся на це оголошення (FR-046) |
 | `ADVERT_CLOSED` | 409 | оголошення закрите або минув дедлайн: відгуки й підтвердження не приймаються (FR-052) |
-| `TOO_MANY_REQUESTS` | 429 | новий код можна запросити не частіше ніж раз на хвилину |
+| `ALREADY_COMPLAINED` | 409 | користувач уже скаржився на цей об'єкт (FR-056) |
+| `ALREADY_BANNED` | 409 | користувач уже заблокований (FR-054) |
+| `NOT_BANNED` | 409 | розблоковувати нічого: користувач не заблокований |
+| `BANNED_WORD_EXISTS` | 409 | слово вже є в списку автофільтра (регістр не враховується) |
+| `TOO_MANY_REQUESTS` | 429 | новий код можна запросити не частіше ніж раз на хвилину; ліміт оголошень чи відгуків вичерпано (FR-059) |
 | `PAYLOAD_TOO_LARGE` | 413 | файл картинки більший за 5 МБ |
 | `UNSUPPORTED_MEDIA_TYPE` | 415 | файл не JPEG/PNG/WebP або запит не `multipart/form-data` |
 | `STORAGE_UNAVAILABLE` | 503 | Supabase Storage недоступне або не налаштоване |
