@@ -8,6 +8,7 @@ import {
   unsubscribeFromOrganization,
 } from '../api/subscriptions'
 import { useAuth } from '../auth/AuthContext'
+import OrganizationRatingPanel from '../components/OrganizationRatingPanel'
 import type { Event } from '../types/event'
 import type { Organization } from '../types/organization'
 import { formatEventDateTime } from '../utils/datetime'
@@ -331,6 +332,12 @@ function OrganizationDetailPage() {
                 Сповіщення про нові події надходитимуть на вашу пошту реєстрації.
               </p>
             ) : null}
+
+            <OrganizationRatingPanel
+              organizationId={organization.id}
+              initial={organization.rating}
+              loginHref={loginFrom}
+            />
 
             {organization.description ? (
               <p className="org-detail__description">{organization.description}</p>

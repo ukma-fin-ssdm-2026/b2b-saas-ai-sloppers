@@ -5,6 +5,7 @@ import CircularCarousel, {
   type CircularCarouselItem,
 } from '../components/CircularCarousel'
 import type { Organization } from '../types/organization'
+import { formatRating } from '../utils/rating'
 import './OrganizationsPage.css'
 
 const PAGE_SIZE = 20
@@ -23,10 +24,13 @@ function logoPlaceholder(name: string): string {
 }
 
 function toCarouselItem(org: Organization): CircularCarouselItem {
+  const rating = formatRating(org.rating)
   return {
     src: org.logoUrl || logoPlaceholder(org.name),
-    alt: `Логотип ${org.name}`,
+    // рейтинг у каталозі (FR-064): у підписі картки й для скрінрідера
+    alt: `Логотип ${org.name}. Рейтинг: ${rating}`,
     title: org.name,
+    subtitle: rating,
   }
 }
 
