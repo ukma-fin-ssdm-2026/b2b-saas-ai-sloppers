@@ -51,6 +51,13 @@ public class InMemoryAdvertRepository implements AdvertRepository {
     }
 
     @Override
+    public long countByAuthorSince(UUID authorId, OffsetDateTime since) {
+        return store.values().stream()
+                .filter(a -> a.isAuthor(authorId) && a.createdAt().isAfter(since))
+                .count();
+    }
+
+    @Override
     public Advert save(Advert advert) {
         store.put(advert.id(), advert);
         return advert;

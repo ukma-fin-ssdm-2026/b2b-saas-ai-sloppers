@@ -29,6 +29,12 @@ public interface AdvertRepository {
     /** Оголошення автора в будь-якому статусі, крім {@code DELETED}. */
     List<Advert> findByAuthor(UUID authorId);
 
+    /**
+     * Скільки оголошень автор створив після {@code since} — для ліміту частоти (FR-059). Видалені
+     * теж рахуються: інакше ліміт обходився б створенням і видаленням оголошення.
+     */
+    long countByAuthorSince(UUID authorId, OffsetDateTime since);
+
     Advert save(Advert advert);
 
     /**

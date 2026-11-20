@@ -6,12 +6,14 @@ import ua.edu.ukma.community.auth.User;
 import ua.edu.ukma.community.common.error.ApiException;
 import ua.edu.ukma.community.common.error.ErrorCode;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
+import ua.edu.ukma.community.moderation.ModerationGate;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -23,6 +25,10 @@ import java.util.stream.Collectors;
  * {@code SELECT ... FOR UPDATE} на рядок оголошення. Так «підтвердити відгук» і «закрити, бо місця скінчились»
  * — одна атомарна дія, і паралельні підтвердження не перевищать кількість місць (FR-050, NFR-006).
  * {@code synchronized} дає ту саму гарантію в профілі {@code inmemory}, де бази й транзакцій немає.
+ *
+ * <p>Правила модерації (FR-055, FR-058, FR-059) живуть за {@link ModerationGate}: дошка лише питає
+ * дозволу перед записом і список прихованих авторів перед показом. Питати треба до відкриття
+ * транзакції: відмову автофільтра шлюз зберігає, і відкат забрав би її з собою.
  */
 @Service
 public class BoardService {
@@ -34,13 +40,15 @@ public class BoardService {
 
     private final AdvertRepository adverts;
     private final ReplyRepository replies;
+    private final ModerationGate moderation;
     private final TransactionOperations transactions;
     private final Clock clock;
 
-    public BoardService(AdvertRepository adverts, ReplyRepository replies, TransactionOperations transactions,
-                        Clock clock) {
+    public BoardService(AdvertRepository adverts, ReplyRepository replies, ModerationGate moderation,
+                        TransactionOperations transactions, Clock clock) {
         this.adverts = adverts;
         this.replies = replies;
+        this.moderation = moderation;
         this.transactions = transactions;
         this.clock = clock;
     }
@@ -53,16 +61,21 @@ public class BoardService {
         if (!request.deadline().isAfter(now)) {
             throw ApiException.validation("deadline", "Дедлайн має бути в майбутньому", request.deadline());
         }
+        moderation.beforeAdvert(author, request.title(), request.description());
         Advert advert = adverts.save(new Advert(UUID.randomUUID(), author.id(), request.type(),
                 request.title().trim(), request.description().trim(), request.slots(), request.deadline(),
                 request.contact().trim(), AdvertStatus.ACTIVE, now, now));
         return AdvertView.of(advert, author.id(), null, now);
     }
 
-    /** FR-045, FR-052: лише відкриті оголошення, найновіші спершу. */
+    /** FR-045, FR-052: лише відкриті оголошення, найновіші спершу; без оголошень заблокованих (FR-055). */
     public OffsetPage<AdvertView> listOpen(User viewer, AdvertType type, int limit, int offset) {
         OffsetDateTime now = now();
-        List<Advert> open = adverts.findOpen(type, now).stream().sorted(NEWEST_FIRST).toList();
+        Set<UUID> hidden = moderation.hiddenAuthors();
+        List<Advert> open = adverts.findOpen(type, now).stream()
+                .filter(a -> !hidden.contains(a.authorId()))
+                .sorted(NEWEST_FIRST)
+                .toList();
         return toViews(viewer, OffsetPage.of(open, limit, offset), now);
     }
 
@@ -80,7 +93,7 @@ public class BoardService {
     public OffsetPage<AdvertView> listReplied(User user, int limit, int offset) {
         OffsetDateTime now = now();
         List<UUID> advertIds = replies.findByUser(user.id()).stream()
-                .filter(r -> r.status() != ReplyStatus.WITHDRAWN)
+                .filter(r -> r.status() != ReplyStatus.WITHDRAWN && r.status() != ReplyStatus.REMOVED)
                 .map(Reply::advertId)
                 .toList();
         List<Advert> replied = adverts.findAllById(advertIds).stream()
@@ -90,9 +103,19 @@ public class BoardService {
         return toViews(user, OffsetPage.of(replied, limit, offset), now);
     }
 
+    /**
+     * FR-055: оголошення заблокованого автора не показуємо й за прямим посиланням. Виняток — сам автор
+     * і ті, хто вже відгукнувся: підтверджений учасник не має втратити контакт через бан автора (US-013).
+     */
     public AdvertView get(User viewer, UUID advertId) {
         Advert advert = requireVisible(advertId);
-        ReplyStatus myReply = replies.findByAdvertAndUser(advertId, viewer.id()).map(Reply::status).orElse(null);
+        ReplyStatus myReply = replies.findByAdvertAndUser(advertId, viewer.id())
+                .filter(r -> r.status() != ReplyStatus.REMOVED)
+                .map(Reply::status)
+                .orElse(null);
+        if (!advert.isAuthor(viewer.id()) && myReply == null && moderation.isHidden(advert.authorId())) {
+            throw advertNotFound(advertId);
+        }
         return AdvertView.of(advert, viewer.id(), myReply, now());
     }
 
@@ -121,6 +144,8 @@ public class BoardService {
      */
     public synchronized Reply reply(User user, UUID advertId, String message) {
         String text = message == null || message.isBlank() ? null : message.trim();
+        // до транзакції: шлюз пише відмову автофільтра, яку відкат знищив би (FR-058, FR-059)
+        moderation.beforeReply(user, text);
         return locked(() -> {
             Advert advert = lockVisible(advertId);
             if (advert.isAuthor(user.id())) {
@@ -144,7 +169,7 @@ public class BoardService {
     public List<Reply> listReplies(User actor, UUID advertId) {
         requireAuthor(actor, requireVisible(advertId));
         return replies.findByAdvert(advertId).stream()
-                .filter(r -> r.status() != ReplyStatus.WITHDRAWN)
+                .filter(r -> r.status() != ReplyStatus.WITHDRAWN && r.status() != ReplyStatus.REMOVED)
                 .sorted(OLDEST_FIRST)
                 .toList();
     }
@@ -197,6 +222,7 @@ public class BoardService {
 
     private OffsetPage<AdvertView> toViews(User viewer, OffsetPage<Advert> page, OffsetDateTime now) {
         Map<UUID, ReplyStatus> myReplies = replies.findByUser(viewer.id()).stream()
+                .filter(r -> r.status() != ReplyStatus.REMOVED)
                 .collect(Collectors.toMap(Reply::advertId, Reply::status, (a, b) -> a));
         return page.map(a -> AdvertView.of(a, viewer.id(), myReplies.get(a.id()), now));
     }

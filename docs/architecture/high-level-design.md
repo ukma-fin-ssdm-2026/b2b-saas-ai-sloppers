@@ -29,6 +29,7 @@
 | Organizations Module | CRUD організацій, голови, каталог/пошук | семестр |
 | Events & Moderation | життєвий цикл подій, черга модерації, автопублікація | семестр |
 | Bulletin Board | оголошення, відгуки, контакти, автозакриття | семестр |
+| User Moderation | скарги на контент, блокування користувачів, автофільтр, ліміти частоти, автоблокування (FR-054–FR-060) | семестр |
 | Scraper Worker | cron-збір постів, розпізнавання, дедуп | семестр (у межах сервісу) |
 | Calendar Export | Google deep link, `.ics` | семестр |
 | PostgreSQL | єдине сховище сервісу | семестр |
@@ -45,8 +46,11 @@
 | React Client | Organizations | `IOrganizations` REST/JSON | каталог, профіль, CRUD (Admin/голова) | JWT за роллю |
 | React Client | Events & Moderation | `IEvents` REST/JSON | каталог подій, модерація, джерела | гість на читання; JWT на запис |
 | React Client | Bulletin Board | `IBoard` REST/JSON | оголошення, відгуки; контакт лише за правилами NFR-009 | JWT |
+| React Client | User Moderation | `IModeration` REST/JSON | скарги (будь-хто); черга скарг, бани, список слів (Global Admin) | JWT |
+| Bulletin Board | User Moderation | `ModerationGate` (виклик у процесі) | дозвіл на запис (ліміт, автофільтр), хто прихований | внутрішній |
+| User Moderation | Bulletin Board | `ModeratedContent` (виклик у процесі) | автор контенту, прибрати контент, лічильники для лімітів | внутрішній |
 | React Client | Calendar Export | `ICalendar` REST/JSON | deep link / файл `.ics` | за потреби JWT |
-| Modules (Auth, Orgs, Events, Board, Scraper) | PostgreSQL | SQL (JDBC/JPA) | сутності домену | credentials сервісу |
+| Modules (Auth, Orgs, Events, Board, Moderation, Scraper) | PostgreSQL | SQL (JDBC/JPA) | сутності домену | credentials сервісу |
 | Scraper Worker | Instagram | HTTP scrape | сирі пости / метадані | токени джерел (secrets) |
 | Calendar Export | Google Calendar | deep link / `.ics` (RFC 5545) | назва, час (Europe/Kyiv), локація | — |
 | Scraper Worker | Events Module | внутрішній виклик / запис у БД | чернетки подій «На модерації» / автопублікація | внутрішній |

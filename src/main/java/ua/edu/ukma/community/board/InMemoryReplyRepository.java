@@ -3,6 +3,7 @@ package ua.edu.ukma.community.board;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -41,6 +42,13 @@ public class InMemoryReplyRepository implements ReplyRepository {
     @Override
     public long countConfirmed(UUID advertId) {
         return store.values().stream().filter(r -> r.advertId().equals(advertId) && r.isConfirmed()).count();
+    }
+
+    @Override
+    public long countByUserSince(UUID userId, OffsetDateTime since) {
+        return store.values().stream()
+                .filter(r -> r.userId().equals(userId) && r.createdAt().isAfter(since))
+                .count();
     }
 
     /** Той самий інваріант, що й {@code UNIQUE (advert_id, user_id)} у базі. */

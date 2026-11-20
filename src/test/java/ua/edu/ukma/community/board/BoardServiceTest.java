@@ -9,6 +9,7 @@ import org.springframework.transaction.support.TransactionOperations;
 import ua.edu.ukma.community.auth.User;
 import ua.edu.ukma.community.auth.UserStatus;
 import ua.edu.ukma.community.common.error.ApiException;
+import ua.edu.ukma.community.moderation.ModerationGate;
 import ua.edu.ukma.community.common.error.ErrorCode;
 import ua.edu.ukma.community.common.pagination.OffsetPage;
 import ua.edu.ukma.community.support.MutableClock;
@@ -50,7 +51,8 @@ class BoardServiceTest {
         clock = MutableClock.startingAtFixtureNow();
         adverts = new InMemoryAdvertRepository();
         replies = new InMemoryReplyRepository();
-        board = new BoardService(adverts, replies, TransactionOperations.withoutTransaction(), clock);
+        board = new BoardService(adverts, replies, ModerationGate.permissive(),
+                TransactionOperations.withoutTransaction(), clock);
         author = user("author");
         alice = user("alice");
         bob = user("bob");
@@ -320,7 +322,8 @@ class BoardServiceTest {
                     return super.save(reply);
                 }
             };
-            board = new BoardService(adverts, replies, TransactionOperations.withoutTransaction(), clock);
+            board = new BoardService(adverts, replies, ModerationGate.permissive(),
+                TransactionOperations.withoutTransaction(), clock);
             Advert advert = createAdvert(5);
             List<Reply> pending = new ArrayList<>();
             for (int i = 0; i < 100; i++) {
