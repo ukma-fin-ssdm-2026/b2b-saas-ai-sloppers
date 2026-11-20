@@ -272,6 +272,49 @@ paths:
       summary: Закрити оголошення
       tags:
       - Board
+  /api/v1/adverts/{advertId}/rating:
+    post:
+      description: "FR-061: лише підтверджений учасник, лише після закриття оголош\
+        ення (вручну, за дедлайном або після заповнення місць), один раз. У відпов\
+        іді — оновлений рейтинг автора (FR-062)."
+      operationId: rateAdvertAuthor
+      parameters:
+      - description: Ідентифікатор оголошення (UUID)
+        example: b1000000-0000-4000-8000-000000000001
+        in: path
+        name: advertId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RatingRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuthorRatingResponse"
+          description: Оцінку збережено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+      security:
+      - bearerAuth: []
+      summary: Оцінити автора оголошення
+      tags:
+      - Ratings
   /api/v1/adverts/{advertId}/replies:
     get:
       description: Лише автор (FR-047). Відкликані відгуки не показуються; найстаріші
@@ -1402,7 +1445,7 @@ paths:
   /api/v1/organizations:
     get:
       description: "Публічна (доступна гостям). Пагінація зі зсувом, сортування за\
-        \ назвою."
+        \ назвою. Кожна організація — з рейтингом (FR-064)."
       operationId: listOrganizations
       parameters:
       - description: "Пошук за назвою або slug, без урахування регістру"
@@ -1434,7 +1477,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/OffsetPageOrganization"
+                $ref: "#/components/schemas/OffsetPageOrganizationResponse"
           description: Сторінка організацій
         "400":
           $ref: "#/components/responses/BadRequest"
@@ -1509,7 +1552,7 @@ paths:
       tags:
       - Organizations
     get:
-      description: Публічна (доступна гостям).
+      description: Публічна (доступна гостям). З рейтингом (FR-064).
       operationId: getOrganization
       parameters:
       - description: Ідентифікатор організації (UUID)
@@ -1525,7 +1568,7 @@ paths:
           content:
             '*/*':
               schema:
-                $ref: "#/components/schemas/Organization"
+                $ref: "#/components/schemas/OrganizationResponse"
           description: Організацію знайдено
         "400":
           $ref: "#/components/responses/BadRequest"
@@ -1882,6 +1925,76 @@ paths:
       summary: Завантажити або замінити логотип
       tags:
       - Organizations
+  /api/v1/organizations/{organizationId}/rating:
+    get:
+      description: "FR-063, FR-064."
+      operationId: getOrganizationRating
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrganizationRatingResponse"
+          description: Рейтинг
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Рейтинг організації і моя оцінка
+      tags:
+      - Ratings
+    put:
+      description: "FR-063: одна оцінка 1–5 на користувача, повторний запит її змі\
+        нює. Голова власну організацію не оцінює."
+      operationId: rateOrganization
+      parameters:
+      - description: Ідентифікатор організації (UUID)
+        example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        in: path
+        name: organizationId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RatingRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/OrganizationRatingResponse"
+          description: Оцінку збережено
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+      security:
+      - bearerAuth: []
+      summary: Оцінити організацію або змінити оцінку
+      tags:
+      - Ratings
   /api/v1/organizations/{organizationId}/role-log:
     get:
       description: "Хто, кому, яку роль призначив чи зняв і коли (FR-013). Голова\
@@ -2197,6 +2310,10 @@ components:
           type: string
           description: "Ім'я та прізвище автора; null, якщо автор їх не задав (FR-069)"
           example: Теодора Гречко
+        authorRating:
+          $ref: "#/components/schemas/RatingSummary"
+          description: Рейтинг автора за оцінками учасників його закритих оголошень
+            (FR-062)
         contact:
           type: string
           description: "Контакт автора. null для всіх, крім автора й підтверджених\
@@ -2221,6 +2338,12 @@ components:
           format: uuid
           description: Ідентифікатор
           example: b1000000-0000-4000-8000-000000000001
+        myRating:
+          type: integer
+          format: int32
+          description: "Ваша оцінка автора за це оголошення; null, якщо ви ще не о\
+            цінювали (FR-061)"
+          example: 5
         myReplyStatus:
           type: string
           description: "Статус вашого відгуку на це оголошення; null, якщо ви не в\
@@ -2261,6 +2384,7 @@ components:
           - LEISURE
           example: TEAM
       required:
+      - authorRating
       - createdAt
       - deadline
       - description
@@ -2312,6 +2436,8 @@ components:
           - ALREADY_BANNED
           - NOT_BANNED
           - BANNED_WORD_EXISTS
+          - ALREADY_RATED
+          - ADVERT_NOT_CLOSED
           - TOO_MANY_REQUESTS
           - PAYLOAD_TOO_LARGE
           - UNSUPPORTED_MEDIA_TYPE
@@ -2358,6 +2484,33 @@ components:
             (лише Global Admin)
       required:
       - email
+    AuthorRatingResponse:
+      type: object
+      description: Оцінка автора оголошення
+      properties:
+        advertId:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+        authorRating:
+          $ref: "#/components/schemas/RatingSummary"
+          description: Рейтинг автора з урахуванням цієї оцінки
+        createdAt:
+          type: string
+          format: date-time
+        score:
+          type: integer
+          format: int32
+          description: Ваша оцінка
+          example: 5
+      required:
+      - advertId
+      - authorId
+      - authorRating
+      - createdAt
+      - score
     BanRequest:
       type: object
       description: Блокування користувача
@@ -2764,14 +2917,14 @@ components:
             $ref: "#/components/schemas/EventResponse"
         pagination:
           $ref: "#/components/schemas/OffsetPagination"
-    OffsetPageOrganization:
+    OffsetPageOrganizationResponse:
       type: object
       description: "Сторінка результатів, пагінація зі зсувом (offset)"
       properties:
         data:
           type: array
           items:
-            $ref: "#/components/schemas/Organization"
+            $ref: "#/components/schemas/OrganizationResponse"
         pagination:
           $ref: "#/components/schemas/OffsetPagination"
     OffsetPagination:
@@ -2922,6 +3075,83 @@ components:
       - appointedAt
       - email
       - userId
+    OrganizationRatingResponse:
+      type: object
+      description: Рейтинг організації
+      properties:
+        myScore:
+          type: integer
+          format: int32
+          description: "Ваша оцінка; null, якщо ви ще не оцінювали"
+          example: 4
+        organizationId:
+          type: string
+          format: uuid
+        rating:
+          $ref: "#/components/schemas/RatingSummary"
+      required:
+      - organizationId
+      - rating
+    OrganizationResponse:
+      type: object
+      description: Студентська організація з рейтингом
+      properties:
+        autoPublish:
+          type: boolean
+          description: Публікувати спаршені події без модерації (FR-029); за замовчуванням
+            вимкнено
+          example: false
+        contactEmail:
+          type: string
+          description: Контактна пошта організації
+          example: debate@ukma.edu.ua
+        createdAt:
+          type: string
+          format: date-time
+          description: Час створення (ISO 8601)
+          example: 2026-09-01T10:00:00+03:00
+        description:
+          type: string
+          description: Опис діяльності
+          example: Щотижневі тренування з британського парламентського формату
+        id:
+          type: string
+          format: uuid
+          description: Ідентифікатор
+          example: 3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60
+        instagramHandle:
+          type: string
+          description: "Instagram-акаунт без @, з якого скрейпер збирає події"
+          example: ukma.debate
+        logoUrl:
+          type: string
+          description: "Посилання на логотип у сховищі; null, якщо логотип не зава\
+            нтажено"
+          example: https://project.supabase.co/storage/v1/object/public/images/organizations/3f6c1f0e-8a2b-4c1d-9e7a-1b2c3d4e5f60/logo-1a2b3c.png
+        name:
+          type: string
+          description: Назва
+          example: Дебатний клуб НаУКМА
+        rating:
+          $ref: "#/components/schemas/RatingSummary"
+          description: Рейтинг за оцінками користувачів (FR-064)
+        slug:
+          type: string
+          description: Унікальний людиночитаний ідентифікатор для URL
+          example: debate-club
+        updatedAt:
+          type: string
+          format: date-time
+          description: Час останньої зміни (ISO 8601)
+          example: 2026-09-15T12:30:00+03:00
+      required:
+      - autoPublish
+      - createdAt
+      - id
+      - name
+      - rating
+      - slug
+      - updatedAt
     OrganizationUpdateRequest:
       type: object
       description: "Часткове оновлення організації: передавайте лише поля, які змі\
@@ -2991,6 +3221,36 @@ components:
           minLength: 1
       required:
       - email
+    RatingRequest:
+      type: object
+      description: Оцінка
+      properties:
+        score:
+          type: integer
+          format: int32
+          description: Оцінка від 1 до 5
+          example: 5
+          maximum: 5
+          minimum: 1
+      required:
+      - score
+    RatingSummary:
+      type: object
+      description: "Рейтинг: середня оцінка 1–5 і кількість оцінок"
+      properties:
+        average:
+          type: number
+          format: double
+          description: "Середня оцінка, округлена до десятих; null, якщо оцінок ще\
+            \ немає"
+          example: 4.3
+        count:
+          type: integer
+          format: int64
+          description: Кількість оцінок
+          example: 12
+      required:
+      - count
     RegisterRequest:
       type: object
       description: Реєстрація з університетською поштою
