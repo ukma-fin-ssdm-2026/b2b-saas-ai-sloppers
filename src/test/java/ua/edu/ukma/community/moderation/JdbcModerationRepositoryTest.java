@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import ua.edu.ukma.community.auth.JdbcUserRepository;
 import ua.edu.ukma.community.auth.User;
@@ -104,10 +105,11 @@ class JdbcModerationRepositoryTest {
         complaint(bob, ContentType.ADVERT, advert.id(), author.id());
         complaint(bob, ContentType.REPLY, reply.id(), alice.id());
 
+        // саме DuplicateKeyException: на нього ModerationService відповідає 409 замість 500
         assertThatThrownBy(() -> complaint(bob, ContentType.ADVERT, advert.id(), author.id()))
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DuplicateKeyException.class);
         assertThatThrownBy(() -> complaint(bob, ContentType.REPLY, reply.id(), alice.id()))
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DuplicateKeyException.class);
     }
 
     @Test
@@ -193,7 +195,7 @@ class JdbcModerationRepositoryTest {
         moderation.saveBan(Ban.create(alice.id(), author.id(), "Перший", null, UserStatus.ACTIVE, now()));
 
         assertThatThrownBy(() -> moderation.saveBan(Ban.create(alice.id(), author.id(), "Другий", null,
-                UserStatus.ACTIVE, now()))).isInstanceOf(DataIntegrityViolationException.class);
+                UserStatus.ACTIVE, now()))).isInstanceOf(DuplicateKeyException.class);
     }
 
     @Test
@@ -204,7 +206,7 @@ class JdbcModerationRepositoryTest {
 
         assertThat(moderation.findBannedWords()).extracting(BannedWord::word).containsExactly("казино", "спам");
         assertThatThrownBy(() -> moderation.saveBannedWord(BannedWord.of("СПАМ", null, now())))
-                .isInstanceOf(DataIntegrityViolationException.class);
+                .isInstanceOf(DuplicateKeyException.class);
 
         assertThat(moderation.deleteBannedWord(spam.id())).isTrue();
         assertThat(moderation.deleteBannedWord(spam.id())).isFalse();

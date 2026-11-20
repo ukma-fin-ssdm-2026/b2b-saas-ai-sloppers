@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.transaction.support.TransactionOperations;
 import ua.edu.ukma.community.auth.InMemoryHeadRepository;
 import ua.edu.ukma.community.auth.InMemoryUserRepository;
@@ -129,6 +130,48 @@ class ModerationServiceTest {
         assertThatThrownBy(action::run)
                 .isInstanceOf(ApiException.class)
                 .satisfies(e -> assertThat(codeOf(e)).isEqualTo(expected));
+    }
+
+    // ---- гонки ----
+
+    @Nested
+    @DisplayName("Подвійний клік: паралельний дубль отримує 409, а не 500")
+    class Races {
+
+        /** Сховище, у якому попередня перевірка не бачить дубля, а запис натрапляє на унікальний індекс. */
+        private ModerationService withRacingRepository() {
+            InMemoryModerationRepository racing = new InMemoryModerationRepository() {
+                @Override
+                public Complaint saveComplaint(Complaint complaint) {
+                    throw new DuplicateKeyException("complaint_once_advert_idx");
+                }
+
+                @Override
+                public Ban saveBan(Ban ban) {
+                    throw new DuplicateKeyException("ban_one_active_idx");
+                }
+
+                @Override
+                public BannedWord saveBannedWord(BannedWord word) {
+                    throw new DuplicateKeyException("banned_word_word_key");
+                }
+            };
+            return new ModerationService(racing, new BoardContent(adverts, replies, clock), users,
+                    new OrgRolePolicy(new InMemoryHeadRepository(users)), new WordFilter(racing), PROPERTIES,
+                    TransactionOperations.withoutTransaction(), clock);
+        }
+
+        @Test
+        @DisplayName("скарга, бан і слово: дубль з паралельного запиту — ті самі коди, що й послідовний")
+        void duplicatesBecomeConflicts() {
+            Advert advert = advert(author);
+            ModerationService racing = withRacingRepository();
+
+            assertCode(() -> racing.complain(alice, ContentType.ADVERT, advert.id(), ComplaintCategory.SPAM, null),
+                    ErrorCode.ALREADY_COMPLAINED);
+            assertCode(() -> racing.ban(admin, bob.id(), "Спам", null), ErrorCode.ALREADY_BANNED);
+            assertCode(() -> racing.addBannedWord(admin, "казино"), ErrorCode.BANNED_WORD_EXISTS);
+        }
     }
 
     // ---- FR-054 ----
