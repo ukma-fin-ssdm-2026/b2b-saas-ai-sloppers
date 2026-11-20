@@ -89,6 +89,7 @@ jobs:
       #   verify   - SpotBugs with find-sec-bugs (bound in pom.xml)
       #   sonar    - analysis; the plugin passes bytecode and dependency jars itself
       # The jar itself is not needed here, so Spring Boot repackaging is skipped.
+      # -DskipITs: the slow set (Failsafe, Testcontainers) runs in ci.yml on main only; here only the fast set.
       # Only the listed sources are analyzed, so generated/committed artifacts
       # (docs/**, web-src/coverage/**, dist, target, node_modules) stay out of the analysis.
       - name: Lint, test and analyze backend
@@ -97,6 +98,7 @@ jobs:
         run: >
           ./mvnw -B -ntp verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
           -Dspring-boot.repackage.skip
+          -DskipITs
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=ukma-fin-ssdm-2026
           -Dsonar.projectKey=ukma-fin-ssdm-2026_b2b-saas-ai-sloppers

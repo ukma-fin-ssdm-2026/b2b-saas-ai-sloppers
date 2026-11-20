@@ -36,7 +36,8 @@ jobs:
       - name: Compile
         run: ./mvnw -B -ntp test-compile
 
-      # unit tests + JaCoCo report and coverage threshold (see pom.xml)
+      # fast set: everything without @Tag("integration") + JaCoCo report and coverage threshold (see pom.xml);
+      # the slow set runs in the integration job below
       - name: Run backend tests
         run: ./mvnw -B -ntp test
 
@@ -112,6 +113,59 @@ jobs:
       # Lab 09 bonus 3: dedicated required check for /tests/reliability (Java package below)
       - name: Run reliability tests
         run: ./mvnw -B -ntp test -Dtest='ua.edu.ukma.community.reliability.**'
+
+  # Lab 10 bonus 3: slow set (@Tag("integration"), Failsafe) — full Spring context + PostgreSQL
+  # in a Testcontainers container. The fast set runs in "Build and Test Backend" on every PR;
+  # this job runs only after the merge, on push to main (CI has no other push trigger).
+  integration:
+    name: Integration Tests
+    if: github.event_name == 'push'
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Testcontainers talks to the runner's Docker daemon; fail early with a clear message if there is none
+      - name: Check Docker
+        run: docker info --format 'Docker {{.ServerVersion}}, API {{.ClientInfo.Version}}, {{.OperatingSystem}}'
+
+      - name: Run integration tests
+        run: ./mvnw -B -ntp test-compile failsafe:integration-test failsafe:verify -Djacoco.skip=true -Dcheckstyle.skip
+
+      - name: Test summary
+        if: always()
+        run: |
+          shopt -s nullglob
+          reports=(target/failsafe-reports/TEST-*.xml)
+          {
+            echo "## Integration tests (slow set)"
+            if [ ${#reports[@]} -eq 0 ]; then
+              echo "No test reports found."
+              exit 0
+            fi
+            count() { cat "${reports[@]}" | grep -o "<$1[ />]" | wc -l | tr -d ' '; }
+            echo "| Classes | Tests | Failures | Errors | Skipped |"
+            echo "|---|---|---|---|---|"
+            echo "| ${#reports[@]} | $(count testcase) | $(count failure) | $(count error) | $(count skipped) |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-reports
+          path: target/failsafe-reports/
+          if-no-files-found: ignore
+          retention-days: 7
 
   frontend:
     name: Build and Test Frontend

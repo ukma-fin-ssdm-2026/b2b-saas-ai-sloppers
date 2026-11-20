@@ -186,10 +186,11 @@ def parse_time(value: Optional[str]) -> Optional[datetime]:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def fetch_runs(repo: str, workflow: str, branch: str, since: datetime, until: datetime) -> list:
+def fetch_runs(repo: str, workflow: str, branch: str, since: datetime, until: datetime,
+               event: str = "push") -> list:
     created = f"{iso(since)}..{iso(until + DELIVERY_LOOKAHEAD)}"
     raw = gh_lines(f"repos/{repo}/actions/workflows/{workflow}/runs", ".workflow_runs[]",
-                   {"branch": branch, "event": "push", "per_page": 100, "created": created})
+                   {"branch": branch, "event": event, "per_page": 100, "created": created})
     runs = []
     for run in raw:
         jobs = gh_lines(f"repos/{repo}/actions/runs/{run['id']}/jobs", ".jobs[]", {"per_page": 100})
@@ -360,18 +361,21 @@ def main(argv: Optional[list] = None) -> int:
     parser.add_argument("--repo", default=DEFAULT_REPO)
     parser.add_argument("--workflow", default=DEFAULT_WORKFLOW)
     parser.add_argument("--branch", default=DEFAULT_BRANCH)
+    parser.add_argument("--event", default="push",
+                        help="подія запуску: push (CI), workflow_dispatch (Build and Deploy), workflow_run (Publish Images)")
     parser.add_argument("--since", default=DEFAULT_SINCE, help="початок вікна, ISO 8601")
     parser.add_argument("--until", default=DEFAULT_UNTIL, help="кінець вікна, ISO 8601")
     parser.add_argument("--output", help="файл Markdown; без нього — у stdout")
     args = parser.parse_args(argv)
 
     since, until = parse_time(args.since), parse_time(args.until)
-    runs = fetch_runs(args.repo, args.workflow, args.branch, since, until)
+    runs = fetch_runs(args.repo, args.workflow, args.branch, since, until, args.event)
     prs = fetch_prs(args.repo, args.branch, since, until)
     report = compute(runs, prs, fetch_main_order(args.repo, args.branch), since, until)
 
     command = "python3 scripts/dora_metrics.py" + "".join(
         f" --{name} {value}" for name, value, default in [
+            ("workflow", args.workflow, DEFAULT_WORKFLOW), ("event", args.event, "push"),
             ("since", args.since, DEFAULT_SINCE), ("until", args.until, DEFAULT_UNTIL),
             ("output", args.output, None)] if value and value != default)
     markdown = render(report, {pr.merge_sha: pr.number for pr in prs}, command)

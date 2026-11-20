@@ -2,6 +2,7 @@ package ua.edu.ukma.community.auth;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import ua.edu.ukma.community.support.MutableClock;
@@ -16,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** SQL користувачів на справжньому PostgreSQL: коди підтвердження, скидання пароля, ім'я та прізвище. */
 @DisplayName("JdbcUserRepository на PostgreSQL")
+@Tag("integration")
 class JdbcUserRepositoryTest {
 
     private MutableClock clock;

@@ -2,6 +2,7 @@ package ua.edu.ukma.community.rating;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -28,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** SQL рейтингів на справжньому PostgreSQL з міграціями V1–V9 (див. {@link TestDatabase}). */
 @DisplayName("JdbcRatingRepository на PostgreSQL")
+@Tag("integration")
 class JdbcRatingRepositoryTest {
 
     private MutableClock clock;

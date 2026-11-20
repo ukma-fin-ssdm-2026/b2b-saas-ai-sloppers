@@ -3,6 +3,7 @@ package ua.edu.ukma.community.rating;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -41,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @ActiveProfiles("inmemory")
 @DisplayName("Рейтинги наскрізно: учасник оцінює автора, користувачі — організацію")
+@Tag("integration")
 class RatingFlowIntegrationTest {
 
     static final String ADVERTS = "/api/v1/adverts";
