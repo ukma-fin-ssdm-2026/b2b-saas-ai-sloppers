@@ -36,3 +36,5 @@ build/
 
 ### VS Code ###
 .vscode/
+# Lab 10 bonus 4: JUnit reports of local flaky-test runs (scripts/flaky_tests.py)
+flaky/
