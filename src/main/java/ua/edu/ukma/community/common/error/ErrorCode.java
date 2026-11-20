@@ -41,6 +41,10 @@ public enum ErrorCode {
     ALREADY_BANNED(HttpStatus.CONFLICT),
     NOT_BANNED(HttpStatus.CONFLICT),
     BANNED_WORD_EXISTS(HttpStatus.CONFLICT),
+    /** учасник уже оцінив автора за це оголошення (FR-061) */
+    ALREADY_RATED(HttpStatus.CONFLICT),
+    /** оцінити автора можна лише після закриття оголошення (FR-061) */
+    ADVERT_NOT_CLOSED(HttpStatus.CONFLICT),
     TOO_MANY_REQUESTS(HttpStatus.TOO_MANY_REQUESTS),
     PAYLOAD_TOO_LARGE(HttpStatus.PAYLOAD_TOO_LARGE),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE),
