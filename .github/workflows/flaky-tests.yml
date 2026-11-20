@@ -1,0 +1,91 @@
+name: Flaky Test Hunt
+
+# Lab 10 bonus 4: the full test suite (backend + frontend) N times on one commit in ONE job,
+# then the list of tests whose result changed between repeats (scripts/flaky_tests.py).
+# Manual only and a single job without a matrix: the course shares four self-hosted runners.
+on:
+  workflow_dispatch:
+    inputs:
+      repeats:
+        description: How many times to run the full suite (at least 5)
+        required: true
+        default: '5'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flaky-tests
+  cancel-in-progress: false
+
+jobs:
+  hunt:
+    name: Repeat full test suite
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web-src/package-lock.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install frontend dependencies
+        working-directory: web-src
+        run: npm ci
+
+      - name: Compile backend once
+        run: ./mvnw -B -ntp test-compile -Dcheckstyle.skip
+
+      # No retries inside a run (Surefire rerunFailingTestsCount stays 0): a retry would hide the flake.
+      # Failing tests do not stop the loop; every repeat writes its own JUnit reports.
+      - name: Run the full suite ${{ inputs.repeats }} times
+        env:
+          REPEATS: ${{ inputs.repeats }}
+        run: |
+          if ! [[ "$REPEATS" =~ ^[0-9]+$ ]] || [ "$REPEATS" -lt 5 ]; then
+            echo "::error::repeats must be a number >= 5, got '$REPEATS'"
+            exit 1
+          fi
+          for i in $(seq 1 "$REPEATS"); do
+            echo "::group::Repeat $i of $REPEATS"
+            out="flaky/run-$i"
+            mkdir -p "$out/backend" "$out/frontend"
+            rm -rf target/surefire-reports
+            ./mvnw -B -ntp surefire:test -Djacoco.skip=true || echo "backend: failures in repeat $i"
+            cp target/surefire-reports/TEST-*.xml "$out/backend/" 2>/dev/null || echo "::warning::no backend reports in repeat $i"
+            (cd web-src && npx vitest run --reporter=default --reporter=junit \
+              --outputFile.junit="../$out/frontend/junit.xml") || echo "frontend: failures in repeat $i"
+            echo "::endgroup::"
+          done
+
+      - name: Report tests whose result changed
+        run: |
+          python3 scripts/flaky_tests.py flaky/ | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 scripts/flaky_tests.py flaky/ --fail-on-flaky > /dev/null
+
+      - name: Upload JUnit reports of every repeat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-test-reports
+          path: flaky/
+          if-no-files-found: ignore
+          retention-days: 7
